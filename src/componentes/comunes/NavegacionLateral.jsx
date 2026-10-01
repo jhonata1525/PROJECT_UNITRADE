@@ -1,101 +1,110 @@
 /**
  * @file NavegacionLateral.jsx
- * Componente de navegación lateral para vista de dashboard/responsivo.
- * Proporciona enlaces principales a las diferentes secciones de la aplicación.
- * Adaptado para ser colapsable en dispositivos móviles.
+ * Sidebar glassmorphism con indicador neón para estado activo.
+ * Navegación principal: Dashboard, Billetera Virtual, Pasarela de Pago, Mis Artículos.
  */
 
 import React from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
-  Home,
+  LayoutDashboard,
   Wallet,
-  Settings,
-  LogOut,
-  Search,
-  Users,
+  CreditCard,
+  Package,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
-/**
- * Componente NavegacionLateral - Menú de navegación lateral
- * - Lista de enlaces navegables: Inicio, Billetera, Catálogo, Perfil
- * - Cada enlace incluye un ícono de LucideReact y etiqueta de acceso
- * - Estado interno para controlar si el menú está expandido o colapsado
- * - En producción, cada enlace navegaría a sus respectivas rutas protegidas
- */
+const NAV_ITEMS = [
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/billetera", label: "Billetera Virtual", icon: Wallet },
+  { path: "/pago", label: "Pasarela de Pago", icon: CreditCard },
+  { path: "/mis-articulos", label: "Mis Artículos", icon: Package },
+];
+
 export const NavegacionLateral = () => {
-  /** Estado para alternar entre menú expandido y colapsado en móvil */
-  const [expandido, setExpandido] = React.useState(true);
-
-  /** Opciones del menú con rótulos y respectivos componentes/icons */
-  const opcionesMenu = [
-    { ruta: "/dashboard", icono: Home, etiqueta: "Inicio" },
-    { ruta: "/billetera", icono: Wallet, etiqueta: "Billetera" },
-    { ruta: "/catalogo", icono: Users, etiqueta: "Catálogo" },
-    { ruta: "/perfil", icono: Settings, etiqueta: "Perfil" },
-  ];
-
-  /**
-   * Manejador para alternar el estado expandido/colapsado
-   * Alternativa el estado booleano para mostrar u ocultar las opciones
-   * en vista móvil donde el menú lateral se superpone al contenido
-   */
-  const alternarMenu = () => {
-    setExpandido(!expandido);
-  };
+  const [collapsed, setCollapsed] = React.useState(false);
+  const location = useLocation();
 
   return (
-    <nav
-      className="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 min-h-screen"
+    <aside
+      className={`sidebar transition-all duration-300 ease-in-out ${
+        collapsed ? "sidebar-collapsed" : ""
+      }`}
+      aria-label="Navegación principal"
     >
-      <div className="p-6 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          UniTrade
-        </h2>
-        <button
-          onClick={alternarMenu}
-          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-          aria-label="Abrir/cerrar menú"
+      <div className="sidebar-logo flex items-center justify-between">
+        <NavLink
+          to="/dashboard"
+          className="flex items-center gap-3 group"
+          aria-label="UniTrade - Inicio"
         >
-          {expandido ? <svg
-            className="w-6 h-6"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path d="M15 18l-6-6L2 12l6-6" />
-          </svg> : <svg
-            className="w-6 h-6"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path d="M15 18l-6-6L2 12l6-6" />
-          </svg>}
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          {!collapsed && (
+            <span className="text-xl font-bold text-white text-gradient">
+              UniTrade
+            </span>
+          )}
+        </NavLink>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors flex-shrink-0"
+          aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <ChevronLeft className="w-5 h-5" />
+          )}
         </button>
       </div>
 
-      <ul className="space-y-1 px-2 pb-4">
-        {opcionesMenu.map((opcion) => (
-          <li
-            key={opcion.ruta}
-            className={
-              expandido
-                ? "px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                : "hidden"
-            }
-          >
-            <a
-              href={opcion.ruta}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-            >
-              <opcion.icono className="w-4 h-4" />
-              <span>{opcion.etiqueta}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin" role="navigation">
+        <ul className="space-y-1" role="list">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive: active }) => `
+                    sidebar-nav-item ${active ? "sidebar-nav-item-active" : ""}
+                    ${collapsed ? "justify-center px-3" : ""}
+                  `}
+                  title={collapsed ? item.label : undefined}
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => collapsed && setCollapsed(false)}
+                >
+                  <Icon
+                    className={`w-5 h-5 flex-shrink-0 ${
+                      isActive ? "text-[var(--color-neon)]" : "text-gray-400 group-hover:text-white"
+                    } transition-colors`}
+                    aria-hidden="true"
+                  />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </NavLink>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="sidebar-footer">
+        {!collapsed && (
+          <div className="glass-panel p-3">
+            <p className="text-xs text-gray-500 text-center">
+              Modo oscuro forzado
+            </p>
+          </div>
+        )}
+      </div>
+    </aside>
   );
 };
+
+export default NavegacionLateral;
