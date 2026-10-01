@@ -19,13 +19,13 @@ import ResumenDesgloseComision from "../componentes/pasarela/ResumenDesgloseComi
  * - Al hacer clic en "Confirmar y Pagar (Sandbox)", envía POST /api/payments/checkout
  */
 
-export const PaginaPagoReserva = () => {
+export default function PaginaPagoReserva() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen page-bg">
       <Encabezado />
 
-      <main className="mt-8 max-w-7xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 className="text-2xl font-bold text-white mb-4">
           Pago y Reserva
         </h2>
 
@@ -37,4 +37,4 @@ export const PaginaPagoReserva = () => {
       </main>
     </div>
   );
-};
+}

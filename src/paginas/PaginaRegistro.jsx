@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Encabezado } from "../componentes/comunes/Encabezado";
-import { FormularioRegistro } from "../componentes/auth/FormularioRegistro";
+import FormularioRegistro from "../componentes/auth/FormularioRegistro";
 
 /**
  * PaginaRegistro - Página de registro de usuario
@@ -17,7 +17,7 @@ import { FormularioRegistro } from "../componentes/auth/FormularioRegistro";
  * - En producción: POST /api/auth/register con validación de dominio
  */
 
-export const PaginaRegistro = () => {
+export default function PaginaRegistro() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Encabezado />
@@ -34,4 +34,4 @@ export const PaginaRegistro = () => {
       </main>
     </div>
   );
-};
+}

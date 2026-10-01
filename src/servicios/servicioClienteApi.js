@@ -26,8 +26,6 @@
  */
 
 import axios from "axios";
-import { useContext } from "react";
-import { AuthContext } from "../contexto/ContextoAutenticacion";
 
 /**
  * Crear instancia de Axios con configuración base
@@ -45,18 +43,18 @@ export const servicioClienteApi = axios.create({
 
 /**
  * Interceptor de petición: Adjunta el token JWT automáticamente
- * - Obtiene el token del contexto global de autenticación
+ * - Obtiene el token de localStorage directamente (no se pueden usar hooks aquí)
  * - Si hay un token, lo agrega en el header Authorization con formato Bearer
  * - Esto ocurre en cada petición automáticamente sin necesidad de agregar manualmente
  */
 servicioClienteApi.interceptors.request.use(
   async (config) => {
-    /** Obtener el usuario y token del contexto React */
-    const { usuario } = useContext(AuthContext);
+    /** Obtener el token de localStorage directamente */
+    const token = localStorage.getItem("uniTrade_token");
 
-    /** Si el usuario tiene token, adjúntelo al header de autorización */
-    if (usuario && usuario.token) {
-      config.headers.Authorization = `Bearer ${usuario.token}`;
+    /** Si hay token, adjúntelo al header de autorización */
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     /** Modo mock: Si VITE_USAR_MOCK=true, registrar pero no bloquear */

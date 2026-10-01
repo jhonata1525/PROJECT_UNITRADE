@@ -1,165 +1,167 @@
 /**
  * @file servicioBilletera.js
- * Servicio específico para la billetera virtual de UniTrade (HU-10).
- *
- * Este módulo encapsula todas las peticiones relacionadas con la gestión de
- * fondos, saldos, historial de transacciones y retiros de ganancias para la
- * historia de usuario HU-10: "Billetera Virtual y Retiro de Ganancias".
- *
- * Endpoints de producción:
- * - GET /api/wallet/balance → Obtener saldo disponible y total ganado
- * - GET /api/wallet/historial → Historial de transacciones y retiros
- * - POST /api/wallet/withdraw → Solicitar retiro de fondos a entidad financiera
- * - GET /api/wallet/entidades → Listar entidades compatibles (Nequi, Daviplata, etc.)
- *
- * Features:
- * - Consumo de endpoints específicos de wallet
- * - Validación reactiva de montos contra saldo disponible
- * - Formateo automático de valores COP antes y después de las peticiones
- * - Manejo de estados loading/error/success en todas las llamadas
- * - Integración con modo mock (VITE_USAR_MOCK) para desarrollo sin backend
- *
- * Flujo de retiro típico:
- * 1. Usuario accede a VistaBilleteraVirtual
- * 2. Completa FormularioRetiroFondos (entidad, número, monto)
- * 3. Validación reactiva: monto ≤ saldo disponible
- * 4. Llama a servicioBilletera.withdraw(datosRetiro)
- * 5. POST /api/wallet/withdraw envía los datos al backend
- * 6. Backend responde con { solicitudId, estado "Procesando"/"Transferido" }
- * 7. Frontend muestra IndicadorCarga y actualizaHistorialTransacciones
+ * Servicio mock para la billetera virtual de UniTrade (HU-10).
+ * Maneja balance, historial de transacciones y retiros usando localStorage para persistencia.
  */
 
-import axios from "axios";
-import { servicioClienteApi } from "./servicioClienteApi";
-
-/** Base URL heredada */
-const API_BASE = servicioClienteApi.baseURL;
-
-/**
- * Obtener balance y datos de la wallet
- * @returns {Promise<object>} { saldoDisponible, totalGanado, retirosProceso }
- */
-export const obtenerBalance = async () => {
-  /** Modo mock: datos simulados para desarrollo */
-  if (import.meta.env.VITE_USAR_MOCK === "true") {
-    return {
-      saldoDisponible: 125000,
-      totalGanado: 450000,
-      retirosProceso: 2,
-    };
-  }
-
-  /** Producción: fetch real al endpoint GET /api/wallet/balance */
-  try {
-    const respuesta = await servicioClienteApi.get("/wallet/balance");
-    return respuesta.data || {
-      saldoDisponible: 0,
-      totalGanado: 0,
-      retirosProceso: 0,
-    };
-  } catch (error) {
-    /** Manejo de errores en obtención de balance */
-    const mensaje =
-      error.response?.data?.message || error.message || "Error al obtener balance";
-    throw new Error(`Error al obtener datos de wallet: ${mensaje}`);
-  }
+const STORAGE_KEYS = {
+  BALANCE: "untrade_wallet_balance",
+  HISTORIAL: "untrade_wallet_historial",
+  ENTIDADES: "untrade_wallet_entidades",
 };
 
-/**
- * Obtener historial de transacciones de la wallet
- * @returns {Promise<Array>} Array de objetos de transacción { id, monto, fecha, estado, concepto }
- */
-export const obtenerHistorialTransacciones = async () => {
-  /** Modo mock */
-  if (import.meta.env.VITE_USAR_MOCK === "true") {
-    return [
+/** Inicializa datos mock en localStorage si no existen */
+const inicializarDatosMock = () => {
+  if (!localStorage.getItem(STORAGE_KEYS.BALANCE)) {
+    const balanceInicial = {
+      saldoDisponible: 125000,
+      totalGanado: 450000,
+      retirosProceso: 0,
+    };
+    localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(balanceInicial));
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.HISTORIAL)) {
+    const historialInicial = [
       {
         id: "tx-001",
+        tipo: "INGRESO",
+        concepto: "Alquiler - Mesa de estudio",
         monto: 50000,
         fecha: "2024-01-15",
-        estado: "Transferido",
-        concepto: "Alquiler - Mesa de estudio",
+        estado: "COMPLETADO",
+        destino: "Billetera UniTrade",
       },
       {
         id: "tx-002",
+        tipo: "INGRESO",
+        concepto: "Alquiler - Silla ergonómica",
         monto: 30000,
         fecha: "2024-01-10",
-        estado: "Procesado",
-        concepto: "Alquiler - Silla ergonómica",
+        estado: "COMPLETADO",
+        destino: "Billetera UniTrade",
       },
     ];
+    localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historialInicial));
   }
 
-  /** Producción */
-  try {
-    const respuesta = await servicioClienteApi.get("/wallet/historial");
-    return respuesta.data || [];
-  } catch (error) {
-    throw new Error(
-      error.response?.data?.message || "Error al obtener historial de transacciones"
-    );
-  }
-};
-
-/**
- * Solicitar retiro de fondos a entidad financiera
- * @param {object} datosRetiro - Datos del retiro a solicitar
- * @param {string} datosRetiro.entidadFinanciera - Nequi, Daviplata, Ahorro a la Mano, Banco Colombia
- * @param {string} datosRetiro.numeroCuenta - Número de cuenta o teléfono celular
- * @param {number} datosRetiro.monto - Monto a retirar (debe ser ≤ saldo disponible)
- * @returns {Promise<object>} Respuesta del backend con estado de la solicitud
- */
-export const solicitarRetiro = async (datosRetiro) => {
-  /** Validación básica de campos requeridos */
-  if (!datosRetiro?.entidadFinanciera || !datosRetiro?.monto) {
-    throw new Error("Datos de retiro incompletos: entidad y monto son obligatorios");
-  }
-
-  /** Modo mock: simular proceso de retiro exitoso */
-  if (import.meta.env.VITE_USAR_MOCK === "true") {
-    return {
-      success: true,
-      solicitudId: `mock-retiro-${Date.now()}`,
-      estado: "Transferido",
-      mensaje: "Retiro procesado exitosamente en modo simulador",
-    };
-  }
-
-  /** Producción: POST /api/wallet/withdraw */
-  try {
-    const respuesta = await servicioClienteApi.post("/wallet/withdraw", datosRetiro);
-    return respuesta.data;
-  } catch (error) {
-    const mensajeError =
-      error.response?.data?.message || error.message || "Error en solicitud de retiro";
-    throw new Error(`Error en solicitud de retiro: ${mensajeError}`);
-  }
-};
-
-/**
- * Listar entidades financieras compatibles con UniTrade
- * @returns {Promise<Array>} Array de objetos { valor, label } para el selector
- */
-export const listarEntidades = async () => {
-  /** Modo mock */
-  if (import.meta.env.VITE_USAR_MOCK === "true") {
-    return [
+  if (!localStorage.getItem(STORAGE_KEYS.ENTIDADES)) {
+    const entidades = [
       { valor: "Nequi", label: "Nequi" },
       { valor: "Daviplata", label: "Daviplata" },
       { valor: "Ahorro a la Mano", label: "Ahorro a la Mano" },
       { valor: "Banco Colombia", label: "Banco Colombia" },
     ];
-  }
-
-  /** Producción */
-  try {
-    const respuesta = await servicioClienteApi.get("/wallet/entidades");
-    return respuesta.data || [];
-  } catch (error) {
-    throw new Error(
-      error.response?.data?.message || "Error al listar entidades financieras"
-    );
+    localStorage.setItem(STORAGE_KEYS.ENTIDADES, JSON.stringify(entidades));
   }
 };
 
-export default { obtenerBalance, obtenerHistorialTransacciones, solicitarRetiro, listarEntidades };
+/** Genera ID único para transacciones */
+const generarId = () => `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+/** Obtiene balance actual desde localStorage */
+export const obtenerBalance = async () => {
+  inicializarDatosMock();
+  const data = localStorage.getItem(STORAGE_KEYS.BALANCE);
+  return data ? JSON.parse(data) : { saldoDisponible: 0, totalGanado: 0, retirosProceso: 0 };
+};
+
+/** Obtiene historial de transacciones desde localStorage */
+export const obtenerHistorialTransacciones = async () => {
+  inicializarDatosMock();
+  const data = localStorage.getItem(STORAGE_KEYS.HISTORIAL);
+  return data ? JSON.parse(data) : [];
+};
+
+/** Obtiene lista de entidades financieras */
+export const listarEntidades = async () => {
+  inicializarDatosMock();
+  const data = localStorage.getItem(STORAGE_KEYS.ENTIDADES);
+  return data ? JSON.parse(data) : [];
+};
+
+/**
+ * Solicita retiro de fondos
+ * Valida que el monto no supere el saldo disponible
+ * Actualiza balance y agrega transacción al historial
+ */
+export const solicitarRetiro = async (datosRetiro) => {
+  const { entidadFinanciera, numeroCuenta, monto } = datosRetiro;
+
+  if (!entidadFinanciera || !monto) {
+    throw new Error("Entidad financiera y monto son obligatorios");
+  }
+
+  const balance = await obtenerBalance();
+
+  if (monto > balance.saldoDisponible) {
+    throw new Error(`Monto insuficiente. Saldo disponible: ${balance.saldoDisponible.toLocaleString()} COP`);
+  }
+
+  /** Actualiza balance */
+  const nuevoBalance = {
+    ...balance,
+    saldoDisponible: balance.saldoDisponible - monto,
+    retirosProceso: balance.retirosProceso + 1,
+  };
+  localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(nuevoBalance));
+
+  /** Agrega transacción al historial */
+  const historial = await obtenerHistorialTransacciones();
+  const nuevaTransaccion = {
+    id: generarId(),
+    tipo: "RETIRO",
+    concepto: `Retiro a ${entidadFinanciera} (${numeroCuenta.slice(-4).padStart(numeroCuenta.length, '*')})`,
+    monto,
+    fecha: new Date().toISOString().split("T")[0],
+    estado: "COMPLETADO",
+    destino: entidadFinanciera,
+  };
+  historial.unshift(nuevaTransaccion);
+  localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historial));
+
+  /** Simula procesamiento asíncrono */
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  return {
+    success: true,
+    solicitudId: `retiro-${Date.now()}`,
+    estado: "COMPLETADO",
+    mensaje: "Retiro procesado exitosamente",
+    transaccion: nuevaTransaccion,
+  };
+};
+
+/** Agrega un ingreso al historial y actualiza balance (para testing/integración) */
+export const agregarIngreso = async (concepto, monto) => {
+  const balance = await obtenerBalance();
+  const nuevoBalance = {
+    ...balance,
+    saldoDisponible: balance.saldoDisponible + monto,
+    totalGanado: balance.totalGanado + monto,
+  };
+  localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(nuevoBalance));
+
+  const historial = await obtenerHistorialTransacciones();
+  const nuevaTransaccion = {
+    id: generarId(),
+    tipo: "INGRESO",
+    concepto,
+    monto,
+    fecha: new Date().toISOString().split("T")[0],
+    estado: "COMPLETADO",
+    destino: "Billetera UniTrade",
+  };
+  historial.unshift(nuevaTransaccion);
+  localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historial));
+
+  return nuevoBalance;
+};
+
+export default {
+  obtenerBalance,
+  obtenerHistorialTransacciones,
+  solicitarRetiro,
+  listarEntidades,
+  agregarIngreso,
+};

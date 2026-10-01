@@ -20,22 +20,42 @@
  * - ProtectedRoute: Componente que valida autenticación antes de renderizar hijos
  */
 
-import React, { Suspense, lazy } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ProveedorAutenticacion, useAuth } from "../contexto/ContextoAutenticacion";
-
-const PaginaDashboard = lazy(() => import("../paginas/PaginaDashboard"));
-const PaginaBilletera = lazy(() => import("../paginas/PaginaBilletera"));
-const PaginaPagoReserva = lazy(() => import("../paginas/PaginaPagoReserva"));
-const PaginaInicioSesion = lazy(() => import("../paginas/PaginaInicioSesion"));
-const PaginaRegistro = lazy(() => import("../paginas/PaginaRegistro"));
+import PaginaDashboard from "../paginas/PaginaDashboard";
+import PaginaBilletera from "../paginas/PaginaBilletera";
+import PaginaPagoReserva from "../paginas/PaginaPagoReserva";
+import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
+import PaginaRegistro from "../paginas/PaginaRegistro";
 
 /**
  * ProtectedRoute - Wrapper que protege rutas requiriendo autenticación
  * Si no hay usuario autenticado, redirige a /login
+ * Muestra loading mientras se verifica la sesión
  */
 const ProtectedRoute = ({ children }) => {
-  const { usuario } = useAuth();
+  const { usuario, cargando } = useAuth();
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <svg
+            className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" />
+            <path className="opacity-75" d="M12 2a10 10 0 0 1 10 10" />
+          </svg>
+          <p className="text-gray-500 dark:text-gray-400">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!usuario) {
     return <Navigate to="/login" replace />;
@@ -44,67 +64,47 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const Loader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-    <div className="text-center">
-      <svg
-        className="animate-spin h-12 w-12 text-primary mx-auto mb-4"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <circle className="opacity-25" cx="12" cy="12" r="10" />
-        <path className="opacity-75" d="M12 2a10 10 0 0 1 10 10" />
-      </svg>
-      <p className="text-gray-500 dark:text-gray-400">Cargando...</p>
-    </div>
-  </div>
-);
-
 const EnrutadorAplicacion = () => {
   return (
     <Router>
       <ProveedorAutenticacion>
-        <Suspense fallback={<Loader />}>
-          <Routes>
-            {/* Rutas públicas */}
-            <Route path="/login" element={<PaginaInicioSesion />} />
-            <Route path="/registro" element={<PaginaRegistro />} />
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path="/login" element={<PaginaInicioSesion />} />
+          <Route path="/registro" element={<PaginaRegistro />} />
 
-            {/* Ruta raíz redirige a login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Ruta raíz redirige a login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Rutas protegidas */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <PaginaDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/billetera"
-              element={
-                <ProtectedRoute>
-                  <PaginaBilletera />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pago"
-              element={
-                <ProtectedRoute>
-                  <PaginaPagoReserva />
-                </ProtectedRoute>
-              }
-            />
+          {/* Rutas protegidas */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <PaginaDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billetera"
+            element={
+              <ProtectedRoute>
+                <PaginaBilletera />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pago"
+            element={
+              <ProtectedRoute>
+                <PaginaPagoReserva />
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Fallback para rutas no encontradas */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Suspense>
+          {/* Fallback para rutas no encontradas */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
       </ProveedorAutenticacion>
     </Router>
   );
