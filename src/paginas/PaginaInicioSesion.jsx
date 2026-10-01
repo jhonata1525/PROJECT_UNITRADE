@@ -11,8 +11,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 
-export const PaginaInicioSesion = () => {
-  // Hooks SIEMPRE en nivel superior del componente
+const PaginaInicioSesion = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -21,7 +20,6 @@ export const PaginaInicioSesion = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  /** Valida que el correo sea institucional @unisimon.edu.co */
   const validarEmailInstitucional = (correo) => {
     return correo.endsWith("@unisimon.edu.co");
   };
@@ -29,25 +27,25 @@ export const PaginaInicioSesion = () => {
   const manejarSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     if (!email || !password) {
       setError("Por favor completa todos los campos");
+      setLoading(false);
       return;
     }
 
     if (!validarEmailInstitucional(email)) {
       setError("El correo debe ser institucional (@unisimon.edu.co)");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
     try {
       await login({ email, password });
-      // Solo navegación aquí, SIN useNavigate()
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err.message || "Credenciales inválidas. Intenta nuevamente.");
+      setError(err.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -57,7 +55,6 @@ export const PaginaInicioSesion = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-          {/* Logo y título */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <svg
@@ -80,19 +77,13 @@ export const PaginaInicioSesion = () => {
             </p>
           </div>
 
-          {/* Mensaje de error */}
           {error && (
-            <div
-              className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm"
-              role="alert"
-            >
+            <div className="p-3 bg-red-100 text-red-700 rounded-lg mb-6" role="alert">
               {error}
             </div>
           )}
 
-          {/* Formulario de login */}
           <form onSubmit={manejarSubmit} className="space-y-5">
-            {/* Email */}
             <div>
               <label
                 htmlFor="email"
@@ -118,7 +109,6 @@ export const PaginaInicioSesion = () => {
               </p>
             </div>
 
-            {/* Contraseña */}
             <div>
               <label
                 htmlFor="password"
@@ -143,7 +133,6 @@ export const PaginaInicioSesion = () => {
               </p>
             </div>
 
-            {/* Botón de envío */}
             <button
               type="submit"
               disabled={loading}
@@ -172,7 +161,6 @@ export const PaginaInicioSesion = () => {
             </button>
           </form>
 
-          {/* Enlace a registro */}
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
             ¿No tienes cuenta?{" "}
             <a
