@@ -124,8 +124,7 @@ export const PaginaDashboard = () => {
       <NavegacionLateral />
 
       <main
-        className="transition-all duration-300 lg:ml-64"
-        style={{ minHeight: "100vh" }}
+        className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6"
       >
         <div className="page-container">
           <div className="mb-8 animate-slide-up">

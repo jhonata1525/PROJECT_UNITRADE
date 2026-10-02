@@ -8,7 +8,7 @@
  */
 
 import React from "react";
-import { Encabezado } from "../componentes/comunes/Encabezado";
+import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import ModalConfirmacionPago from "../componentes/pasarela/ModalConfirmacionPago";
 import ResumenDesgloseComision from "../componentes/pasarela/ResumenDesgloseComision";
 
@@ -21,10 +21,10 @@ import ResumenDesgloseComision from "../componentes/pasarela/ResumenDesgloseComi
 
 export default function PaginaPagoReserva() {
   return (
-    <div className="min-h-screen page-bg">
-      <Encabezado />
+    <div className="min-h-screen bg-[var(--color-canvas)]">
+      <NavegacionLateral onLogout={() => {}} onProfileClick={() => {}} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 py-8">
         <h2 className="text-2xl font-bold text-white mb-4">
           Pago y Reserva
         </h2>

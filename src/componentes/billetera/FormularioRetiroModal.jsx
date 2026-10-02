@@ -1,12 +1,14 @@
+/**
+ * @file FormularioRetiroModal.jsx
+ * Modal para solicitar retiro a Nequi/Daviplata/Banco.
+ * Validaciones: monto mínimo $5.000 COP, no mayor al saldo disponible, número cuenta/teléfono requerido.
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { solicitarRetiro, listarEntidades } from "../../servicios/servicioBilletera";
 
-/**
- * @file FormularioRetiroModal.jsx
- * Modal para solicitar retiro a Nequi/Daviplata.
- * Validación: El monto no debe superar el saldo disponible.
- */
+const MIN_RETIRO = 5000;
 
 export const FormularioRetiroModal = ({
   isOpen,
@@ -55,7 +57,11 @@ export const FormularioRetiroModal = ({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
 
-  const esMontoValido = montoRetiro && !isNaN(parseFloat(montoRetiro)) && parseFloat(montoRetiro) <= saldoDisponible && parseFloat(montoRetiro) > 0;
+  const montoNumerico = parseFloat(montoRetiro);
+  const esMontoValido = montoRetiro &&
+    !isNaN(montoNumerico) &&
+    montoNumerico >= MIN_RETIRO &&
+    montoNumerico <= saldoDisponible;
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
@@ -63,7 +69,13 @@ export const FormularioRetiroModal = ({
     setExito(false);
 
     if (!esMontoValido) {
-      setError("El monto no puede ser mayor al saldo disponible");
+      if (montoRetiro && montoNumerico < MIN_RETIRO) {
+        setError(`El monto mínimo de retiro es $${MIN_RETIRO.toLocaleString()} COP`);
+      } else if (montoNumerico > saldoDisponible) {
+        setError(`El monto no puede ser mayor al saldo disponible ($${saldoDisponible.toLocaleString()} COP)`);
+      } else {
+        setError("Ingresa un monto válido");
+      }
       return;
     }
 
@@ -77,7 +89,7 @@ export const FormularioRetiroModal = ({
       const resultado = await solicitarRetiro({
         entidadFinanciera: entidadSeleccionada,
         numeroCuenta: numeroCuenta.trim(),
-        monto: parseFloat(montoRetiro),
+        monto: montoNumerico,
       });
 
       if (resultado.success) {
@@ -103,26 +115,26 @@ export const FormularioRetiroModal = ({
       aria-labelledby="modal-title"
     >
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
 
-      <div className="flex min-h-full items-center justify-center p-4 text-center">
+      <div className="flex min-h-full items-center justify-center p-4">
         <div
           ref={modalRef}
           tabIndex={-1}
-          className="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 px-6 py-6 shadow-xl transition-all text-left sm:max-w-lg"
+          className="relative w-full max-w-md bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] p-6 animate-scale-in"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 id="modal-title" className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 id="modal-title" className="text-xl font-bold text-white">
               Solicitar Retiro
             </h2>
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors disabled:opacity-50"
               aria-label="Cerrar modal"
             >
               <X className="w-5 h-5" />
@@ -130,7 +142,7 @@ export const FormularioRetiroModal = ({
           </div>
 
           {exito && (
-            <div className="mb-4 p-3 rounded-lg bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-sm text-center">
+            <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm text-center">
               ¡Retiro procesado exitosamente!
             </div>
           )}
@@ -139,7 +151,7 @@ export const FormularioRetiroModal = ({
             <div>
               <label
                 htmlFor="entidadFinanciera"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-300 mb-2"
               >
                 Entidad Financiera
               </label>
@@ -148,7 +160,7 @@ export const FormularioRetiroModal = ({
                 value={entidadSeleccionada}
                 onChange={(e) => setEntidadSeleccionada(e.target.value)}
                 disabled={loading || exito}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="glass-input bg-[var(--color-surface)] cursor-pointer"
               >
                 {entidades.map((entidad) => (
                   <option key={entidad.valor} value={entidad.valor}>
@@ -161,7 +173,7 @@ export const FormularioRetiroModal = ({
             <div>
               <label
                 htmlFor="numeroCuenta"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-300 mb-2"
               >
                 Número de Cuenta / Teléfono
               </label>
@@ -176,10 +188,10 @@ export const FormularioRetiroModal = ({
                     : "Ej: 12345678-9"
                 }
                 disabled={loading || exito}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="glass-input"
                 aria-describedby="telefono-help"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1" id="telefono-help">
+              <p className="text-xs text-gray-500 mt-1" id="telefono-help">
                 Ingresa tu número de Daviplata/Nequi o número de cuenta bancario
               </p>
             </div>
@@ -187,7 +199,7 @@ export const FormularioRetiroModal = ({
             <div>
               <label
                 htmlFor="montoRetiro"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-300 mb-2"
               >
                 Monto a Retirar
               </label>
@@ -198,38 +210,41 @@ export const FormularioRetiroModal = ({
                   id="montoRetiro"
                   value={montoRetiro}
                   onChange={(e) => setMontoRetiro(e.target.value)}
-                  min="1000"
+                  min={MIN_RETIRO}
                   max={saldoDisponible}
                   step="1000"
                   disabled={loading || exito}
-                  className={`w-full pl-7 pr-10 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
+                  className={`glass-input pl-7 pr-10 ${
                     montoRetiro && !esMontoValido
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 dark:border-gray-600"
+                      ? "border-red-500/50 focus:ring-red-500"
+                      : ""
                   }`}
                   placeholder="0"
                   aria-invalid={montoRetiro && !esMontoValido}
-                  aria-describedby="monto-error monto-help"
+                  aria-describedby={montoRetiro && !esMontoValido ? "monto-error" : "monto-help"}
                 />
                 {(montoRetiro && esMontoValido) && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400">✓</span>
                 )}
                 {(montoRetiro && !esMontoValido) && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">⚠</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400">⚠</span>
                 )}
               </div>
               {(montoRetiro && !esMontoValido) && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-1" id="monto-error">
-                  El monto no puede ser mayor al saldo disponible (${saldoDisponible.toLocaleString()})
+                <p className="text-xs text-red-400 mt-1" id="monto-error" role="alert">
+                  {montoNumerico < MIN_RETIRO
+                    ? `El monto mínimo es $${MIN_RETIRO.toLocaleString()} COP`
+                    : `El monto no puede superar el saldo disponible ($${saldoDisponible.toLocaleString()} COP)`
+                  }
                 </p>
               )}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1" id="monto-help">
-                Saldo disponible: ${saldoDisponible.toLocaleString()} COP
+              <p className="text-xs text-gray-500 mt-1" id="monto-help">
+                Saldo disponible: ${saldoDisponible.toLocaleString()} COP · Mínimo: $${MIN_RETIRO.toLocaleString()} COP
               </p>
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-sm" role="alert">
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm" role="alert">
                 {error}
               </div>
             )}
@@ -239,23 +254,23 @@ export const FormularioRetiroModal = ({
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="flex-1 btn-secondary disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={loading || !esMontoValido || exito}
-                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <span className="flex items-center justify-center gap-2">
+                  <>
                     <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                       <circle className="opacity-25" cx="12" cy="12" r="10" />
                       <path className="opacity-75" d="M12 2a10 10 0 0 1 10 10" />
                     </svg>
                     Procesando...
-                  </span>
+                  </>
                 ) : exito ? (
                   "¡Completado!"
                 ) : (

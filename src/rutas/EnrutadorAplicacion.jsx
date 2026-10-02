@@ -2,7 +2,7 @@
  * @file EnrutadorAplicacion.jsx
  * Configuración principal de rutas para la aplicación UniTrade usando React Router DOM.
  * Define todas las rutas públicas y protegidas de la aplicación, organizándolas por
- * secciones principales: auth (login/registro), dashboard, billetera y pasarela de pagos.
+ * secciones principales: auth (login/registro), dashboard, billetera, pasarela de pagos y mis artículos.
  *
  * Rutas públicas (accesibles sin autenticación):
  * - /login → PaginaInicioSesion (formulario de login con email/contraseña)
@@ -13,6 +13,7 @@
  * - /dashboard → PaginaDashboard (panel principal)
  * - /billetera → PaginaBilletera (vista de wallet virtual - HU-10)
  * - /pago → PaginaPagoReserva (modal de confirmación de pago - HU-06)
+ * - /mis-articulos → PaginaMisArticulos (gestión de artículos en alquiler)
  *
  * Componentes utilizados:
  * - Encabezado: Barra superior con nombre del plantilla, datos estudiante y logout
@@ -26,6 +27,8 @@ import { ProveedorAutenticacion, useAuth } from "../contexto/ContextoAutenticaci
 import PaginaDashboard from "../paginas/PaginaDashboard";
 import PaginaBilletera from "../paginas/PaginaBilletera";
 import PaginaPagoReserva from "../paginas/PaginaPagoReserva";
+import PaginaMisArticulos from "../paginas/PaginaMisArticulos";
+import PaginaPerfil from "../paginas/PaginaPerfil";
 import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
 import PaginaRegistro from "../paginas/PaginaRegistro";
 
@@ -39,10 +42,10 @@ const ProtectedRoute = ({ children }) => {
 
   if (cargando) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-canvas)]">
         <div className="text-center">
           <svg
-            className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4"
+            className="animate-spin h-12 w-12 text-[var(--color-neon)] mx-auto mb-4"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -51,7 +54,7 @@ const ProtectedRoute = ({ children }) => {
             <circle className="opacity-25" cx="12" cy="12" r="10" />
             <path className="opacity-75" d="M12 2a10 10 0 0 1 10 10" />
           </svg>
-          <p className="text-gray-500 dark:text-gray-400">Verificando sesión...</p>
+          <p className="text-gray-400">Verificando sesión...</p>
         </div>
       </div>
     );
@@ -98,6 +101,22 @@ const EnrutadorAplicacion = () => {
             element={
               <ProtectedRoute>
                 <PaginaPagoReserva />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mis-articulos"
+            element={
+              <ProtectedRoute>
+                <PaginaMisArticulos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <PaginaPerfil />
               </ProtectedRoute>
             }
           />

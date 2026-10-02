@@ -6,28 +6,26 @@
  * Features principales:
  * - Muestra el artículo universitario reservado (nombre, horas, tarifa/hora)
  * - Desglose financiero transparente:
-   * Subtotal Alquiler
-   * Retención Comisión UniTrade (% de la plataforma)
-   * Total a pagar por el Arrendatario
+ *   * Subtotal Alquiler
+ *   * Retención Comisión UniTrade (% de la plataforma)
+ *   * Total a pagar por el Arrendatario
  * - Botón destacado "Confirmar y Pagar (Sandbox)"
  * - Estados de manejo: Procesando (Spinner), Éxito (Transacción autorizada y reserva a estado "Confirmada") y Error
  * - Comentario explícito sobre el endpoint objetivo: POST /api/payments/checkout.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ModalGenerico from "../comunes/ModalGenerico";
 import IndicadorCarga from "../comunes/IndicadorCarga";
 import AlertaToast from "../comunes/AlertaToast";
 import { useApi } from "../../hooks/useApi";
-import { useContext } from "react";
-import { AuthContext } from "../../contexto/ContextoAutenticacion";
-import { useNavigate } from "react-router-dom";
+import { X, CheckCircle2, AlertCircle, Loader2, CreditCard } from "lucide-react";
 
 /**
  * ModalConfirmacionPago - Modal de confirmación de pago con desglose de comisión
  *
  * Estados de la interfaz:
- * - "idle": Estado inicial, muestra el resumen estático y botón de confirmar
+ * - "idle": Estado inicial, modal CERRADO, muestra resumen estático y botón de confirmar
  * - "processing": Cuando el usuario hace clic en confirmar, muestra spinner y desactiva botón
  * - "success": Después de autorización exitosa, muestra mensaje de transacción confirmada
  * - "error": Si la petición falla, muestra mensaje de error con detalles
@@ -36,7 +34,7 @@ import { useNavigate } from "react-router-dom";
  *
  * Datos simulados (cuando VITE_USAR_MOCK=true):
  * - artículo: { nombre: "Mesa de estudio", horas: 4, tarifaHora: 15000 }
- * - comisionPlataforma: 0.10 (10%)
+ * - comisionPlataforma: 0.12 (12% - RN-08 UniTrade)
  * - subtotal: horas * tarifaHora
  * - retención: subtotal * comisionPlataforma
  * - total: subtotal - retención
@@ -45,9 +43,14 @@ import { useNavigate } from "react-router-dom";
  * Datos enviados: { itemId, horas, subtotal, retencion, total, usuarioId }
  */
 
+const COMISION_PORCENTAJE = 0.12; // 12% comisión UniTrade (RN-08)
+
+const formatCOP = (valor) =>
+  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(valor);
+
 const ModalConfirmacionPago = () => {
   /** Hook personalizado que maneja estados loading/error/success y fetch al endpoint */
-  const { datos, loading, error, fetchApi, execute } = useApi("/api/payments/checkout");
+  const { execute } = useApi("/api/payments/checkout");
 
   /** Estado interno para gestionar la vista actual del modal */
   const [vista, setVista] = useState("idle"); // idle | processing | success | error
@@ -61,9 +64,14 @@ const ModalConfirmacionPago = () => {
 
   /** Desglose financiero calculado a partir de los datos del artículo */
   const subtotal = articulo.horas * articulo.tarifaHora;
-  const comisionPorcentaje = 0.10; // 10% comisión UniTrade (constante de negocio)
-  const retencion = subtotal * comisionPorcentaje;
+  const retencion = subtotal * COMISION_PORCENTAJE;
   const totalPagar = subtotal - retencion;
+
+  /** Manejador para cerrar el modal correctamente */
+  const manejarCerrar = useCallback((e) => {
+    if (e) e.stopPropagation();
+    setVista("idle");
+  }, []);
 
   /** Manejador para confirmar y procesar el pago */
   const manejarConfirmarPago = async () => {
@@ -78,183 +86,146 @@ const ModalConfirmacionPago = () => {
 
     // Ejecutar la petición POST al endpoint de checkout
     try {
-      const respuesta = await execute({
+      await execute({
         metodo: "POST",
         datos: {
           itemId: articulo.nombre,
           horas: articulo.horas,
-          subtotal: subtotal,
-          retencion: retencion,
+          subtotal,
+          retencion,
           total: totalPagar,
           moneda: "COP",
         },
       });
 
-      // En caso de éxito: transición a vista success y mostrar toast
+      // En caso de éxito: transición a vista success
       setVista("success");
-      // TODO: Toast de éxito - "Transacción autorizada y reserva confirmada"
-      // En producción aquí recibiríamos: { transactionId, estado: "confirmada" }
     } catch (err) {
       // En caso de error: transición a vista error
       setVista("error");
-      // TODO: Toast de error con mensaje de la falla
     }
   };
 
   /** Efecto que reacciona al cambio de vista para manejar navegación/post-procesado */
   useEffect(() => {
-    switch (vista) {
-      case "success": {
-        // En un caso completo, aquí navegaríamos a la página de confirmación
-        // o mostraríamos el resumen de que la reserva está "Confirmada"
-        setTimeout(() => {
-          // window.location.href = "/confirmacion-pago";
-        }, 2000);
-        break;
-      }
-      case "error": {
-        // Mantener el usuario informado y permitir reintentar
-        break;
-      }
-      default:
-        break;
+    if (vista === "success") {
+      setTimeout(() => {
+        // window.location.href = "/confirmacion-pago";
+      }, 2000);
     }
   }, [vista]);
 
   return (
     <ModalGenerico
-      abierto={vista !== "idle" || true} // Siempre visible para HU-06
+      abierto={vista !== "idle"}
       titulo="Confirmar Pago - UniTrade"
-      onCancelar={() => setVista("idle")}
+      onCancelar={manejarCerrar}
+      size="md"
     >
       {/* Resumen del artículo reservado */}
-      <div className="space-y-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+      <div className="space-y-4 pb-4 border-b border-[var(--color-border)]">
+        <h2 className="text-lg font-medium text-white">
           Resumen de tu reserva
         </h2>
 
         {/* Nombre del artículo */}
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-6 h-6 text-gray-500 dark:text-gray-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
-              <path d="M9 10H7a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-2" />
-            </svg>
+          <div className="w-12 h-12 rounded-xl bg-[var(--color-canvas)] flex items-center justify-center flex-shrink-0">
+            <CreditCard className="w-6 h-6 text-[var(--color-neon)]" />
           </div>
           <div className="flex-1 pt-1">
-            <p className="text-gray-700 dark:text-gray-300">
-              {articulo.nombre}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {articulo.horas} horas seleccionadas · ${articulo.tarifaHora}/hora
+            <p className="text-white">{articulo.nombre}</p>
+            <p className="text-sm text-gray-400">
+              {articulo.horas} horas seleccionadas · {formatCOP(articulo.tarifaHora)}/h
             </p>
           </div>
         </div>
 
         {/* Tarifa por hora desglosada */}
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Tarifa por hora:</span>
-          <span className="font-medium">${articulo.tarifaHora.toLocaleString()}</span>
-          <span className="text-gray-500 dark:text-gray-400">Horas:</span>
-          <span className="font-medium">{articulo.horas}</span>
+          <span className="text-gray-400">Tarifa por hora:</span>
+          <span className="font-medium text-white">{formatCOP(articulo.tarifaHora)}</span>
+          <span className="text-gray-400">Horas:</span>
+          <span className="font-medium text-white">{articulo.horas}</span>
         </div>
       </div>
 
       {/* Desglose financiero transparente */}
-      <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+      <div className="space-y-3 pb-4 border-b border-[var(--color-border)]">
+        <h3 className="text-sm font-medium text-gray-400">
           Desglose financiero
         </h3>
 
         {/* Subtotal Alquiler */}
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Subtotal Alquiler</span>
-          <span className="font-medium">${subtotal.toLocaleString()}</span>
+          <span className="text-gray-400">Subtotal Alquiler</span>
+          <span className="font-medium text-white">{formatCOP(subtotal)}</span>
         </div>
 
-        {/* Retención Comisión UniTrade (%) */}
+        {/* Retención Comisión UniTrade (12%) */}
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">
-            Retención Comisión UniTrade ({comisionPorcentaje * 100}%)
+          <span className="text-gray-400">
+            Retención Comisión UniTrade ({(COMISION_PORCENTAJE * 100).toFixed(0)}%)
           </span>
-          <span className="font-medium text-red-600 dark:text-red-400">
-            -${retencion.toLocaleString()}
+          <span className="font-medium text-red-400">
+            -{formatCOP(retencion)}
           </span>
         </div>
 
         {/* Total a pagar por el Arrendatario */}
-        <div className="flex justify-between text-bold border-t border-gray-200 dark:border-gray-700 pt-3">
-          <span className="text-gray-600 dark:text-gray-400">Total a pagar</span>
-          <span className="font-xl text-red-600 dark:text-red-300">
-            $${totalPagar.toLocaleString()}
+        <div className="flex justify-between font-bold border-t border-[var(--color-border)] pt-3">
+          <span className="text-gray-400">Total a pagar</span>
+          <span className="text-xl text-[var(--color-neon)]">
+            {formatCOP(totalPagar)}
           </span>
         </div>
       </div>
 
       {/* Botón de acción principal */}
       <div className="pt-4">
-        {/* Botón destacado "Confirmar y Pagar (Sandbox)" */}
         {vista === "processing" ? (
           <IndicadorCarga texto="Procesando" tamaño="sm" />
         ) : (
-          <BotonDestacado
+          <button
             onClick={manejarConfirmarPago}
             disabled={vista !== "idle"}
-            clase="w-full"
+            className="w-full btn-primary py-3 px-6 rounded-full font-medium transition-colors
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+              focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
           >
             {vista === "processing"
-              ? "Procesando..."
-              : "Confirmar y Pagar (Sandbox)"}
-          </BotonDestacado>
+              ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Procesando...</>
+              : <><CreditCard className="w-5 h-5 mr-2" /> Confirmar y Pagar (Sandbox)</>}
+          </button>
         )}
       </div>
 
       {/* Mostrar estado de éxito o error */}
       {vista === "success" && (
-        <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 p-4 rounded-md mb-4 text-center">
-          <p className="font-medium">Transacción autorizada</p>
-          <p className="text-sm mt-1">
+        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-4 rounded-xl mb-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <CheckCircle2 className="w-5 h-5" />
+            <p className="font-medium">Transacción autorizada</p>
+          </div>
+          <p className="text-sm">
             Tu reserva ha sido confirmada y el artículo está reservado para ti.
           </p>
         </div>
       )}
 
       {vista === "error" && (
-        <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300 p-4 rounded-md mb-4 text-center">
-          <p className="font-medium">Error en el pago</p>
-          <p className="text-sm mt-1">
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl mb-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <AlertCircle className="w-5 h-5" />
+            <p className="font-medium">Error en el pago</p>
+          </div>
+          <p className="text-sm">
             No fue posible procesar el pago en este momento. Inténtalo de nuevo.
           </p>
         </div>
       )}
     </ModalGenerico>
-  );
-};
-
-/** Componente helper BotonDestacado usado dentro del modal */
-const BotonDestacado = ({
-  onClick,
-  children,
-  disabled = false,
-  clase = "btn-primary",
-}) => {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={` ${clase} py-3 px-6 rounded-full font-medium transition-colors
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-        focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed`}
-      type="button"
-    >
-      {children}
-    </button>
   );
 };
 

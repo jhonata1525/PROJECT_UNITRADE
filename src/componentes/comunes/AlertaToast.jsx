@@ -5,67 +5,89 @@
  * Accesible con role="alert" y aria-live="polite" para lectores de pantalla.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { X } from "lucide-react";
 
-/**
- * AlertaToast - Componente de mensaje temporario
- * Props:
- * - tipo: "éxito" | "error" | "advertencia" define el estilo visual
- * - mensaje: string el texto a mostrar al usuario
- * - duracion: número milisegundos antes de auto-ocultarse (default: 5000)
- *
- * Características de accesibilidad:
- * - role="alert" notifica automáticamente a lectores de pantalla
- * - aria-live="polite" para anuncios no interruptivos
- * - focus trapping no necesario ya que es efímero, pero se mantiene outline visible
- *
- * Casos de uso en la aplicación:
- * - Después de un retiro exitoso: "Retiro de $50.000 procesado correctamente"
- * - Si falla la transacción: "Saldo insuficiente para el retiro solicitado"
- * - Confirmación de pago: "Pago autorizado en sandbox UniTrade"
- *
- * Flujo de funcionamiento:
- * 1. Componente se monta con el mensaje y tipo indicados
- * 2. useEffect inicia un timeout para auto-cerrar
- * 3. El padre controla cuándo mostrar el toast mediante el prop 'mostrar'
- * 4. Al expirar el tiempo, el toast se oculta y el estado se resetea
- */
-const AlertaToast = ({ tipo, mensaje, duracion = 5000 }) => {
-  /** Controla si el toast es visible actualmente */
+const AlertaToast = ({ tipo, mensaje, duracion = 5000, onClose }) => {
   const [mostrar, setMostrar] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const timeoutRef = useRef(null);
 
-  /** Al montar el componente, iniciar el auto-cierre después de 'duracion' ms */
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMostrar(false);
+    setMostrar(true);
+    setExiting(false);
+
+    timeoutRef.current = setTimeout(() => {
+      setExiting(true);
+      setTimeout(() => {
+        setMostrar(false);
+        onClose?.();
+      }, 300);
     }, duracion);
 
-    // Limpiar timeout al desmontar el componente
-    return () => clearTimeout(timer);
-  }, [mensaje, tipo, duracion, setMostrar]);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [mensaje, tipo, duracion, onClose]);
 
-  /** Clasetas CSS según el tipo de mensaje */
   const clasesTipo = {
-    éxito: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-    error: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-    advertencia: "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-300",
-  }[tipo] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+    éxito: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+    error: "bg-red-500/10 border-red-500/30 text-red-400",
+    advertencia: "bg-amber-500/10 border-amber-500/30 text-amber-400",
+  }[tipo] || "bg-gray-500/10 border-gray-500/30 text-gray-400";
+
+  const iconos = {
+    éxito: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    ),
+    error: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
+    advertencia: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+  };
+
+  if (!mostrar) return null;
 
   return (
     <div
       role="alert"
       aria-live="polite"
-      className={`fixed bottom-4 left-1/2 transform -x-1/2 ${clasesTipo} px-6 py-3 rounded-full shadow-xl max-w-md z-50 opacity-0 transition-opacity duration-500`}
-      onClick={() => setMostrar(false)}
-      style={{ visibility: mostrar ? "visible" : "hidden" }}
+      className={`fixed bottom-4 right-4 ${clasesTipo} border px-4 py-3 rounded-xl shadow-2xl max-w-md z-50 flex items-start gap-3 animate-slide-up ${exiting ? "animate-fade-out" : ""}`}
+      onClick={() => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setExiting(true);
+        setTimeout(() => {
+          setMostrar(false);
+          onClose?.();
+        }, 300);
+      }}
     >
-      <div className="flex items-center gap-3">
-        {/* Ícono según tipo - usando caracteres Unicode simples */}
-        <span className="text-lg">
-          {tipo === "éxito" ? "✓" : tipo === "error" ? "✗" : "!"}
-        </span>
-        <span className="text-sm font-medium">{mensaje}</span>
+      <div className="flex-shrink-0 mt-0.5">{iconos[tipo] || iconos.error}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{mensaje}</p>
       </div>
+      <button
+        onClick={() => {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setExiting(true);
+          setTimeout(() => {
+            setMostrar(false);
+            onClose?.();
+          }, 300);
+        }}
+        className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+        aria-label="Cerrar"
+      >
+        <X className="w-4 h-4" />
+      </button>
     </div>
   );
 };

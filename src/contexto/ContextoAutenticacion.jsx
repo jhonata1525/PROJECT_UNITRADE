@@ -5,13 +5,14 @@
  * No realiza peticiones a backend - autenticación 100% local simulada.
  */
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 const ContextoAutenticacion = createContext({
   usuario: null,
   cargando: true,
   login: async () => {},
   logout: () => {},
+  actualizarUsuario: async () => {},
 });
 
 export { ContextoAutenticacion, ContextoAutenticacion as AuthContext };
@@ -48,6 +49,8 @@ const ProveedorAutenticacion = ({ children }) => {
       nombre: "Jhonatan Acevedo",
       email,
       rol: "estudiante",
+      telefono: null,
+      telefonoVerificado: false,
     };
 
     localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioMock));
@@ -56,13 +59,23 @@ const ProveedorAutenticacion = ({ children }) => {
     return { usuario: usuarioMock };
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUsuario(null);
     localStorage.removeItem("usuario_unitrade");
-  };
+  }, []);
+
+  const actualizarUsuario = useCallback(async (datosActualizados) => {
+    const usuarioActualizado = {
+      ...usuario,
+      ...datosActualizados,
+    };
+    localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioActualizado));
+    setUsuario(usuarioActualizado);
+    return { usuario: usuarioActualizado };
+  }, [usuario]);
 
   return (
-    <ContextoAutenticacion.Provider value={{ usuario, cargando, login, logout }}>
+    <ContextoAutenticacion.Provider value={{ usuario, cargando, login, logout, actualizarUsuario }}>
       {children}
     </ContextoAutenticacion.Provider>
   );

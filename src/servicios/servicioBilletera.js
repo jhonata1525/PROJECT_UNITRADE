@@ -132,6 +132,57 @@ export const solicitarRetiro = async (datosRetiro) => {
   };
 };
 
+/**
+ * Procesa una reserva de alquiler por horas
+ * Descuenta el monto del saldo disponible y registra la transacción
+ */
+export const solicitarReserva = async (datosReserva) => {
+  const { articuloId, articuloNombre, horaInicio, horaFin, horas, tarifaHora, total, pin } = datosReserva;
+
+  if (!articuloId || !total) {
+    throw new Error("Datos de reserva incompletos");
+  }
+
+  const balance = await obtenerBalance();
+
+  if (total > balance.saldoDisponible) {
+    throw new Error(`Saldo insuficiente. Disponible: ${balance.saldoDisponible.toLocaleString()} COP`);
+  }
+
+  /** Actualiza balance */
+  const nuevoBalance = {
+    ...balance,
+    saldoDisponible: balance.saldoDisponible - total,
+    retirosProceso: balance.retirosProceso + 1,
+  };
+  localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(nuevoBalance));
+
+  /** Agrega transacción al historial */
+  const historial = await obtenerHistorialTransacciones();
+  const nuevaTransaccion = {
+    id: generarId(),
+    tipo: "RETIRO",
+    concepto: `Reserva: ${articuloNombre} (${horas}h)`,
+    monto: total,
+    fecha: new Date().toISOString().split("T")[0],
+    estado: "COMPLETADO",
+    destino: "Reserva de alquiler",
+  };
+  historial.unshift(nuevaTransaccion);
+  localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historial));
+
+  /** Simula procesamiento asíncrono */
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  return {
+    success: true,
+    reservaId: `res_${Date.now()}`,
+    estado: "CONFIRMADA",
+    mensaje: "Reserva procesada exitosamente",
+    transaccion: nuevaTransaccion,
+  };
+};
+
 /** Agrega un ingreso al historial y actualiza balance (para testing/integración) */
 export const agregarIngreso = async (concepto, monto) => {
   const balance = await obtenerBalance();
@@ -162,6 +213,7 @@ export default {
   obtenerBalance,
   obtenerHistorialTransacciones,
   solicitarRetiro,
+  solicitarReserva,
   listarEntidades,
   agregarIngreso,
 };
