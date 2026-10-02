@@ -37,3 +37,15 @@ coverage/
 *.tgz
 .cache/
 .eslintcache
+
+# AI/Development tools
+.opencode/
+build_errors.txt
+
+# Temporary test files
+test-temp.jsx
+test-minimal.jsx
+*.tmp
+*.temp
+*.bak
+*.backup
