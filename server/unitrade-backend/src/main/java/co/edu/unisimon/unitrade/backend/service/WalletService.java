@@ -26,25 +26,17 @@ public class WalletService {
     @Transactional(readOnly = true)
     public WalletBalanceDTO getBalance(Long userId) {
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseGet(() -> new Wallet(userId, BigDecimal.ZERO));
+                .orElseGet(() -> new Wallet(userId, BigDecimal.ZERO, "COP"));
         return new WalletBalanceDTO(wallet.getUserId(), wallet.getBalance());
     }
 
     @Transactional
     public void creditSellerBalance(Long sellerId, BigDecimal amount, String description) {
         Wallet wallet = walletRepository.findByUserId(sellerId)
-                .orElseGet(() -> walletRepository.save(new Wallet(sellerId, BigDecimal.ZERO)));
+                .orElseGet(() -> walletRepository.save(new Wallet(sellerId, BigDecimal.ZERO, "COP")));
 
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
-
-        WalletTransaction transaction = new WalletTransaction(
-                wallet.getId(),
-                amount,
-                "CREDIT",
-                description
-        );
-        walletTransactionRepository.save(transaction);
     }
 
     @Transactional
@@ -61,9 +53,11 @@ public class WalletService {
 
         WalletTransaction transaction = new WalletTransaction(
                 wallet.getId(),
+                request.getUserId(),
                 request.getAmount(),
-                "DEBIT",
-                "Retiro a cuenta bancaria: " + request.getBankAccountNumber()
+                request.getFinancialEntity(),
+                request.getAccountNumber(),
+                "PROCESADO"
         );
         WalletTransaction savedTx = walletTransactionRepository.save(transaction);
 
@@ -72,8 +66,8 @@ public class WalletService {
                 wallet.getUserId(),
                 request.getAmount(),
                 wallet.getBalance(),
-                "APPROVED",
-                "Solicitud de retiro procesada exitosamente."
+                "PROCESADO",
+                "Retiro a " + request.getFinancialEntity() + " (" + request.getAccountNumber() + ") procesado con éxito."
         );
     }
 }
