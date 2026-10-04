@@ -9,9 +9,7 @@ import java.util.UUID;
 public class MockPaymentGateway implements PaymentGateway {
 
     @Override
-    public PaymentGatewayResult processPayment(PaymentRequestDTO request) {
-        // Simulación de procesamiento de pasarela de pago exitoso
-        String mockGatewayId = "GW-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        return new PaymentGatewayResult(true, mockGatewayId, "Transacción aprobada por la pasarela simulada");
+    public String processPayment(PaymentRequestDTO request) {
+        return "GW-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }

@@ -14,29 +14,31 @@ import java.math.RoundingMode;
 @Service
 public class PaymentService {
 
-    private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.12"); // RN-08: 12% comisión
-
-    private final PaymentTransactionRepository transactionRepository;
+    private final PaymentTransactionRepository paymentRepository;
     private final PaymentGateway paymentGateway;
+    private final WalletService walletService;
 
-    public PaymentService(PaymentTransactionRepository transactionRepository, PaymentGateway paymentGateway) {
-        this.transactionRepository = transactionRepository;
+    private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.12");
+
+    public PaymentService(PaymentTransactionRepository paymentRepository,
+                          PaymentGateway paymentGateway,
+                          WalletService walletService) {
+        this.paymentRepository = paymentRepository;
         this.paymentGateway = paymentGateway;
+        this.walletService = walletService;
     }
 
     @Transactional
     public PaymentResponseDTO processPayment(PaymentRequestDTO request) {
-        // 1. Cálculo de comisión (RN-08: 12% para la plataforma, 88% para vendedor)
+        // 1. Regla RN-08: Calcular comisión (12%) y monto neto del vendedor (88%)
         BigDecimal grossAmount = request.getAmount();
         BigDecimal platformFee = grossAmount.multiply(COMMISSION_RATE).setScale(2, RoundingMode.HALF_UP);
         BigDecimal netSellerAmount = grossAmount.subtract(platformFee);
 
-        // 2. Procesar pago en la pasarela mediante el Gateway
-        PaymentGateway.PaymentGatewayResult gatewayResult = paymentGateway.processPayment(request);
+        // 2. Procesar cobro mediante la pasarela de pagos
+        String gatewayTxId = paymentGateway.processPayment(request);
 
-        // 3. Crear entidad y guardar la transacción en PostgreSQL
-        String status = gatewayResult.success() ? "COMPLETED" : "FAILED";
-
+        // 3. Persistir la transacción del pago en PostgreSQL
         PaymentTransaction transaction = new PaymentTransaction(
                 request.getOrderId(),
                 request.getBuyerId(),
@@ -45,22 +47,29 @@ public class PaymentService {
                 platformFee,
                 netSellerAmount,
                 request.getPaymentMethod(),
-                status,
-                gatewayResult.transactionId()
+                "COMPLETED",
+                gatewayTxId
         );
 
-        PaymentTransaction savedTransaction = transactionRepository.save(transaction);
+        PaymentTransaction savedTx = paymentRepository.save(transaction);
 
-        // 4. Retornar DTO de respuesta
+        // 4. Integración HU-10: Acreditar automáticamente el 88% neto a la Billetera del vendedor
+        walletService.creditSellerBalance(
+                request.getSellerId(),
+                netSellerAmount,
+                "Abono por venta en orden #" + request.getOrderId()
+        );
+
+        // 5. Devolver DTO de respuesta
         return new PaymentResponseDTO(
-                savedTransaction.getId(),
-                savedTransaction.getOrderId(),
-                savedTransaction.getGrossAmount(),
-                savedTransaction.getPlatformFee(),
-                savedTransaction.getNetSellerAmount(),
-                savedTransaction.getStatus(),
-                savedTransaction.getGatewayTransactionId(),
-                gatewayResult.message()
+                savedTx.getId(),
+                savedTx.getOrderId(),
+                savedTx.getGrossAmount(),
+                savedTx.getPlatformFee(),
+                savedTx.getNetSellerAmount(),
+                savedTx.getStatus(),
+                savedTx.getGatewayTransactionId(),
+                "Pago procesado exitosamente y acreditado a la billetera virtual."
         );
     }
 }
