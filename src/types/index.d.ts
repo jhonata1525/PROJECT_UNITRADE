@@ -15,19 +15,39 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
+/** Franja de disponibilidad para un día */
+interface FranjaDisponibilidad {
+  activo: boolean
+  inicio: string
+  fin: string
+}
+
+/** Disponibilidad semanal del usuario (clave: lunes, martes, ...) */
+type DisponibilidadSemanal = Record<string, FranjaDisponibilidad>
+
 /** Usuario autenticado */
 interface User {
-  id: number
-  name: string
+  id: number | string
+  name?: string
+  nombre?: string
   email: string
   phone?: string
+  telefono?: string
+  telefonoVerificado?: boolean
+  fechaVerificacionTelefono?: string | null
   university?: string
   career?: string
+  rol?: string
   avatar?: string
-  verified: boolean
+  fotoPerfil?: string | null
+  sede?: string
+  puntoEntrega?: string
+  disponibilidad?: DisponibilidadSemanal
+  perfilActualizadoEn?: string
+  verified?: boolean
   rating?: number
   reviewsCount?: number
-  createdAt: string
+  createdAt?: string
 }
 
 /** Artículo del catálogo */

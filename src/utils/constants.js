@@ -30,6 +30,45 @@ export const CONDITION_COLORS = {
   fair: 'bg-orange-100 text-orange-700',
 }
 
+export const DIAS_SEMANA = [
+  { id: 'lunes', label: 'Lunes', short: 'Lun' },
+  { id: 'martes', label: 'Martes', short: 'Mar' },
+  { id: 'miercoles', label: 'Miércoles', short: 'Mié' },
+  { id: 'jueves', label: 'Jueves', short: 'Jue' },
+  { id: 'viernes', label: 'Viernes', short: 'Vie' },
+  { id: 'sabado', label: 'Sábado', short: 'Sáb' },
+  { id: 'domingo', label: 'Domingo', short: 'Dom' },
+]
+
+export const HORAS_ATENCION = Array.from({ length: 11 }, (_, i) => {
+  const hora = 8 + i
+  return `${String(hora).padStart(2, '0')}:00`
+})
+
+export const SEDES_UNISIMON = [
+  'Sede Barranquilla',
+  'Sede Cúcuta',
+  'Sede Montería',
+  'Sede Sincelejo',
+  'Otra sede',
+]
+
+export const OTRO_PUNTO_ENTREGA = 'Otro punto'
+
+export const PUNTOS_ENTREGA = [
+  'Cafetería sede 1',
+  'Cafetería sede 2',
+  'Cafetería sede 3',
+  'Cafetería sede 4',
+  'Biblioteca principal',
+  'Bienestar universitario',
+]
+
+export const DISPONIBILIDAD_INICIAL = {
+  inicio: '08:00',
+  fin: '12:00',
+}
+
 export const WITHDRAW_METHODS = [
   { id: 'nequi', label: 'Nequi', icon: '📱', placeholder: '300XXXXXXX' },
   { id: 'daviplata', label: 'Daviplata', icon: '📲', placeholder: '300XXXXXXX' },

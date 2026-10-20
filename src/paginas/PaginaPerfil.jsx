@@ -9,17 +9,23 @@ import React from "react";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import { ModalVerificacionWhatsApp } from "../componentes/auth/ModalVerificacionWhatsApp";
+import { ModalEdicionPerfil } from "../componentes/perfil/ModalEdicionPerfil";
 import {
   User,
   GraduationCap,
   BadgeCheck,
   Shield,
   MessageSquare,
-  Loader2,
   CheckCircle2,
   AlertCircle,
-  ChevronRight,
+  Pencil,
+  MapPin,
+  Clock,
+  Phone,
+  Mail,
+  CalendarDays,
 } from "lucide-react";
+import { obtenerFranjasDisponibles, formatearSede } from "../utils/perfil";
 
 const formatPhone = (phone) => {
   if (!phone) return "";
@@ -34,6 +40,7 @@ const formatPhone = (phone) => {
 export const PaginaPerfil = () => {
   const { usuario, actualizarUsuario } = useAuth();
   const [verificandoWhatsApp, setVerificandoWhatsApp] = React.useState(false);
+  const [editandoPerfil, setEditandoPerfil] = React.useState(false);
 
   const handleVerificarWhatsApp = () => {
     setVerificandoWhatsApp(true);
@@ -51,10 +58,16 @@ export const PaginaPerfil = () => {
     }
   };
 
+  const handleGuardarPerfil = async (datosActualizados) => {
+    await actualizarUsuario(datosActualizados);
+  };
+
   const nombreCompleto = usuario?.nombre || "Estudiante UniTrade";
   const email = usuario?.email || "";
   const telefono = usuario?.telefono;
   const telefonoVerificado = usuario?.telefonoVerificado;
+  const franjasDisponibles = obtenerFranjasDisponibles(usuario?.disponibilidad);
+  const sedeCompleta = formatearSede(usuario);
   const programa = "Ingeniería de Sistemas / Administración";
   const codigoEstudiantil = "2026-USB-10293";
 
@@ -75,9 +88,18 @@ export const PaginaPerfil = () => {
       <main className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container">
           {/* Header */}
-          <div className="mb-8 animate-slide-up">
-            <h1 className="text-3xl font-bold text-white">Mi Perfil</h1>
-            <p className="text-gray-400 mt-1">Configura tu cuenta y verifica tu información</p>
+          <div className="mb-8 animate-slide-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Mi Perfil</h1>
+              <p className="text-gray-400 mt-1">Configura tu cuenta, contacto y disponibilidad</p>
+            </div>
+            <button
+              onClick={() => setEditandoPerfil(true)}
+              className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              <Pencil className="w-5 h-5" />
+              Editar perfil
+            </button>
           </div>
 
           {/* ========================================
@@ -109,9 +131,17 @@ export const PaginaPerfil = () => {
 
               {/* Foto y datos */}
               <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] flex items-center justify-center text-4xl font-bold text-white shadow-lg">
-                  {iniciales}
-                </div>
+                {usuario?.fotoPerfil ? (
+                  <img
+                    src={usuario.fotoPerfil}
+                    alt={`Foto de perfil de ${nombreCompleto}`}
+                    className="w-28 h-28 rounded-full object-cover shadow-lg border-2 border-[var(--color-neon)]/40"
+                  />
+                ) : (
+                  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] flex items-center justify-center text-4xl font-bold text-white shadow-lg">
+                    {iniciales}
+                  </div>
+                )}
 
                 <div>
                   <p className="text-xl font-bold text-white">{nombreCompleto}</p>
@@ -160,7 +190,132 @@ export const PaginaPerfil = () => {
           </section>
 
           {/* ========================================
-             SECCIÓN 2: VERIFICACIÓN WHATSAPP OTP (HU-02)
+             SECCIÓN 2: CONTACTO, SEDE Y DISPONIBILIDAD (HU-03)
+             ======================================== */}
+          <section className="mb-8 animate-slide-up" style={{ animationDelay: "150ms" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <User className="w-6 h-6 text-[var(--color-neon)]" />
+                Contacto y Disponibilidad
+              </h2>
+              <button
+                onClick={() => setEditandoPerfil(true)}
+                className="btn-secondary text-sm flex items-center gap-2"
+              >
+                <Pencil className="w-4 h-4" />
+                Editar
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Datos de contacto */}
+              <div className="glass-card p-5">
+                <h3 className="font-medium text-white mb-4 flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-emerald-400" />
+                  Datos de contacto
+                </h3>
+                <dl className="space-y-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-gray-500">Nombre</dt>
+                    <dd className="text-gray-200 font-medium">{nombreCompleto}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Correo institucional</dt>
+                    <dd className="text-gray-200 flex items-center gap-2 break-all">
+                      <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      {email || "Sin registrar"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Teléfono / WhatsApp</dt>
+                    <dd className="text-gray-200 flex flex-wrap items-center gap-2">
+                      <span className="font-mono">
+                        {telefono ? formatPhone(telefono) : "Sin registrar"}
+                      </span>
+                      {telefonoVerificado ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          <BadgeCheck className="w-3 h-3" />
+                          Verificado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          <AlertCircle className="w-3 h-3" />
+                          Sin verificar
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Sede y punto de entrega */}
+              <div className="glass-card p-5">
+                <h3 className="font-medium text-white mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-[var(--color-neon)]" />
+                  Sede y punto de entrega
+                </h3>
+                {sedeCompleta ? (
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-xs text-gray-500">Sede</p>
+                      <p className="text-gray-200 font-medium">{usuario.sede}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Punto de entrega</p>
+                      <p className="text-gray-200 font-medium">{usuario.puntoEntrega}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400">
+                    <p>Aún no has definido dónde entregarás tus artículos.</p>
+                    <button
+                      onClick={() => setEditandoPerfil(true)}
+                      className="mt-3 text-[var(--color-neon)] hover:underline text-sm font-medium"
+                    >
+                      Configurar sede y punto de entrega
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Disponibilidad horaria */}
+              <div className="glass-card p-5 md:col-span-2">
+                <h3 className="font-medium text-white mb-4 flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-blue-400" />
+                  Franjas de disponibilidad
+                </h3>
+                {franjasDisponibles.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {franjasDisponibles.map((franja) => (
+                      <span
+                        key={franja.id}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-[var(--color-canvas)] border border-[var(--color-border)] text-gray-200"
+                      >
+                        <Clock className="w-4 h-4 text-[var(--color-neon)]" />
+                        <span className="font-medium">{franja.label}</span>
+                        <span className="font-mono text-xs text-gray-400">
+                          {franja.inicio}–{franja.fin}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400">
+                    <p>No tienes horarios de atención configurados.</p>
+                    <button
+                      onClick={() => setEditandoPerfil(true)}
+                      className="mt-3 text-[var(--color-neon)] hover:underline text-sm font-medium"
+                    >
+                      Agregar disponibilidad horaria
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ========================================
+             SECCIÓN 3: VERIFICACIÓN WHATSAPP OTP (HU-02)
              ======================================== */}
           <section className="animate-slide-up" style={{ animationDelay: "200ms" }}>
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
@@ -248,6 +403,14 @@ export const PaginaPerfil = () => {
               </ul>
             </div>
           </section>
+
+          {/* Modal Edición de Perfil (HU-03) */}
+          <ModalEdicionPerfil
+            isOpen={editandoPerfil}
+            onClose={() => setEditandoPerfil(false)}
+            usuario={usuario}
+            onSave={handleGuardarPerfil}
+          />
 
           {/* Modal Verificación WhatsApp */}
           <ModalVerificacionWhatsApp

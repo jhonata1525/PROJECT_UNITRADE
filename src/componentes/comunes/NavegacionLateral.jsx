@@ -48,7 +48,7 @@ export const NavegacionLateral = ({ onLogout }) => {
         className="max-lg:!hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40 lg:h-screen lg:w-64 lg:flex lg:flex-col sidebar transition-all duration-300 ease-in-out"
         aria-label="Navegación principal"
       >
-        <div className="sidebar-logo flex items-center justify-between flex-shrink-0 p-4 border-b border-[var(--color-border)] h-full flex flex-col">
+        <div className="sidebar-logo flex items-center justify-between flex-shrink-0 p-4 border-b border-[var(--color-border)]">
           <NavLink
             to="/dashboard"
             className="flex items-center gap-3 group"

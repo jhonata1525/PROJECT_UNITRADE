@@ -25,9 +25,14 @@ import {
   Edit,
   Loader2,
   Image as ImageIcon,
-  Calendar,
   Clock,
+  MapPin,
 } from "lucide-react";
+import {
+  resumenDisponibilidad,
+  hayDisponibilidad,
+  formatearSede,
+} from "../utils/perfil";
 
 const CATEGORIAS = ["Todas", "Libros", "Laboratorio", "Calculadoras", "Tecnología", "Deportes", "Otros"];
 const STORAGE_KEY = "unitrade_mis_articulos";
@@ -94,6 +99,10 @@ export const PaginaMisArticulos = () => {
     enAlquiler: articulos.filter((a) => a.estado === "en_alquiler").length,
     pausados: articulos.filter((a) => a.estado === "pausado").length,
   };
+
+  const tieneDisponibilidad = hayDisponibilidad(usuario?.disponibilidad);
+  const resumenHorario = resumenDisponibilidad(usuario?.disponibilidad, { corto: true });
+  const sedeEntrega = formatearSede(usuario);
 
   const handleSubmit = (data) => {
     if (editandoArticulo) {
@@ -310,6 +319,24 @@ export const PaginaMisArticulos = () => {
                       <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-3">
                         {art.descripcion}
                       </p>
+
+                      {/* Contacto y disponibilidad del dueño (HU-03) */}
+                      {(tieneDisponibilidad || sedeEntrega) && (
+                        <div className="space-y-1 text-xs text-gray-400 mb-3">
+                          {tieneDisponibilidad && (
+                            <p className="flex items-start gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-[var(--color-neon)] flex-shrink-0 mt-0.5" />
+                              <span>{resumenHorario}</span>
+                            </p>
+                          )}
+                          {sedeEntrega && (
+                            <p className="flex items-start gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                              <span>{sedeEntrega}</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Acciones */}
                       <div className="flex items-center gap-2 pt-3 border-t border-[var(--color-border)]">
