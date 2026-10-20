@@ -56,9 +56,24 @@ Cada integrante tiene dos opciones:
 1. **Crear su propia base en Neon** (recomendado): crea un proyecto gratis en
    https://neon.tech, copia su `DATABASE_URL` en `backend/.env` y ejecuta
    `npm run prisma:deploy`. Las tablas se crean a partir de las migraciones del repo.
-2. **Compartir la base del equipo**: el dueño del proyecto de Neon invita a los
-   demás desde el panel de Neon, o comparte la cadena de conexión por un canal
-   privado (nunca por Git ni por el chat del repositorio).
+2. **Compartir la misma base del equipo**:
+   1. Cada compañero debe crear una cuenta gratis en https://neon.tech y darte
+      el correo con el que se registró.
+   2. En Neon Console, abre el proyecto → **Settings → Collaborators**
+      (en algunas versiones aparece como **Sharing**) → **Invite**.
+   3. Escribe los correos separados por comas y confirma con **Invite**.
+   4. Cada invitado acepta el correo; el proyecto aparecerá en su panel en
+      **Shared with me**. Desde ahí abre **Connect** y copia su cadena de conexión.
+   5. Esa cadena va en `backend/.env` de cada compañero (nunca se sube a Git).
+   6. Luego cada uno ejecuta `npm install`, `npm run prisma:deploy` y
+      `npm run start:dev`.
+
+   El consumo y los costos del proyecto compartido se cobran a la cuenta dueña.
+
+   Como todos usan la **misma base**, tengan en cuenta:
+   - Solo una persona crea migraciones con `npm run prisma:migrate -- --name ...`.
+   - Los demás aplican los cambios con `npm run prisma:deploy`.
+   - **Nunca** ejecutar `prisma migrate reset` sin avisar al equipo: borra todo.
 
 ## Scripts
 
