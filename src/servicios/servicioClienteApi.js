@@ -7,7 +7,7 @@
  * JWT en el header de autorización.
  *
  * Features:
- * - Base URL: configurable via VITE_API_BASE_URL (ej: http://localhost:8080/api)
+ * - Base URL: configurable via VITE_API_BASE_URL (ej: http://localhost:8081/api)
  * - Interceptor de petición: Adjunta `Authorization: Bearer <token>` automáticamente
  *   usando el token almacenado en el ContextoAutenticacion.
  * - Interceptor de respuesta: Maneja códigos de estado 401 (no autorizado) y 500
@@ -34,7 +34,7 @@ import axios from "axios";
  * - Headers por defecto con Content-Type JSON
  */
 export const servicioClienteApi = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api",
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",

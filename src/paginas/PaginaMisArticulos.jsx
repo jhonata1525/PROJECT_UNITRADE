@@ -169,7 +169,7 @@ export const PaginaMisArticulos = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
-      <NavegacionLateral onLogout={() => {}} onProfileClick={() => {}} />
+      <NavegacionLateral />
 
       <main className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container">

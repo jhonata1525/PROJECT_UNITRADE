@@ -49,6 +49,14 @@ npm run start:dev
 - Salud: http://localhost:8081/api/salud
 - Swagger: http://localhost:8081/api/docs
 
+## Inicio de sesión
+
+`POST /api/auth/login` recibe `email` y `password`, consulta el usuario en
+PostgreSQL y valida la contraseña contra `hashContrasena` con bcrypt. El correo
+debe pertenecer al dominio `@unisimon.edu.co`. La respuesta contiene los datos
+del usuario, nunca el hash de su contraseña; las contraseñas almacenadas deben
+estar generadas con bcrypt.
+
 ## Base de datos para el equipo
 
 Cada integrante tiene dos opciones:
@@ -99,6 +107,7 @@ backend/
 │   └── migrations/          # Historial de migraciones
 ├── src/
 │   ├── prisma/              # Servicio y módulo de Prisma
+│   ├── auth/                # Inicio de sesión y validación de credenciales
 │   ├── app.modulo.ts        # Módulo raíz
 │   ├── app.controlador.ts   # Rutas de salud
 │   ├── app.servicio.ts

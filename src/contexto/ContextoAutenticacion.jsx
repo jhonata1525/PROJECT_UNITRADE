@@ -6,6 +6,8 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import servicioClienteApi from "../servicios/servicioClienteApi";
 
 const ContextoAutenticacion = createContext({
   usuario: null,
@@ -40,28 +42,55 @@ const ProveedorAutenticacion = ({ children }) => {
   const login = async (credenciales) => {
     const { email, password } = credenciales;
 
-    if (!email.endsWith("@unisimon.edu.co")) {
-      throw new Error("Solo se permiten correos institucionales @unisimon.edu.co");
+    try {
+      const { data } = await servicioClienteApi.post("/auth/login", {
+        email: email.trim(),
+        password,
+      });
+      const usuarioAutenticado = {
+        ...data.usuario,
+        email: data.usuario.correo,
+        rol: data.usuario.rol.toLowerCase(),
+      };
+
+      localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioAutenticado));
+      setUsuario(usuarioAutenticado);
+
+      return { usuario: usuarioAutenticado };
+    } catch (error) {
+      if (!axios.isAxiosError(error)) {
+        throw error;
+      }
+      if (error.response?.status === 401) {
+        throw new Error("Correo o contraseña incorrectos", { cause: error });
+      }
+
+      const mensaje = error.response?.data?.message;
+      if (typeof mensaje === "string") {
+        throw new Error(mensaje, { cause: error });
+      }
+      if (Array.isArray(mensaje)) {
+        throw new Error(mensaje.join(", "), { cause: error });
+      }
+
+      if (!error.response) {
+        throw new Error("No se pudo conectar con el servidor. Intenta de nuevo.", {
+          cause: error,
+        });
+      }
+
+      throw new Error("No se pudo iniciar sesión. Intenta de nuevo.", {
+        cause: error,
+      });
     }
-
-    const usuarioMock = {
-      id: "1",
-      nombre: "Jhonatan Acevedo",
-      email,
-      rol: "estudiante",
-      telefono: null,
-      telefonoVerificado: false,
-    };
-
-    localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioMock));
-    setUsuario(usuarioMock);
-
-    return { usuario: usuarioMock };
   };
 
   const logout = useCallback(() => {
     setUsuario(null);
     localStorage.removeItem("usuario_unitrade");
+    localStorage.removeItem("uniTrade_token");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
   }, []);
 
   const actualizarUsuario = useCallback(async (datosActualizados) => {

@@ -6,7 +6,8 @@
  */
 
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexto/ContextoAutenticacion";
 import {
   LayoutDashboard,
   Wallet,
@@ -29,14 +30,21 @@ const NAV_ITEMS = [
   { path: "/perfil", label: "Perfil", icon: User },
 ];
 
-export const NavegacionLateral = ({ onLogout }) => {
+export const NavegacionLateral = () => {
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleNavClick = () => {
     if (collapsed) setCollapsed(false);
     setMobileMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -115,8 +123,9 @@ export const NavegacionLateral = ({ onLogout }) => {
                 <span>Mi Perfil</span>
               </NavLink>
               <button
-                onClick={onLogout}
+                onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-[rgba(239,68,68,0.1)] transition-colors text-sm"
+                type="button"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Cerrar Sesión</span>
@@ -213,7 +222,7 @@ export const NavegacionLateral = ({ onLogout }) => {
               >
                 <User className="w-5 h-5" /><span>Mi Perfil</span>
               </NavLink>
-              <button onClick={() => { onLogout(); setMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:text-red-300 hover:bg-[rgba(239,68,68,0.1)] transition-colors text-base">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:text-red-300 hover:bg-[rgba(239,68,68,0.1)] transition-colors text-base" type="button">
                 <LogOut className="w-5 h-5" /><span>Cerrar Sesión</span>
               </button>
             </nav>

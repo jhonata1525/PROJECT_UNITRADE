@@ -95,7 +95,7 @@ export const PaginaBilletera = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-white">
-      <NavegacionLateral onLogout={() => {}} onProfileClick={() => {}} />
+      <NavegacionLateral />
 
       <main className="max-w-7xl mx-auto transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 py-8">
         <button

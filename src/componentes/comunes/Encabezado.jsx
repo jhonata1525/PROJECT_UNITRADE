@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { useContext } from "react";
 import { AuthContext } from "../../contexto/ContextoAutenticacion";
@@ -17,10 +18,9 @@ import { AuthContext } from "../../contexto/ContextoAutenticacion";
  * - Botón de cerrar sesión que dispara el logout del contexto
  */
 export const Encabezado = () => {
-  /** Estado para controlar si el menú móvil está abierto (aunque el encabezado es superior) */
-  const [menuAbierto, setMenuAbierto] = React.useState(false);
   /** Obtener el usuario actual y el token del contexto global de autenticación */
   const { usuario, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   /**
    * Manejador del clic en cerrar sesión
@@ -31,6 +31,7 @@ export const Encabezado = () => {
   const manejadorLogout = (e) => {
     e.preventDefault();
     logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -69,15 +70,17 @@ export const Encabezado = () => {
           )}
 
           {/* Botón de cerrar sesión funcional */}
-          <button
-            onClick={manejadorLogout}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 relative overflow-hidden"
-            aria-label="Cerrar sesión"
-            role="menuitem"
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar Sesión
-          </button>
+          {usuario && (
+            <button
+              onClick={manejadorLogout}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 relative overflow-hidden"
+              aria-label="Cerrar sesión"
+              type="button"
+            >
+              <LogOut className="w-4 h-4" />
+              Cerrar Sesión
+            </button>
+          )}
         </div>
       </div>
     </header>
