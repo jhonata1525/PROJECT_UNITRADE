@@ -14,6 +14,7 @@ import {
   Wallet,
   CreditCard,
   Package,
+  Compass,
   TrendingUp,
   Clock,
   Users,
@@ -67,6 +68,14 @@ const STAT_CARDS = [
 ];
 
 const QUICK_ACTIONS = [
+  {
+    path: "/catalogo",
+    label: "Explorar Artículos",
+    description: "Encuentra artículos disponibles de otros estudiantes",
+    icon: Compass,
+    color: "from-cyan-500 to-blue-500",
+    hoverColor: "hover:border-cyan-500/50",
+  },
   {
     path: "/billetera",
     label: "Billetera Virtual",
@@ -179,7 +188,7 @@ export const PaginaDashboard = () => {
                     Accesos Rápidos
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {QUICK_ACTIONS.map((action) => {
                     const Icon = action.icon;
                     return (

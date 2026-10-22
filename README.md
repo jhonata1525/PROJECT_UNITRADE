@@ -30,7 +30,7 @@ Abre `http://localhost:5173`.
 
 ### Variables de entorno
 
-La app usa `VITE_API_BASE_URL` (por defecto `http://localhost:8081/api`). Si no defines un backend, **la billetera funciona igual** con datos mock en `localStorage`.
+La app usa `VITE_API_BASE_URL` (por defecto `/api`, que Vite redirige a `http://localhost:8081` con el proxy de `vite.config.js`). Así funciona también desde el celular en la red local (`http://IP-DEL-PC:5173`). Si no defines un backend, **la billetera funciona igual** con datos mock en `localStorage`.
 
 ---
 

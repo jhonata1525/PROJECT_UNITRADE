@@ -10,6 +10,15 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // El frontend llama a /api y Vite lo redirige al backend local.
+    // Así funciona desde el celular (192.168.x.x:5173/api) sin CORS ni
+    // tener que apuntar a localhost, que en el teléfono sería el teléfono.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {

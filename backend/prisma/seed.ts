@@ -7,7 +7,10 @@
  * Es idempotente: usa ids fijos y `upsert`, así que se puede ejecutar varias
  * veces. No borra datos existentes ni reinicia billeteras ya creadas.
  *
- * Uso: npm run prisma:seed
+ * Por defecto NO se ejecuta: solo crea datos si defines SEED_DEMO=true.
+ * Estos usuarios son ficticios y no deben mezclarse con usuarios reales.
+ *
+ * Uso: SEED_DEMO=true npm run prisma:seed
  */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -516,11 +519,21 @@ async function principal() {
   console.log(`  artículo silla:            ${IDS.articulos.silla}`);
 }
 
-principal()
-  .catch((error) => {
-    console.error('Error al sembrar la base de datos:', error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+const habilitarDemo = process.env.SEED_DEMO === 'true';
+
+if (!habilitarDemo) {
+  console.log(
+    'Seed de demostración omitido: no se crean usuarios ni artículos falsos.\n' +
+      'Si necesitas los datos de prueba para HU-06/HU-10, ejecuta con SEED_DEMO=true.',
+  );
+  await prisma.$disconnect();
+} else {
+  principal()
+    .catch((error) => {
+      console.error('Error al sembrar la base de datos:', error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

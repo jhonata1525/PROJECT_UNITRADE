@@ -11,6 +11,7 @@
  */
 
 import React from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import { FormularioArticuloModal } from "../componentes/comunes/FormularioArticuloModal";
@@ -27,6 +28,7 @@ import {
   Plus,
   Search,
   Filter,
+  Compass,
   Package,
   Trash2,
   Pause,
@@ -330,10 +332,19 @@ export const PaginaMisArticulos = () => {
                   Gestiona tus publicaciones y controla el estado de cada artículo
                 </p>
               </div>
-              <button onClick={abrirModalNuevo} className="btn-primary w-full sm:w-auto flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Publicar Nuevo
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Link
+                  to="/catalogo"
+                  className="btn-secondary w-full sm:w-auto flex items-center justify-center gap-2"
+                >
+                  <Compass className="w-5 h-5" />
+                  Explorar catálogo
+                </Link>
+                <button onClick={abrirModalNuevo} className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Publicar Nuevo
+                </button>
+              </div>
             </div>
 
             {/* Resumen badges */}

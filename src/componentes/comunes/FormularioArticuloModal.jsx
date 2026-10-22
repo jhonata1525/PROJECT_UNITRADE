@@ -1,14 +1,29 @@
 /**
  * @file FormularioArticuloModal.jsx
  * Modal glassmorphism para crear/editar artículos en "Mis Artículos".
- * - Campos: Nombre, Categoría, Precio por Hora, Estado, Descripción, URL Foto.
+ * - Campos: Nombre, Categoría, Precio por Hora, Estado, Descripción y Foto.
+ * - La foto se puede tomar con la cámara del celular o elegir de la galería
+ *   (se comprime y se envía como data URL), o pegar una URL.
  * - Tarifa sugerida automática por categoría (RN-05).
  * - Validación tarifa mínima $1.000 COP/hora (RN-04).
- * - Guarda en localStorage con clave 'unitrade_mis_articulos'.
  */
 
 import React from "react";
-import { X, Image, Loader2, Info, AlertCircle, CheckCircle2, Zap } from "lucide-react";
+import {
+  X,
+  Image,
+  Camera,
+  Upload,
+  Trash2,
+  Loader2,
+  Info,
+  AlertCircle,
+  CheckCircle2,
+  Zap,
+} from "lucide-react";
+import { MAX_FOTO_MB, procesarArchivoImagen } from "../../utils/imagenes";
+
+const TAMANO_MAXIMO_FOTO = 900;
 
 const CATEGORIAS = [
   "Libros",
@@ -54,6 +69,9 @@ export const FormularioArticuloModal = ({
   });
   const [errors, setErrors] = React.useState({});
   const [previewError, setPreviewError] = React.useState(false);
+  const [procesandoFoto, setProcesandoFoto] = React.useState(false);
+  const [fotoError, setFotoError] = React.useState("");
+  const inputFotoRef = React.useRef(null);
 
   // Tarifa sugerida basada en la categoría seleccionada
   const tarifaSugerida = TARIFAS_SUGERIDAS[formData.categoria] || 0;
@@ -84,6 +102,9 @@ export const FormularioArticuloModal = ({
       }
       setErrors({});
       setPreviewError(false);
+      setFotoError("");
+      setProcesandoFoto(false);
+      if (inputFotoRef.current) inputFotoRef.current.value = "";
     }
   }, [isOpen, initialData]);
 
@@ -112,12 +133,44 @@ export const FormularioArticuloModal = ({
   };
 
   const isValidUrl = (string) => {
+    if (string.startsWith("data:image/")) return true;
     try {
       new URL(string);
       return true;
-    } catch (_) {
+    } catch {
       return false;
     }
+  };
+
+  /** Toma o elige una foto del dispositivo, la comprime y la deja como fotoUrl. */
+  const handleFoto = async (e) => {
+    const input = e.target;
+    const archivo = input.files?.[0];
+    if (!archivo) return;
+
+    setFotoError("");
+    setPreviewError(false);
+    setProcesandoFoto(true);
+
+    try {
+      const comprimida = await procesarArchivoImagen(archivo, {
+        maxSize: TAMANO_MAXIMO_FOTO,
+        quality: 0.8,
+      });
+      setFormData((prev) => ({ ...prev, fotoUrl: comprimida }));
+      setErrors((prev) => ({ ...prev, fotoUrl: "" }));
+    } catch (err) {
+      setFotoError(err.message || "No se pudo cargar la imagen");
+    } finally {
+      setProcesandoFoto(false);
+      input.value = "";
+    }
+  };
+
+  const quitarFoto = () => {
+    setFormData((prev) => ({ ...prev, fotoUrl: "" }));
+    setFotoError("");
+    setPreviewError(false);
   };
 
   const handleChange = (e) => {
@@ -343,33 +396,89 @@ export const FormularioArticuloModal = ({
               )}
             </div>
 
-            {/* Foto URL */}
+            {/* Foto */}
             <div>
-              <label htmlFor="fotoUrl" className="block text-sm font-medium text-gray-300 mb-2">
-                URL de la Foto (opcional)
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Foto del Artículo (opcional)
               </label>
-              <div className="relative">
-                <input
-                  type="url"
-                  id="fotoUrl"
-                  name="fotoUrl"
-                  value={formData.fotoUrl}
-                  onChange={handleChange}
-                  placeholder="https://ejemplo.com/foto.jpg"
-                  className="glass-input pr-10"
-                  aria-invalid={!!errors.fotoUrl}
-                />
+
+              <input
+                ref={inputFotoRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFoto}
+                className="hidden"
+                id="foto-articulo-input"
+                disabled={procesandoFoto || loading}
+              />
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => inputFotoRef.current?.click()}
+                  disabled={procesandoFoto || loading}
+                  className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+                >
+                  {procesandoFoto ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                  {procesandoFoto
+                    ? "Procesando..."
+                    : formData.fotoUrl
+                      ? "Cambiar foto"
+                      : "Tomar o subir foto"}
+                </button>
                 {formData.fotoUrl && (
                   <button
                     type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, fotoUrl: "" }))}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-white transition-colors"
-                    aria-label="Eliminar URL"
+                    onClick={quitarFoto}
+                    disabled={procesandoFoto || loading}
+                    className="btn-secondary text-red-400 hover:text-red-300 flex items-center gap-2 disabled:opacity-50"
                   >
-                    <X className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
+                    Quitar
                   </button>
                 )}
               </div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                <Upload className="w-3 h-3" />
+                Desde el celular puedes tomar la foto o elegirla de la galería.
+                JPG, PNG o WEBP · máximo {MAX_FOTO_MB} MB.
+              </p>
+
+              {fotoError && (
+                <p className="text-xs text-red-400 mt-1" role="alert">
+                  {fotoError}
+                </p>
+              )}
+
+              {!formData.fotoUrl.startsWith("data:") && (
+                <div className="relative mt-3">
+                  <input
+                    type="url"
+                    id="fotoUrl"
+                    name="fotoUrl"
+                    value={formData.fotoUrl}
+                    onChange={handleChange}
+                    placeholder="o pega una URL: https://ejemplo.com/foto.jpg"
+                    className="glass-input pr-10"
+                    aria-invalid={!!errors.fotoUrl}
+                  />
+                  {formData.fotoUrl && (
+                    <button
+                      type="button"
+                      onClick={quitarFoto}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-white transition-colors"
+                      aria-label="Eliminar URL"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {errors.fotoUrl && (
                 <p className="text-xs text-red-400 mt-1" role="alert">
                   {errors.fotoUrl}

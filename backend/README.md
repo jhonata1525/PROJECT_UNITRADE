@@ -39,11 +39,12 @@ npm run prisma:generate
 npm run prisma:deploy
 ```
 
-Opcionalmente carga los datos de demostración (usuarios, artículos, reservas,
-pagos y billeteras con saldo):
+Opcionalmente carga los datos de demostración (usuarios ficticios, artículos,
+reservas, pagos y billeteras con saldo). **No se ejecuta por defecto**, porque
+esos usuarios no son reales; actívalo solo si necesitas probar HU-06/HU-10:
 
 ```bash
-npm run prisma:seed
+SEED_DEMO=true npm run prisma:seed
 ```
 
 Inicia el servidor:
@@ -150,7 +151,7 @@ Cada integrante tiene dos opciones:
 | `npm run prisma:generate` | Genera el cliente de Prisma |
 | `npm run prisma:migrate -- --name nombre` | Crea una migración en desarrollo |
 | `npm run prisma:deploy` | Aplica migraciones existentes |
-| `npm run prisma:seed` | Carga datos mock de demostración |
+| `npm run prisma:seed` | Carga datos de demostración solo con `SEED_DEMO=true` |
 | `npm run prisma:studio` | Abre Prisma Studio |
 
 ## Estructura
@@ -185,5 +186,7 @@ backend/
 ## Nota sobre el puerto
 
 El puerto por defecto de Nest es `3000`, pero aquí usamos `8081` porque el
-`8080` suele estar ocupado por Oracle (`TNSLSNR`) en Windows. El frontend debe
-apuntar a `VITE_API_BASE_URL=http://localhost:8081/api`.
+`8080` suele estar ocupado por Oracle (`TNSLSNR`) en Windows. El frontend usa
+`VITE_API_BASE_URL=/api` y el proxy de Vite (`vite.config.js`) lo redirige a
+`http://localhost:8081`. Eso permite entrar también desde el celular con
+`http://IP-DEL-PC:5173` sin problemas de CORS.

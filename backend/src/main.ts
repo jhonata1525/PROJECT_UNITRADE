@@ -1,10 +1,19 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { ModuloApp } from './app.modulo.js';
 
 async function iniciar() {
-  const app = await NestFactory.create(ModuloApp);
+  const app = await NestFactory.create<NestExpressApplication>(ModuloApp, {
+    // Se desactiva el parser por defecto (100 kb) porque las fotos de los
+    // artículos viajan como data URL dentro del JSON.
+    bodyParser: false,
+  });
+
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ extended: true, limit: '10mb' }));
 
   // Todas las rutas quedan bajo http://localhost:8081/api
   app.setGlobalPrefix('api');

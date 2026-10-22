@@ -36,7 +36,7 @@ import {
   resumenDisponibilidad,
 } from "../../utils/perfil";
 
-const MAX_FOTO_MB = 2;
+const MAX_FOTO_MB = 15;
 const TAMANO_MAXIMO_FOTO = 320;
 const HORAS_INICIO = HORAS_ATENCION.slice(0, -1);
 const HORAS_FIN = HORAS_ATENCION.slice(1);

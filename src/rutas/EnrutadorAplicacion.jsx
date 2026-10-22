@@ -13,6 +13,7 @@
  * - /dashboard → PaginaDashboard (panel principal)
  * - /billetera → PaginaBilletera (vista de wallet virtual - HU-10)
  * - /pago → PaginaPagoReserva (modal de confirmación de pago - HU-06)
+ * - /catalogo → PaginaCatalogo (explorar y reservar artículos disponibles)
  * - /mis-articulos → PaginaMisArticulos (gestión de artículos en alquiler)
  *
  * Componentes utilizados:
@@ -28,6 +29,7 @@ import PaginaDashboard from "../paginas/PaginaDashboard";
 import PaginaBilletera from "../paginas/PaginaBilletera";
 import PaginaPagoReserva from "../paginas/PaginaPagoReserva";
 import PaginaMisArticulos from "../paginas/PaginaMisArticulos";
+import PaginaCatalogo from "../paginas/PaginaCatalogo";
 import PaginaPerfil from "../paginas/PaginaPerfil";
 import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
 import PaginaRegistro from "../paginas/PaginaRegistro";
@@ -101,6 +103,14 @@ const EnrutadorAplicacion = () => {
             element={
               <ProtectedRoute>
                 <PaginaPagoReserva />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/catalogo"
+            element={
+              <ProtectedRoute>
+                <PaginaCatalogo />
               </ProtectedRoute>
             }
           />

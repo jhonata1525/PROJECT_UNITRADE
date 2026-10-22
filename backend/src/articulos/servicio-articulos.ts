@@ -74,11 +74,16 @@ export class ServicioArticulos {
       take: dto.limite ?? 30,
       include: {
         propietario: { select: { id: true, nombre: true, sede: true } },
+        alquileres: {
+          where: { estado: { in: ESTADOS_CON_ALQUILER_ACTIVO } },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
 
     return articulos.map((articulo) => ({
-      ...mapearArticulo(articulo),
+      ...mapearArticulo(articulo, articulo.alquileres.length > 0),
       propietario: articulo.propietario,
     }));
   }
