@@ -90,6 +90,27 @@ usa el header `Idempotency-Key`.
 Detalle completo, reglas de negocio, modelo de datos y ejemplos:
 [`docs/HU-06-HU-10.md`](docs/HU-06-HU-10.md).
 
+## Artículos en PostgreSQL
+
+La pantalla **"Mis Artículos"** ya no guarda en `localStorage`: todos los
+artículos se guardan en la tabla `articulo` y se comparten entre usuarios.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/articulos` | Catálogo de artículos activos |
+| `GET` | `/api/articulos/mios` | Artículos del usuario (`x-usuario-id`) |
+| `GET` | `/api/articulos/:id` | Detalle de un artículo |
+| `POST` | `/api/articulos` | Publica un artículo |
+| `PATCH` | `/api/articulos/:id` | Actualiza un artículo propio |
+| `DELETE` | `/api/articulos/:id` | Elimina o pausa un artículo propio |
+| `POST` | `/api/articulos/importar` | Migra artículos desde `localStorage` |
+
+Cuando un usuario entra por primera vez a la página, el frontend envía sus
+artículos guardados en el navegador a `/api/articulos/importar`. La importación
+usa el `id` local como `claveExterna`, así que es idempotente y no duplica
+registros. Acepta los nombres antiguos del frontend (`nombre`, `precioPorDia`,
+`fotoUrl`, `estado`) y los convierte al modelo.
+
 ## Base de datos para el equipo
 
 Cada integrante tiene dos opciones:

@@ -7,6 +7,7 @@ import { ServicioAuth } from './auth/auth.servicio.js';
 import { ModuloBilletera } from './billetera/modulo-billetera.js';
 import { ModuloPagos } from './pagos/modulo-pagos.js';
 import { ModuloPasarela } from './pasarela/modulo-pasarela.js';
+import { ModuloArticulos } from './articulos/modulo-articulos.js';
 import { ModuloPrisma } from './prisma/modulo-prisma.js';
 import { ModuloReservas } from './reservas/modulo-reservas.js';
 
@@ -21,6 +22,7 @@ import { ModuloReservas } from './reservas/modulo-reservas.js';
     ModuloPagos,
     ModuloBilletera,
     ModuloReservas,
+    ModuloArticulos,
   ],
   controllers: [ControladorApp, ControladorAuth],
   providers: [ServicioApp, ServicioAuth],

@@ -6,7 +6,8 @@
  * - Grid de tarjetas responsive con foto, título, categoría, precio, estado
  * - Acciones: Cambiar estado (Pausar/Activar) y Eliminar
  * - Modal FormularioArticuloModal para crear/editar
- * - Persistencia en localStorage (clave: unitrade_mis_articulos)
+ * - Persistencia en la tabla `articulo` del backend (PostgreSQL)
+ * - Migración automática de los artículos que estaban en localStorage
  */
 
 import React from "react";
@@ -14,6 +15,14 @@ import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import { FormularioArticuloModal } from "../componentes/comunes/FormularioArticuloModal";
 import { ModalReservaHoras } from "../componentes/articulos/ModalReservaHoras";
+import {
+  actualizarArticulo,
+  crearArticulo,
+  eliminarArticulo,
+  importarArticulos,
+  listarMisArticulos,
+  mensajeErrorArticulos,
+} from "../servicios/servicioArticulos";
 import {
   Plus,
   Search,
@@ -27,6 +36,9 @@ import {
   Image as ImageIcon,
   Clock,
   MapPin,
+  AlertCircle,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import {
   resumenDisponibilidad,
@@ -43,7 +55,18 @@ const ESTADOS_CONFIG = {
   pausado: { label: "Pausado", color: "bg-amber-500", text: "text-amber-400", icon: Play },
 };
 
-const generateId = () => `art_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+/** Lee los artículos que quedaron guardados en el navegador (formato antiguo). */
+const leerArticulosLocales = () => {
+  try {
+    const guardados = localStorage.getItem(STORAGE_KEY);
+    if (!guardados) return [];
+    const datos = JSON.parse(guardados);
+    return Array.isArray(datos) ? datos : [];
+  } catch (error) {
+    console.error("No se pudieron leer los artículos locales:", error);
+    return [];
+  }
+};
 
 const formatCOP = (value) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(value);
@@ -60,30 +83,87 @@ export const PaginaMisArticulos = () => {
   const [editandoArticulo, setEditandoArticulo] = React.useState(null);
   const [eliminandoId, setEliminandoId] = React.useState(null);
   const [cambiandoEstadoId, setCambiandoEstadoId] = React.useState(null);
+  const [guardando, setGuardando] = React.useState(false);
+  const [aviso, setAviso] = React.useState(null);
 
-  // Cargar desde localStorage al montar
+  // Cargar desde la tabla `articulo` y migrar una sola vez los datos locales.
   React.useEffect(() => {
-    const cargar = () => {
-      try {
-        const guardados = localStorage.getItem(STORAGE_KEY);
-        if (guardados) {
-          setArticulos(JSON.parse(guardados));
+    let cancelado = false;
+
+    const cargar = async () => {
+      if (!usuario?.id) {
+        if (!cancelado) {
+          setAviso({
+            tipo: "error",
+            mensaje: "Inicia sesión para ver y administrar tus artículos.",
+          });
+          setLoading(false);
         }
-      } catch (e) {
-        console.error("Error cargando artículos:", e);
+        return;
+      }
+
+      try {
+        const articulosLocales = leerArticulosLocales();
+        let datos = null;
+        let migrados = 0;
+        let pendientes = 0;
+
+        if (articulosLocales.length > 0) {
+          const resultado = await importarArticulos(usuario.id, articulosLocales);
+          datos = resultado.articulos;
+          migrados = resultado.creados + resultado.actualizados;
+          pendientes = resultado.omitidos;
+        }
+
+        if (!datos) {
+          datos = await listarMisArticulos(usuario.id);
+        }
+
+        if (cancelado) return;
+
+        setArticulos(datos);
+
+        if (migrados > 0) {
+          setAviso({
+            tipo: "éxito",
+            mensaje: `Se sincronizaron ${migrados} artículo(s) con la base de datos.`,
+          });
+        }
+
+        if (pendientes > 0) {
+          setAviso({
+            tipo: "error",
+            mensaje:
+              `${pendientes} artículo(s) guardados en este navegador no se pudieron migrar. ` +
+              "Revisa que tengan descripción y una tarifa de al menos $1.000.",
+          });
+        } else if (articulosLocales.length > 0) {
+          // Todo quedó en PostgreSQL: ya no hace falta duplicarlo en el navegador.
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (error) {
+        if (cancelado) return;
+        const locales = leerArticulosLocales();
+        setArticulos(locales);
+        setAviso({
+          tipo: "error",
+          mensaje: mensajeErrorArticulos(
+            error,
+            "No se pudieron cargar los artículos desde la base de datos. " +
+              "Se muestran los guardados en este navegador."
+          ),
+        });
       } finally {
-        setLoading(false);
+        if (!cancelado) setLoading(false);
       }
     };
-    cargar();
-  }, []);
 
-  // Guardar en localStorage cuando cambien
-  React.useEffect(() => {
-    if (!loading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(articulos));
-    }
-  }, [articulos, loading]);
+    cargar();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [usuario?.id]);
 
   const articulosFiltrados = articulos.filter((art) => {
     const matchSearch =
@@ -104,22 +184,47 @@ export const PaginaMisArticulos = () => {
   const resumenHorario = resumenDisponibilidad(usuario?.disponibilidad, { corto: true });
   const sedeEntrega = formatearSede(usuario);
 
-  const handleSubmit = (data) => {
-    if (editandoArticulo) {
-      setArticulos((prev) =>
-        prev.map((a) => (a.id === editandoArticulo.id ? { ...a, ...data, id: a.id } : a))
-      );
-      setEditandoArticulo(null);
-    } else {
-      const nuevo = {
-        id: generateId(),
-        ...data,
-        fechaCreacion: new Date().toISOString(),
-        usuarioId: usuario?.id || "demo",
+  const handleSubmit = async (data) => {
+    if (!usuario?.id || guardando) return;
+
+    const editando = Boolean(editandoArticulo);
+    setGuardando(true);
+    setAviso(null);
+
+    try {
+      const cambios = {
+        nombre: data.nombre,
+        categoria: data.categoria,
+        precioPorDia: Number(data.precioPorDia),
+        estado: data.estado,
+        descripcion: data.descripcion,
+        fotoUrl: data.fotoUrl || undefined,
       };
-      setArticulos((prev) => [nuevo, ...prev]);
+
+      if (editando) {
+        await actualizarArticulo(usuario.id, editandoArticulo.id, cambios);
+      } else {
+        await crearArticulo(usuario.id, cambios);
+      }
+
+      const datos = await listarMisArticulos(usuario.id);
+      setArticulos(datos);
+      setEditandoArticulo(null);
+      setModalAbierto(false);
+      setAviso({
+        tipo: "éxito",
+        mensaje: editando
+          ? "Artículo actualizado en la base de datos."
+          : "Artículo publicado en la base de datos.",
+      });
+    } catch (error) {
+      setAviso({
+        tipo: "error",
+        mensaje: mensajeErrorArticulos(error, "No se pudo guardar el artículo."),
+      });
+    } finally {
+      setGuardando(false);
     }
-    setModalAbierto(false);
   };
 
   const handleEditar = (art) => {
@@ -131,19 +236,62 @@ export const PaginaMisArticulos = () => {
     setEliminandoId(id);
   };
 
-  const confirmarEliminar = (id) => {
-    setArticulos((prev) => prev.filter((a) => a.id !== id));
-    setEliminandoId(null);
+  const confirmarEliminar = async (id) => {
+    if (!usuario?.id || guardando) return;
+
+    setGuardando(true);
+    setAviso(null);
+
+    try {
+      const resultado = await eliminarArticulo(usuario.id, id);
+      setArticulos((prev) => prev.filter((a) => a.id !== id));
+      setEliminandoId(null);
+      setAviso({
+        tipo: "éxito",
+        mensaje: resultado.mensaje || "Artículo eliminado de la base de datos.",
+      });
+    } catch (error) {
+      setAviso({
+        tipo: "error",
+        mensaje: mensajeErrorArticulos(error, "No se pudo eliminar el artículo."),
+      });
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  const handleCambiarEstado = (art) => {
+  const handleCambiarEstado = async (art) => {
+    if (!usuario?.id || guardando) return;
+
+    const nuevoEstado = art.estado === "disponible" ? "pausado" : "disponible";
     setCambiandoEstadoId(art.id);
-    const nuevoEstado =
-      art.estado === "disponible" ? "pausado" : art.estado === "pausado" ? "disponible" : "disponible";
-    setArticulos((prev) =>
-      prev.map((a) => (a.id === art.id ? { ...a, estado: nuevoEstado } : a))
-    );
-    setTimeout(() => setCambiandoEstadoId(null), 300);
+    setAviso(null);
+
+    try {
+      const actualizado = await actualizarArticulo(usuario.id, art.id, {
+        estado: nuevoEstado,
+      });
+      setArticulos((prev) =>
+        prev.map((a) => (a.id === art.id ? actualizado : a))
+      );
+      setAviso({
+        tipo: "éxito",
+        mensaje:
+          nuevoEstado === "pausado"
+            ? "El artículo se pausó en la base de datos."
+            : "El artículo se activó en la base de datos.",
+      });
+    } catch (error) {
+      setAviso({
+        tipo: "error",
+        mensaje: mensajeErrorArticulos(
+          error,
+          "No se pudo cambiar el estado del artículo."
+        ),
+      });
+    } finally {
+      setCambiandoEstadoId(null);
+    }
   };
 
   const abrirModalNuevo = () => {
@@ -208,6 +356,32 @@ export const PaginaMisArticulos = () => {
               </div>
             </div>
           </div>
+
+          {aviso && (
+            <div
+              role="alert"
+              className={`mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm animate-fade-in ${
+                aviso.tipo === "error"
+                  ? "border-red-500/40 bg-red-500/10 text-red-300"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+              }`}
+            >
+              {aviso.tipo === "error" ? (
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              )}
+              <span className="flex-1">{aviso.mensaje}</span>
+              <button
+                type="button"
+                onClick={() => setAviso(null)}
+                className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                aria-label="Cerrar mensaje"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Buscador y Filtros */}
           <div className="glass-panel p-4 mb-6 animate-slide-up" style={{ animationDelay: "100ms" }}>
@@ -404,9 +578,10 @@ export const PaginaMisArticulos = () => {
                             </button>
                             <button
                               onClick={() => confirmarEliminar(art.id)}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                              disabled={guardando}
+                              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
                             >
-                              Eliminar
+                              {guardando ? "Eliminando..." : "Eliminar"}
                             </button>
                           </div>
                         </div>
@@ -427,7 +602,7 @@ export const PaginaMisArticulos = () => {
             }}
             onSubmit={handleSubmit}
             initialData={editandoArticulo}
-            loading={eliminandoId !== null || cambiandoEstadoId !== null}
+            loading={guardando}
           />
 
           {/* Modal Reserva por Horas */}

@@ -115,12 +115,15 @@ model Articulo {
   disponibleHasta DateTime
   activo          Boolean            @default(true)
   propietarioId   String
+  // Id del artículo en el navegador del usuario (migración desde localStorage).
+  claveExterna    String?
   creadoEn        DateTime           @default(now())
   actualizadoEn   DateTime           @updatedAt
 
   propietario Usuario    @relation(fields: [propietarioId], references: [id], onDelete: Cascade)
   alquileres  Alquiler[]
 
+  @@unique([propietarioId, claveExterna])
   @@index([propietarioId])
   @@index([categoria])
   @@index([activo])

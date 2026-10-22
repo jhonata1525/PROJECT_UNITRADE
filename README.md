@@ -30,7 +30,7 @@ Abre `http://localhost:5173`.
 
 ### Variables de entorno
 
-La app usa `VITE_API_BASE_URL` (por defecto `http://localhost:8080/api`). Si no defines un backend, **la billetera funciona igual** con datos mock en `localStorage`.
+La app usa `VITE_API_BASE_URL` (por defecto `http://localhost:8081/api`). Si no defines un backend, **la billetera funciona igual** con datos mock en `localStorage`.
 
 ---
 
@@ -66,7 +66,7 @@ contexto/ hooks/ servicios/ utils/  → lógica de apoyo (estado, datos, utilida
 | `componentes/` | **UI reutilizable**, dividida por dominio (ver abajo). |
 | `contexto/` | **Estado global con React Context.** `ContextoAutenticacion` (usuario, login/logout, `useAuth`) y `ContextoBilletera` (saldo, historial). |
 | `hooks/` | **Lógica reutilizable.** `useApi.js` = hook genérico para peticiones HTTP (loading/error/data). |
-| `servicios/` | **Capa de datos (español).** `servicioBilletera` (mock en localStorage), `servicioClienteApi` (Axios + interceptores JWT), `servicioPasarelaPago` (pagos). |
+| `servicios/` | **Capa de datos (español).** `servicioBilletera` (mock en localStorage), `servicioArticulos` (artículos del backend), `servicioClienteApi` (Axios + interceptores JWT), `servicioPasarelaPago` (pagos). |
 | `services/` | **Capa de datos (inglés, más vieja).** Solo `api.js`: instancia de Axios con manejo de token y refresh en 401. |
 | `utils/` | **Funciones de apoyo puras:** `constants.js`, `formatters.js` (fechas/moneda), `validators.js`. |
 | `types/` | **Tipos / documentación** (`index.d.ts`). |
