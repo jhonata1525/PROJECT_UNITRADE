@@ -39,6 +39,13 @@ npm run prisma:generate
 npm run prisma:deploy
 ```
 
+Opcionalmente carga los datos de demostración (usuarios, artículos, reservas,
+pagos y billeteras con saldo):
+
+```bash
+npm run prisma:seed
+```
+
 Inicia el servidor:
 
 ```bash
@@ -56,6 +63,32 @@ PostgreSQL y valida la contraseña contra `hashContrasena` con bcrypt. El correo
 debe pertenecer al dominio `@unisimon.edu.co`. La respuesta contiene los datos
 del usuario, nunca el hash de su contraseña; las contraseñas almacenadas deben
 estar generadas con bcrypt.
+
+## Pagos y billetera (HU-06 / HU-10)
+
+El backend implementa el cobro de reservas con comisión del 12%, el abono a la
+billetera del propietario, el historial de transacciones y los retiros con
+dispersión simulada en sandbox.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/payments/checkout` | Procesa el pago y reparte la comisión |
+| `GET` | `/api/payments/status/:transactionId` | Consulta una transacción |
+| `GET` | `/api/payments/history` | Historial de pagos |
+| `GET` | `/api/wallet/balance` | Saldo disponible, pendiente y totales |
+| `GET` | `/api/wallet/historial` | Transacciones de la billetera |
+| `POST` | `/api/wallet/withdraw` | Solicita retiro y ejecuta el payout |
+| `GET` | `/api/wallet/withdrawals` | Solicitudes de retiro |
+| `GET` | `/api/wallet/entidades` | Métodos de retiro disponibles |
+| `GET` | `/api/reservas` | Reservas del usuario con desglose |
+| `GET` | `/api/reservas/:id` | Detalle de una reserva y su pago |
+
+Mientras no exista el guard de JWT, identifica al usuario con el header
+`x-usuario-id` (o el campo `usuarioId` en el cuerpo). Para reintentos seguros
+usa el header `Idempotency-Key`.
+
+Detalle completo, reglas de negocio, modelo de datos y ejemplos:
+[`docs/HU-06-HU-10.md`](docs/HU-06-HU-10.md).
 
 ## Base de datos para el equipo
 
@@ -96,6 +129,7 @@ Cada integrante tiene dos opciones:
 | `npm run prisma:generate` | Genera el cliente de Prisma |
 | `npm run prisma:migrate -- --name nombre` | Crea una migración en desarrollo |
 | `npm run prisma:deploy` | Aplica migraciones existentes |
+| `npm run prisma:seed` | Carga datos mock de demostración |
 | `npm run prisma:studio` | Abre Prisma Studio |
 
 ## Estructura
@@ -108,6 +142,11 @@ backend/
 ├── src/
 │   ├── prisma/              # Servicio y módulo de Prisma
 │   ├── auth/                # Inicio de sesión y validación de credenciales
+│   ├── pagos/               # HU-06: checkout, comisión e historial
+│   ├── billetera/           # HU-10: saldo, historial y retiros
+│   ├── reservas/            # Consulta de reservas y desglose
+│   ├── pasarela/            # Pasarela sandbox (cobros y payouts)
+│   ├── comun/               # Reglas de dinero y decoradores compartidos
 │   ├── app.modulo.ts        # Módulo raíz
 │   ├── app.controlador.ts   # Rutas de salud
 │   ├── app.servicio.ts

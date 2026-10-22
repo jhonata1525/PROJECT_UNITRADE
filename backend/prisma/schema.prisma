@@ -53,6 +53,7 @@ enum TipoTransaccion {
 
 enum EstadoTransaccion {
   PENDIENTE
+  PROCESANDO
   COMPLETADO
   FALLIDO
 }
@@ -164,18 +165,25 @@ model Alquiler {
 // ─────────────────────────────────────────────
 
 model Pago {
-  id            String     @id @default(cuid())
-  alquilerId    String     @unique
-  monto         Int
-  estado        EstadoPago @default(PENDIENTE)
-  metodo        String     @default("sandbox")
-  idTransaccion String?    @unique
-  pagadoEn      DateTime?
-  creadoEn      DateTime   @default(now())
-  actualizadoEn DateTime   @updatedAt
+  id                String     @id @default(cuid())
+  alquilerId        String     @unique
+  monto             Int
+  comision          Int        @default(0)
+  montoPropietario  Int        @default(0)
+  moneda            String     @default("COP")
+  estado            EstadoPago @default(PENDIENTE)
+  metodo            String     @default("sandbox")
+  idTransaccion     String?    @unique
+  claveIdempotencia String?    @unique
+  errorMensaje      String?
+  metadata          Json?
+  pagadoEn          DateTime?
+  creadoEn          DateTime   @default(now())
+  actualizadoEn     DateTime   @updatedAt
 
   alquiler Alquiler @relation(fields: [alquilerId], references: [id], onDelete: Cascade)
 
+  @@index([estado])
   @@map("pago")
 }
 
@@ -183,12 +191,16 @@ model Pago {
 // Billetera virtual (HU-10)
 // ─────────────────────────────────────────────
 
+// El dinero se guarda en pesos enteros (COP), nunca en decimales.
+// saldoDisponible = dinero listo para retirar.
+// saldoPendiente  = dinero retenido mientras una dispersión (payout) está en proceso.
 model Billetera {
   id              String   @id @default(cuid())
   usuarioId       String   @unique
   saldoDisponible Int      @default(0)
   saldoPendiente  Int      @default(0)
   totalGanado     Int      @default(0)
+  totalRetirado   Int      @default(0)
   moneda          String   @default("COP")
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
@@ -223,13 +235,18 @@ model Retiro {
   metodo        MetodoRetiro
   cuenta        String
   monto         Int
+  moneda        String            @default("COP")
   estado        EstadoTransaccion @default(PENDIENTE)
+  idPayout      String?           @unique
+  errorMensaje  String?
+  completadoEn  DateTime?
   creadoEn      DateTime          @default(now())
   actualizadoEn DateTime          @updatedAt
 
   billetera Billetera @relation(fields: [billeteraId], references: [id], onDelete: Cascade)
 
-  @@index([billeteraId])
+  @@index([billeteraId, creadoEn])
+  @@index([estado])
   @@map("retiro")
 }
 

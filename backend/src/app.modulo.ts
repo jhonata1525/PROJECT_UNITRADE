@@ -4,7 +4,11 @@ import { ControladorApp } from './app.controlador.js';
 import { ServicioApp } from './app.servicio.js';
 import { ControladorAuth } from './auth/auth.controlador.js';
 import { ServicioAuth } from './auth/auth.servicio.js';
+import { ModuloBilletera } from './billetera/modulo-billetera.js';
+import { ModuloPagos } from './pagos/modulo-pagos.js';
+import { ModuloPasarela } from './pasarela/modulo-pasarela.js';
 import { ModuloPrisma } from './prisma/modulo-prisma.js';
+import { ModuloReservas } from './reservas/modulo-reservas.js';
 
 @Module({
   imports: [
@@ -13,6 +17,10 @@ import { ModuloPrisma } from './prisma/modulo-prisma.js';
       envFilePath: '.env',
     }),
     ModuloPrisma,
+    ModuloPasarela,
+    ModuloPagos,
+    ModuloBilletera,
+    ModuloReservas,
   ],
   controllers: [ControladorApp, ControladorAuth],
   providers: [ServicioApp, ServicioAuth],
