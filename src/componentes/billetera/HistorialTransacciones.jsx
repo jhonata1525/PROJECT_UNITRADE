@@ -1,7 +1,6 @@
 /**
  * @file HistorialTransacciones.jsx
- * Tabla/Lista estilizada con glassmorphism para mostrar fecha, tipo (Ingreso/Retiro),
- * monto y estado (Completado/Pendiente).
+ * Historial de movimientos de la billetera (ingresos, retiros, recargas).
  */
 
 import React from "react";
@@ -14,8 +13,14 @@ const ESTADOS_CONFIG = {
     bg: "bg-emerald-500/10 border-emerald-500/30",
     text: "text-emerald-400",
   },
+  PROCESANDO: {
+    label: "Procesando",
+    icon: Clock,
+    bg: "bg-amber-500/10 border-amber-500/30",
+    text: "text-amber-400",
+  },
   PENDIENTE: {
-    label: "En Proceso",
+    label: "Pendiente",
     icon: Clock,
     bg: "bg-amber-500/10 border-amber-500/30",
     text: "text-amber-400",
@@ -36,6 +41,20 @@ const TIPOS_CONFIG = {
     montoColor: "text-emerald-400",
     prefix: "+",
   },
+  DEPOSITO: {
+    icon: ArrowDownLeft,
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    montoColor: "text-emerald-400",
+    prefix: "+",
+  },
+  REEMBOLSO: {
+    icon: ArrowDownLeft,
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    montoColor: "text-emerald-400",
+    prefix: "+",
+  },
   RETIRO: {
     icon: ArrowUpRight,
     bg: "bg-blue-500/10",
@@ -43,11 +62,26 @@ const TIPOS_CONFIG = {
     montoColor: "text-gray-300",
     prefix: "-",
   },
+  COMISION: {
+    icon: ArrowUpRight,
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    montoColor: "text-red-400",
+    prefix: "-",
+  },
+  OTRO: {
+    icon: ArrowUpRight,
+    bg: "bg-slate-500/10",
+    text: "text-slate-300",
+    montoColor: "text-gray-300",
+    prefix: "",
+  },
 };
 
 const formatearFecha = (fecha) => {
   if (!fecha) return "";
   const date = new Date(fecha);
+  if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("es-CO", {
     year: "numeric",
     month: "short",
@@ -56,18 +90,20 @@ const formatearFecha = (fecha) => {
 };
 
 const formatearCOP = (monto) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(monto);
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0,
+  }).format(monto);
 
 const HistorialTransacciones = ({ transacciones = [] }) => {
   if (transacciones.length === 0) {
     return (
       <div className="glass-card p-6">
         <div className="mb-4">
-          <h3 className="text-lg font-bold text-white">
-            Historial de Transacciones
-          </h3>
+          <h3 className="text-lg font-bold text-white">Historial de Transacciones</h3>
           <p className="text-sm text-gray-400 mt-1">
-            Últimos movimientos de ingresos y solicitudes de retiro
+            Últimos movimientos de ingresos, recargas y solicitudes de retiro
           </p>
         </div>
         <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -96,11 +132,9 @@ const HistorialTransacciones = ({ transacciones = [] }) => {
   return (
     <div className="glass-card overflow-hidden">
       <div className="p-5 border-b border-[var(--color-border)]">
-        <h3 className="text-lg font-bold text-white">
-          Historial de Transacciones
-        </h3>
+        <h3 className="text-lg font-bold text-white">Historial de Transacciones</h3>
         <p className="text-sm text-gray-400 mt-1">
-          Últimos movimientos de ingresos y solicitudes de retiro
+          Últimos movimientos de ingresos, recargas y solicitudes de retiro
         </p>
       </div>
 
@@ -117,33 +151,36 @@ const HistorialTransacciones = ({ transacciones = [] }) => {
           </thead>
           <tbody className="divide-y divide-[var(--color-border)]">
             {transacciones.map((item) => {
-              const tipoConfig = TIPOS_CONFIG[item.tipo] || TIPOS_CONFIG.RETIRO;
+              const tipoConfig = TIPOS_CONFIG[item.tipo] || TIPOS_CONFIG.OTRO;
               const Icon = tipoConfig.icon;
               const estadoConfig = ESTADOS_CONFIG[item.estado] || ESTADOS_CONFIG.FALLIDO;
               const EstadoIcon = estadoConfig.icon;
+              const concepto = item.concepto || item.descripcion || "Movimiento";
+              const destino = item.destino || "—";
 
               return (
-                <tr
-                  key={item.id}
-                  className="hover:bg-[rgba(255,255,255,0.02)] transition-colors"
-                >
-                  <td className="px-6 py-4 font-medium text-white flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${tipoConfig.bg} ${tipoConfig.text}`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{item.concepto}</p>
-                      <p className="text-xs text-gray-500">ID: {item.id}</p>
+                <tr key={item.id} className="hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+                  <td className="px-6 py-4 font-medium text-white">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${tipoConfig.bg} ${tipoConfig.text}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{concepto}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.tipo} · ID: {item.id}
+                        </p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-400">
                     {formatearFecha(item.fecha)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">
-                    {item.destino}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-300">{destino}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${estadoConfig.bg} ${estadoConfig.text}`}>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${estadoConfig.bg} ${estadoConfig.text}`}
+                    >
                       <EstadoIcon className="w-3.5 h-3.5" />
                       {estadoConfig.label}
                     </span>
@@ -151,7 +188,8 @@ const HistorialTransacciones = ({ transacciones = [] }) => {
                   <td
                     className={`px-6 py-4 whitespace-nowrap text-right font-bold ${tipoConfig.montoColor}`}
                   >
-                    {tipoConfig.prefix}{formatearCOP(item.monto)}
+                    {tipoConfig.prefix}
+                    {formatearCOP(item.monto)}
                   </td>
                 </tr>
               );

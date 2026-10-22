@@ -216,6 +216,41 @@ describe('ServicioBilletera (HU-10)', () => {
     expect(pasarela.dispersar).not.toHaveBeenCalled();
   });
 
+  it('acredita una recarga sandbox sin contarla como ganancia', async () => {
+    prisma.billetera.update.mockResolvedValue({
+      ...billeteraBase,
+      saldoDisponible: 200_000,
+    });
+    prisma.transaccionBilletera.create.mockResolvedValue({ id: 'tx-dep-1' });
+
+    const resultado = await servicio.recargarSandbox(
+      { monto: 100_000, metodo: 'Nequi' },
+      'usr-laura',
+    );
+
+    expect(prisma.billetera.update).toHaveBeenCalledWith({
+      where: { id: 'bill-1' },
+      data: { saldoDisponible: { increment: 100_000 } },
+    });
+    expect(prisma.transaccionBilletera.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: 'DEPOSITO',
+          estado: 'COMPLETADO',
+          monto: 100_000,
+          saldoDespues: 200_000,
+        }),
+      }),
+    );
+    expect(resultado).toMatchObject({
+      exito: true,
+      saldoDisponible: 200_000,
+      totalGanado: 150_000,
+      monto: 100_000,
+      transaccionId: 'tx-dep-1',
+    });
+  });
+
   it('expone el saldo pendiente y los retiros en proceso', async () => {
     prisma.retiro.count.mockResolvedValue(1);
 

@@ -114,11 +114,10 @@ export const PaginaCatalogo = () => {
     setArticuloParaReserva(null);
   };
 
-  const handleReservaExitosa = () => {
-    cerrarReserva();
+  const handleReservaExitosa = (reserva) => {
     setAviso({
       tipo: "exito",
-      mensaje: "Reserva confirmada. Revisa el PIN y el QR en el comprobante.",
+      mensaje: `Pago aprobado en sandbox. Reserva creada con PIN ${reserva?.pin || "----"}.`,
     });
     cargarCatalogo();
   };

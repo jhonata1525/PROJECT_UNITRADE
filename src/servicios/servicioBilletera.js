@@ -1,219 +1,130 @@
 /**
  * @file servicioBilletera.js
- * Servicio mock para la billetera virtual de UniTrade (HU-10).
- * Maneja balance, historial de transacciones y retiros usando localStorage para persistencia.
+ * Cliente HTTP de la billetera virtual (HU-10).
+ *
+ * Todos los datos viven en PostgreSQL y se consultan al backend NestJS.
+ * Mientras no exista JWT, el usuario se identifica con `x-usuario-id`.
+ *
+ * Endpoints:
+ * - GET  /wallet/balance    → saldos y totales
+ * - GET  /wallet/historial  → movimientos
+ * - GET  /wallet/entidades  → métodos de retiro
+ * - POST /wallet/withdraw   → retiro con payout sandbox
+ * - POST /wallet/deposit    → recarga de prueba (solo sandbox)
+ * - GET  /wallet/withdrawals→ solicitudes de retiro
  */
 
-const STORAGE_KEYS = {
-  BALANCE: "untrade_wallet_balance",
-  HISTORIAL: "untrade_wallet_historial",
-  ENTIDADES: "untrade_wallet_entidades",
-};
+import servicioClienteApi from "./servicioClienteApi";
 
-/** Inicializa datos mock en localStorage si no existen */
-const inicializarDatosMock = () => {
-  if (!localStorage.getItem(STORAGE_KEYS.BALANCE)) {
-    const balanceInicial = {
-      saldoDisponible: 125000,
-      totalGanado: 450000,
-      retirosProceso: 0,
-    };
-    localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(balanceInicial));
+const cabecerasUsuario = (usuarioId) => ({
+  headers: { "x-usuario-id": usuarioId },
+});
+
+/**
+ * Convierte un error de Axios en un mensaje legible en español.
+ * @param {unknown} error
+ * @param {string} mensajePorDefecto
+ * @returns {string}
+ */
+export const mensajeErrorBilletera = (
+  error,
+  mensajePorDefecto = "No se pudo completar la operación de la billetera."
+) => {
+  const respuesta = error?.response?.data;
+  const mensaje = respuesta?.mensaje ?? respuesta?.message;
+
+  if (Array.isArray(mensaje)) return mensaje.join(", ");
+  if (typeof mensaje === "string" && mensaje.trim()) return mensaje;
+  if (error?.message === "Network Error") {
+    return "No se pudo conectar con el servidor. Verifica que el backend esté encendido.";
   }
-
-  if (!localStorage.getItem(STORAGE_KEYS.HISTORIAL)) {
-    const historialInicial = [
-      {
-        id: "tx-001",
-        tipo: "INGRESO",
-        concepto: "Alquiler - Mesa de estudio",
-        monto: 50000,
-        fecha: "2024-01-15",
-        estado: "COMPLETADO",
-        destino: "Billetera UniTrade",
-      },
-      {
-        id: "tx-002",
-        tipo: "INGRESO",
-        concepto: "Alquiler - Silla ergonómica",
-        monto: 30000,
-        fecha: "2024-01-10",
-        estado: "COMPLETADO",
-        destino: "Billetera UniTrade",
-      },
-    ];
-    localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historialInicial));
-  }
-
-  if (!localStorage.getItem(STORAGE_KEYS.ENTIDADES)) {
-    const entidades = [
-      { valor: "Nequi", label: "Nequi" },
-      { valor: "Daviplata", label: "Daviplata" },
-      { valor: "Ahorro a la Mano", label: "Ahorro a la Mano" },
-      { valor: "Banco Colombia", label: "Banco Colombia" },
-    ];
-    localStorage.setItem(STORAGE_KEYS.ENTIDADES, JSON.stringify(entidades));
-  }
+  return mensajePorDefecto;
 };
 
-/** Genera ID único para transacciones */
-const generarId = () => `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-/** Obtiene balance actual desde localStorage */
-export const obtenerBalance = async () => {
-  inicializarDatosMock();
-  const data = localStorage.getItem(STORAGE_KEYS.BALANCE);
-  return data ? JSON.parse(data) : { saldoDisponible: 0, totalGanado: 0, retirosProceso: 0 };
+/** Saldo disponible, pendiente, ganado y retirado del usuario. */
+export const obtenerBalance = async (usuarioId) => {
+  const { data } = await servicioClienteApi.get(
+    "/wallet/balance",
+    cabecerasUsuario(usuarioId)
+  );
+  return data;
 };
 
-/** Obtiene historial de transacciones desde localStorage */
-export const obtenerHistorialTransacciones = async () => {
-  inicializarDatosMock();
-  const data = localStorage.getItem(STORAGE_KEYS.HISTORIAL);
-  return data ? JSON.parse(data) : [];
+/** Historial de movimientos (ingresos, retiros y recargas). */
+export const obtenerHistorialTransacciones = async (
+  usuarioId,
+  { limite = 50, tipo } = {}
+) => {
+  const { data } = await servicioClienteApi.get("/wallet/historial", {
+    ...cabecerasUsuario(usuarioId),
+    params: {
+      limite,
+      ...(tipo ? { tipo } : {}),
+    },
+  });
+  return data;
 };
 
-/** Obtiene lista de entidades financieras */
+/** Métodos de retiro habilitados por el backend. */
 export const listarEntidades = async () => {
-  inicializarDatosMock();
-  const data = localStorage.getItem(STORAGE_KEYS.ENTIDADES);
-  return data ? JSON.parse(data) : [];
+  const { data } = await servicioClienteApi.get("/wallet/entidades");
+  return data;
 };
 
 /**
- * Solicita retiro de fondos
- * Valida que el monto no supere el saldo disponible
- * Actualiza balance y agrega transacción al historial
+ * Solicita un retiro. El backend retiene el saldo, ejecuta el payout sandbox
+ * y devuelve el resultado. Si el payout falla, el saldo se restaura.
  */
-export const solicitarRetiro = async (datosRetiro) => {
-  const { entidadFinanciera, numeroCuenta, monto } = datosRetiro;
-
-  if (!entidadFinanciera || !monto) {
-    throw new Error("Entidad financiera y monto son obligatorios");
-  }
-
-  const balance = await obtenerBalance();
-
-  if (monto > balance.saldoDisponible) {
-    throw new Error(`Monto insuficiente. Saldo disponible: ${balance.saldoDisponible.toLocaleString()} COP`);
-  }
-
-  /** Actualiza balance */
-  const nuevoBalance = {
-    ...balance,
-    saldoDisponible: balance.saldoDisponible - monto,
-    retirosProceso: balance.retirosProceso + 1,
-  };
-  localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(nuevoBalance));
-
-  /** Agrega transacción al historial */
-  const historial = await obtenerHistorialTransacciones();
-  const nuevaTransaccion = {
-    id: generarId(),
-    tipo: "RETIRO",
-    concepto: `Retiro a ${entidadFinanciera} (${numeroCuenta.slice(-4).padStart(numeroCuenta.length, '*')})`,
-    monto,
-    fecha: new Date().toISOString().split("T")[0],
-    estado: "COMPLETADO",
-    destino: entidadFinanciera,
-  };
-  historial.unshift(nuevaTransaccion);
-  localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historial));
-
-  /** Simula procesamiento asíncrono */
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  return {
-    success: true,
-    solicitudId: `retiro-${Date.now()}`,
-    estado: "COMPLETADO",
-    mensaje: "Retiro procesado exitosamente",
-    transaccion: nuevaTransaccion,
-  };
+export const solicitarRetiro = async (usuarioId, datosRetiro) => {
+  const { metodo, cuenta, monto, forzarFallo } = datosRetiro;
+  const { data } = await servicioClienteApi.post(
+    "/wallet/withdraw",
+    {
+      metodo,
+      cuenta,
+      monto,
+      ...(typeof forzarFallo === "boolean" ? { forzarFallo } : {}),
+    },
+    cabecerasUsuario(usuarioId)
+  );
+  return data;
 };
 
 /**
- * Procesa una reserva de alquiler por horas
- * Descuenta el monto del saldo disponible y registra la transacción
+ * Recarga saldo de prueba (solo sandbox).
+ * No cobra dinero real; sirve para demostrar la billetera y el retiro.
  */
-export const solicitarReserva = async (datosReserva) => {
-  const { articuloId, articuloNombre, horaInicio, horaFin, horas, tarifaHora, total, pin } = datosReserva;
-
-  if (!articuloId || !total) {
-    throw new Error("Datos de reserva incompletos");
-  }
-
-  const balance = await obtenerBalance();
-
-  if (total > balance.saldoDisponible) {
-    throw new Error(`Saldo insuficiente. Disponible: ${balance.saldoDisponible.toLocaleString()} COP`);
-  }
-
-  /** Actualiza balance */
-  const nuevoBalance = {
-    ...balance,
-    saldoDisponible: balance.saldoDisponible - total,
-    retirosProceso: balance.retirosProceso + 1,
-  };
-  localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(nuevoBalance));
-
-  /** Agrega transacción al historial */
-  const historial = await obtenerHistorialTransacciones();
-  const nuevaTransaccion = {
-    id: generarId(),
-    tipo: "RETIRO",
-    concepto: `Reserva: ${articuloNombre} (${horas}h)`,
-    monto: total,
-    fecha: new Date().toISOString().split("T")[0],
-    estado: "COMPLETADO",
-    destino: "Reserva de alquiler",
-  };
-  historial.unshift(nuevaTransaccion);
-  localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historial));
-
-  /** Simula procesamiento asíncrono */
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  return {
-    success: true,
-    reservaId: `res_${Date.now()}`,
-    estado: "CONFIRMADA",
-    mensaje: "Reserva procesada exitosamente",
-    transaccion: nuevaTransaccion,
-  };
+export const recargarSaldo = async (usuarioId, datosRecarga) => {
+  const { monto, metodo } = datosRecarga;
+  const { data } = await servicioClienteApi.post(
+    "/wallet/deposit",
+    { monto, metodo },
+    cabecerasUsuario(usuarioId)
+  );
+  return data;
 };
 
-/** Agrega un ingreso al historial y actualiza balance (para testing/integración) */
-export const agregarIngreso = async (concepto, monto) => {
-  const balance = await obtenerBalance();
-  const nuevoBalance = {
-    ...balance,
-    saldoDisponible: balance.saldoDisponible + monto,
-    totalGanado: balance.totalGanado + monto,
-  };
-  localStorage.setItem(STORAGE_KEYS.BALANCE, JSON.stringify(nuevoBalance));
-
-  const historial = await obtenerHistorialTransacciones();
-  const nuevaTransaccion = {
-    id: generarId(),
-    tipo: "INGRESO",
-    concepto,
-    monto,
-    fecha: new Date().toISOString().split("T")[0],
-    estado: "COMPLETADO",
-    destino: "Billetera UniTrade",
-  };
-  historial.unshift(nuevaTransaccion);
-  localStorage.setItem(STORAGE_KEYS.HISTORIAL, JSON.stringify(historial));
-
-  return nuevoBalance;
+/** Solicitudes de retiro del usuario. */
+export const obtenerRetiros = async (usuarioId, limite = 20) => {
+  const { data } = await servicioClienteApi.get("/wallet/withdrawals", {
+    ...cabecerasUsuario(usuarioId),
+    params: { limite },
+  });
+  return data;
 };
 
-export default {
+/** Alias de compatibilidad con el contexto existente. */
+export const obtenerHistorial = obtenerHistorialTransacciones;
+
+export const servicioBilletera = {
   obtenerBalance,
+  obtenerHistorial,
   obtenerHistorialTransacciones,
-  solicitarRetiro,
-  solicitarReserva,
   listarEntidades,
-  agregarIngreso,
+  solicitarRetiro,
+  recargarSaldo,
+  obtenerRetiros,
+  mensajeErrorBilletera,
 };
+
+export default servicioBilletera;

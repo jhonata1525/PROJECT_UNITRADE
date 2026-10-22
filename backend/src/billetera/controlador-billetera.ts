@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
+import { DepositoDto } from './dto/deposito.dto.js';
 import { HistorialBilleteraDto } from './dto/historial-billetera.dto.js';
 import { SolicitarRetiroDto } from './dto/solicitar-retiro.dto.js';
 import { ServicioBilletera } from './servicio-billetera.js';
@@ -38,6 +39,16 @@ export class ControladorBilletera {
   })
   solicitarRetiro(@Body() dto: SolicitarRetiroDto, @UsuarioId() usuarioId: string) {
     return this.servicioBilletera.solicitarRetiro(dto, usuarioId);
+  }
+
+  @Post('deposit')
+  @ApiOperation({
+    summary: 'Recarga saldo de prueba (solo sandbox)',
+    description:
+      'Acredita saldo simulado en la billetera para demostrar el flujo de retiro. No cobra dinero real.',
+  })
+  recargarSandbox(@Body() dto: DepositoDto, @UsuarioId() usuarioId: string) {
+    return this.servicioBilletera.recargarSandbox(dto, usuarioId);
   }
 
   @Get('withdrawals')

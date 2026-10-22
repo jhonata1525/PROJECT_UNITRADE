@@ -2,13 +2,19 @@ import React from "react";
 
 /**
  * @file TarjetasBalance.jsx
- * Componente para mostrar las 3 tarjetas principales de balance:
- * - Saldo Disponible
- * - Saldo Pendiente (retiros en proceso)
- * - Ganancias Totales
+ * Tarjetas principales de la billetera:
+ * - Saldo disponible
+ * - Saldo pendiente (retiros en proceso)
+ * - Ganancias totales
+ * - Total retirado
  */
 
-export const TarjetasBalance = ({ saldoDisponible = 0, saldoPendiente = 0, totalGanado = 0 }) => {
+export const TarjetasBalance = ({
+  saldoDisponible = 0,
+  saldoPendiente = 0,
+  totalGanado = 0,
+  totalRetirado = 0,
+}) => {
   const formatearCOP = (valor) =>
     new Intl.NumberFormat("es-CO", {
       style: "currency",
@@ -50,23 +56,36 @@ export const TarjetasBalance = ({ saldoDisponible = 0, saldoPendiente = 0, total
       colorIcono: "text-blue-500 bg-blue-100 dark:bg-blue-900/30",
       colorTexto: "text-blue-600 dark:text-blue-400",
     },
+    {
+      titulo: "Total Retirado",
+      valor: formatearCOP(totalRetirado),
+      icono: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      colorIcono: "text-purple-500 bg-purple-100 dark:bg-purple-900/30",
+      colorTexto: "text-purple-600 dark:text-purple-400",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-      {tarjetas.map((tarjeta, index) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {tarjetas.map((tarjeta) => (
         <div
-          key={index}
+          key={tarjeta.titulo}
           className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
         >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {tarjeta.titulo}
               </p>
-              <p className={`text-2xl font-bold ${tarjeta.colorTexto}`}>{tarjeta.valor}</p>
+              <p className={`text-xl sm:text-2xl font-bold break-words ${tarjeta.colorTexto}`}>
+                {tarjeta.valor}
+              </p>
             </div>
-            <div className={`p-3 rounded-lg ${tarjeta.colorIcono}`}>
+            <div className={`p-3 rounded-lg flex-shrink-0 ${tarjeta.colorIcono}`}>
               {tarjeta.icono}
             </div>
           </div>

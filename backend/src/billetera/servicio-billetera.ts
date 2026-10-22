@@ -18,6 +18,7 @@ import {
   type ResultadoPayout,
 } from '../pasarela/servicio-pasarela-sandbox.js';
 import { ServicioPrisma } from '../prisma/servicio-prisma.js';
+import { DepositoDto } from './dto/deposito.dto.js';
 import { HistorialBilleteraDto } from './dto/historial-billetera.dto.js';
 import { SolicitarRetiroDto } from './dto/solicitar-retiro.dto.js';
 
@@ -304,6 +305,58 @@ export class ServicioBilletera {
       saldoPendiente: completado.billetera.saldoPendiente,
       fecha: (completado.retiroCompletado.completadoEn ?? payout.fecha).toISOString(),
       mensaje: `Retiro de ${formatearCop(dto.monto)} procesado en sandbox hacia ${destino}.`,
+    };
+  }
+
+  /**
+   * Recarga saldo de prueba (solo sandbox).
+   *
+   * Acredita el monto en la billetera y registra una transacción DEPOSITO.
+   * No incrementa `totalGanado` porque no es una ganancia por alquiler.
+   */
+  async recargarSandbox(dto: DepositoDto, usuarioId: string) {
+    const billetera = await this.obtenerOCrearBilletera(usuarioId);
+    const metodo = dto.metodo?.trim() || 'Sandbox';
+
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const actualizada = await tx.billetera.update({
+        where: { id: billetera.id },
+        data: {
+          saldoDisponible: { increment: dto.monto },
+        },
+      });
+
+      const transaccion = await tx.transaccionBilletera.create({
+        data: {
+          billeteraId: billetera.id,
+          tipo: TipoTransaccion.DEPOSITO,
+          monto: dto.monto,
+          saldoDespues: actualizada.saldoDisponible,
+          descripcion: `Recarga sandbox vía ${metodo}`,
+          estado: EstadoTransaccion.COMPLETADO,
+          metadata: {
+            origen: 'sandbox',
+            metodo,
+          },
+        },
+      });
+
+      return { actualizada, transaccion };
+    });
+
+    this.logger.log(
+      `Recarga sandbox de ${formatearCop(dto.monto)} acreditada al usuario ${usuarioId}.`,
+    );
+
+    return {
+      exito: true,
+      saldoDisponible: resultado.actualizada.saldoDisponible,
+      saldoPendiente: resultado.actualizada.saldoPendiente,
+      totalGanado: resultado.actualizada.totalGanado,
+      transaccionId: resultado.transaccion.id,
+      monto: dto.monto,
+      metodo,
+      mensaje: `Recarga sandbox de ${formatearCop(dto.monto)} acreditada.`,
     };
   }
 

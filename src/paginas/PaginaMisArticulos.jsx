@@ -15,7 +15,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import { FormularioArticuloModal } from "../componentes/comunes/FormularioArticuloModal";
-import { ModalReservaHoras } from "../componentes/articulos/ModalReservaHoras";
 import {
   actualizarArticulo,
   crearArticulo,
@@ -80,8 +79,6 @@ export const PaginaMisArticulos = () => {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [categoriaFiltro, setCategoriaFiltro] = React.useState("Todas");
   const [modalAbierto, setModalAbierto] = React.useState(false);
-  const [reservaModalAbierto, setReservaModalAbierto] = React.useState(false);
-  const [articuloParaReserva, setArticuloParaReserva] = React.useState(null);
   const [editandoArticulo, setEditandoArticulo] = React.useState(null);
   const [eliminandoId, setEliminandoId] = React.useState(null);
   const [cambiandoEstadoId, setCambiandoEstadoId] = React.useState(null);
@@ -299,11 +296,6 @@ export const PaginaMisArticulos = () => {
   const abrirModalNuevo = () => {
     setEditandoArticulo(null);
     setModalAbierto(true);
-  };
-
-  const abrirModalReserva = (articulo) => {
-    setArticuloParaReserva(articulo);
-    setReservaModalAbierto(true);
   };
 
   if (loading) {
@@ -533,16 +525,6 @@ export const PaginaMisArticulos = () => {
                           <Edit className="w-4 h-4" />
                           Editar
                         </button>
-                        {art.estado === "disponible" && (
-                          <button
-                            onClick={() => abrirModalReserva(art)}
-                            className="flex-1 btn-primary text-xs py-2 flex items-center justify-center gap-1"
-                            disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
-                          >
-                            <Clock className="w-4 h-4" />
-                            <span className="hidden sm:inline">Reservar</span>
-                          </button>
-                        )}
                         <button
                           onClick={() => handleCambiarEstado(art)}
                           className={`flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1 transition-colors ${
@@ -614,20 +596,6 @@ export const PaginaMisArticulos = () => {
             onSubmit={handleSubmit}
             initialData={editandoArticulo}
             loading={guardando}
-          />
-
-          {/* Modal Reserva por Horas */}
-          <ModalReservaHoras
-            isOpen={reservaModalAbierto}
-            onClose={() => {
-              setReservaModalAbierto(false);
-              setArticuloParaReserva(null);
-            }}
-            articulo={articuloParaReserva}
-            onReservaExitosa={() => {
-              setReservaModalAbierto(false);
-              setArticuloParaReserva(null);
-            }}
           />
         </div>
       </main>
