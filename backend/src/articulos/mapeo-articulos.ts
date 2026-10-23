@@ -187,11 +187,11 @@ export function mapearArticulo(
   articulo: ArticuloPersistido,
   tieneAlquilerActivo = false,
 ): ArticuloFrontend {
-  const estado = !articulo.activo
-    ? 'pausado'
-    : tieneAlquilerActivo
-      ? 'en_alquiler'
-      : 'disponible';
+  const estado = tieneAlquilerActivo
+    ? 'en_alquiler'
+    : articulo.activo
+      ? 'disponible'
+      : 'pausado';
 
   return {
     id: articulo.id,

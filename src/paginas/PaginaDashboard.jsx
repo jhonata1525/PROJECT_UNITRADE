@@ -14,6 +14,7 @@ import {
   Wallet,
   CreditCard,
   Package,
+  KeyRound,
   Compass,
   TrendingUp,
   Clock,
@@ -91,6 +92,14 @@ const QUICK_ACTIONS = [
     icon: CreditCard,
     color: "from-blue-500 to-indigo-500",
     hoverColor: "hover:border-blue-500/50",
+  },
+  {
+    path: "/mis-alquileres",
+    label: "Mis Alquileres",
+    description: "Consulta tus reservas y códigos de devolución",
+    icon: KeyRound,
+    color: "from-amber-500 to-orange-500",
+    hoverColor: "hover:border-amber-500/50",
   },
   {
     path: "/mis-articulos",

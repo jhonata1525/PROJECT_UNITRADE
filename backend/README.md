@@ -32,7 +32,9 @@ FRONTEND_URL=http://localhost:5173
 > Usa la conexión **directa** (sin `-pooler`) para las migraciones.
 > Nunca subas el archivo `.env` al repositorio.
 
-Genera el cliente de Prisma y aplica las migraciones:
+Aplica las migraciones. El cliente de Prisma se genera automáticamente al
+iniciar el backend en desarrollo o compilarlo; también puedes generarlo
+manualmente después de cambiar el esquema:
 
 ```bash
 npm run prisma:generate
@@ -65,6 +67,11 @@ debe pertenecer al dominio `@unisimon.edu.co`. La respuesta contiene los datos
 del usuario, nunca el hash de su contraseña; las contraseñas almacenadas deben
 estar generadas con bcrypt.
 
+El perfil devuelve también `sede`, `puntoEntrega` y `disponibilidad`. Para
+guardarlos, el frontend usa `PATCH /api/auth/perfil` con el header
+`x-usuario-id` y un cuerpo con esos tres campos. La sede, el punto de entrega y
+las franjas semanales quedan almacenados en la tabla `usuario`.
+
 ## Pagos y billetera (HU-06 / HU-10)
 
 El backend implementa el cobro de reservas con comisión del 12%, el abono a la
@@ -83,6 +90,7 @@ dispersión simulada en sandbox.
 | `GET` | `/api/wallet/entidades` | Métodos de retiro disponibles |
 | `GET` | `/api/reservas` | Reservas del usuario con desglose |
 | `GET` | `/api/reservas/:id` | Detalle de una reserva y su pago |
+| `POST` | `/api/reservas/articulos/:articuloId/devolucion` | Valida el código del arrendatario y vuelve a publicar el artículo |
 
 Mientras no exista el guard de JWT, identifica al usuario con el header
 `x-usuario-id` (o el campo `usuarioId` en el cuerpo). Para reintentos seguros
@@ -142,8 +150,8 @@ Cada integrante tiene dos opciones:
 
 | Script | Qué hace |
 |---|---|
-| `npm run start:dev` | Servidor en modo desarrollo |
-| `npm run build` | Compila a `dist/` |
+| `npm run start:dev` | Genera el cliente Prisma e inicia el servidor en modo desarrollo |
+| `npm run build` | Genera el cliente Prisma y compila a `dist/` |
 | `npm run start:prod` | Ejecuta la versión compilada |
 | `npm run lint` | Revisa el código |
 | `npm test` | Pruebas unitarias (Vitest) |

@@ -1,7 +1,7 @@
 /**
  * @file PaginaCatalogo.jsx
  * Catálogo público de artículos disponibles en UniTrade.
- * - Muestra solo artículos con estado "disponible" de otros usuarios.
+ * - Muestra artículos disponibles y en alquiler de otros usuarios.
  * - Buscador y filtro por categoría.
  * - Cada tarjeta muestra foto, título, categoría, tarifa por hora, descripción
  *   y datos del propietario (nombre y sede).
@@ -85,12 +85,18 @@ export const PaginaCatalogo = () => {
     cargarCatalogo();
   }, [cargarCatalogo]);
 
-  // Solo se ofrecen artículos disponibles y que no sean del usuario actual.
+  // Los artículos alquilados se muestran, pero no pueden reservarse otra vez.
   const disponibles = articulos.filter(
     (art) => art.estado === "disponible" && art.propietario?.id !== usuario?.id
   );
 
-  const articulosFiltrados = disponibles.filter((art) => {
+  const articulosVisibles = articulos.filter(
+    (art) =>
+      ["disponible", "en_alquiler"].includes(art.estado) &&
+      art.propietario?.id !== usuario?.id
+  );
+
+  const articulosFiltrados = articulosVisibles.filter((art) => {
     const termino = searchTerm.trim().toLowerCase();
     const coincideBusqueda =
       !termino ||
@@ -117,7 +123,7 @@ export const PaginaCatalogo = () => {
   const handleReservaExitosa = (reserva) => {
     setAviso({
       tipo: "exito",
-      mensaje: `Pago aprobado en sandbox. Reserva creada con PIN ${reserva?.pin || "----"}.`,
+      mensaje: `Pago aprobado en sandbox. Reserva creada con código de devolución ${reserva?.pin || "----"}.`,
     });
     cargarCatalogo();
   };
@@ -137,7 +143,7 @@ export const PaginaCatalogo = () => {
                   Explorar Artículos
                 </h1>
                 <p className="text-gray-400 mt-1">
-                  Encuentra artículos disponibles de otros estudiantes y resérvalos por horas.
+                  Encuentra artículos de otros estudiantes y resérvalos por horas.
                 </p>
               </div>
               <div className="glass-panel px-4 py-3 rounded-xl flex items-center gap-2 self-start sm:self-auto">
@@ -241,16 +247,16 @@ export const PaginaCatalogo = () => {
             <div className="glass-panel p-12 text-center animate-fade-in">
               <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
-                {disponibles.length === 0
+                {articulosVisibles.length === 0
                   ? "No hay artículos disponibles por ahora"
                   : "No hay resultados"}
               </h3>
               <p className="text-gray-400 mb-6">
-                {disponibles.length === 0
+                {articulosVisibles.length === 0
                   ? "Cuando otros estudiantes publiquen sus artículos, aparecerán aquí."
                   : "Intenta cambiar el término de búsqueda o la categoría."}
               </p>
-              {disponibles.length === 0 && (
+              {articulosVisibles.length === 0 && (
                 <Link
                   to="/mis-articulos"
                   className="btn-primary inline-flex items-center gap-2"
@@ -264,7 +270,7 @@ export const PaginaCatalogo = () => {
             <div
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in"
               role="list"
-              aria-label="Artículos disponibles para alquilar"
+              aria-label="Artículos disponibles y en alquiler"
             >
               {articulosFiltrados.map((art) => (
                 <article
@@ -287,9 +293,19 @@ export const PaginaCatalogo = () => {
                       </div>
                     )}
                     <div className="absolute top-3 left-3">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500 text-white shadow-lg">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Disponible
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-white shadow-lg ${
+                          art.estado === "en_alquiler"
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                        }`}
+                      >
+                        {art.estado === "en_alquiler" ? (
+                          <Clock className="w-3 h-3" />
+                        ) : (
+                          <CheckCircle2 className="w-3 h-3" />
+                        )}
+                        {art.estado === "en_alquiler" ? "En alquiler" : "Disponible"}
                       </span>
                     </div>
                   </div>
@@ -339,14 +355,25 @@ export const PaginaCatalogo = () => {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => abrirReserva(art)}
-                      className="w-full btn-primary text-sm py-2 flex items-center justify-center gap-2"
-                    >
-                      <Clock className="w-4 h-4" />
-                      Reservar por horas
-                    </button>
+                    {art.estado === "en_alquiler" ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full btn-secondary text-sm py-2 flex items-center justify-center gap-2 opacity-60 cursor-not-allowed"
+                      >
+                        <Clock className="w-4 h-4" />
+                        En alquiler
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => abrirReserva(art)}
+                        className="w-full btn-primary text-sm py-2 flex items-center justify-center gap-2"
+                      >
+                        <Clock className="w-4 h-4" />
+                        Reservar por horas
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}

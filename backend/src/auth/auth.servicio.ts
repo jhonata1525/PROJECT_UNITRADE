@@ -1,6 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { compare } from 'bcryptjs';
 import { ServicioPrisma } from '../prisma/servicio-prisma.js';
+import { ActualizarPerfilDto } from './dto/actualizar-perfil.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
 @Injectable()
@@ -25,6 +30,10 @@ export class ServicioAuth {
         telefonoVerificado: true,
         fechaVerificacionTelefono: true,
         rol: true,
+        sede: true,
+        puntoEntrega: true,
+        disponibilidad: true,
+        fotoPerfil: true,
       },
     });
 
@@ -41,7 +50,37 @@ export class ServicioAuth {
         telefonoVerificado: usuario.telefonoVerificado,
         fechaVerificacionTelefono: usuario.fechaVerificacionTelefono,
         rol: usuario.rol,
+        sede: usuario.sede,
+        puntoEntrega: usuario.puntoEntrega,
+        disponibilidad: usuario.disponibilidad,
+        fotoPerfil: usuario.fotoPerfil,
       },
     };
+  }
+
+  async actualizarPerfil(usuarioId: string, dto: ActualizarPerfilDto) {
+    const usuarioExiste = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { id: true },
+    });
+
+    if (!usuarioExiste) {
+      throw new NotFoundException('El usuario indicado no existe.');
+    }
+
+    return this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        sede: dto.sede,
+        puntoEntrega: dto.puntoEntrega,
+        disponibilidad: dto.disponibilidad,
+      },
+      select: {
+        id: true,
+        sede: true,
+        puntoEntrega: true,
+        disponibilidad: true,
+      },
+    });
   }
 }

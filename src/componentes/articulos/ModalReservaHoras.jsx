@@ -58,8 +58,6 @@ const formatFecha = (fecha) =>
     month: "short",
   }).format(fecha);
 
-const generarPin = () => Math.floor(1000 + Math.random() * 9000).toString();
-
 /**
  * Construye las fechas de la reserva para hoy o mañana.
  * Si el horario elegido ya pasó, se agenda para mañana.
@@ -172,7 +170,12 @@ export const ModalReservaHoras = ({
         throw new Error(respuesta?.mensaje || "El pago no fue aprobado.");
       }
 
-      const pin = generarPin();
+      if (!respuesta.codigoDevolucion) {
+        throw new Error(
+          "El pago se aprobó, pero no se recibió el código de devolución. Consulta Mis Alquileres antes de entregar el artículo."
+        );
+      }
+
       const reserva = {
         id: respuesta.alquilerId,
         pagoId: respuesta.pagoId,
@@ -194,7 +197,7 @@ export const ModalReservaHoras = ({
             montoPropietario,
             porcentajeComision: COMISION,
           },
-        pin,
+        pin: respuesta.codigoDevolucion,
         estado: respuesta.estado,
         mensaje: respuesta.mensaje,
       };
@@ -484,7 +487,7 @@ export const ModalReservaHoras = ({
                   </div>
 
                   <div className="p-3 rounded-lg bg-gradient-to-r from-[var(--color-neon)]/10 to-[var(--color-accent-500)]/10 border border-[var(--color-neon)]/30">
-                    <p className="text-xs text-gray-400 mb-2">Código PIN de entrega</p>
+                    <p className="text-xs text-gray-400 mb-2">Código para confirmar la devolución</p>
                     <div className="flex justify-center">
                       <PinInput
                         value={reservaConfirmada.pin}
@@ -494,7 +497,7 @@ export const ModalReservaHoras = ({
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      Comparte este PIN con el propietario al recoger el artículo.
+                      Guarda este código y muéstraselo al propietario cuando devuelvas el artículo. También podrás consultarlo en Mis Alquileres.
                     </p>
                   </div>
                 </div>

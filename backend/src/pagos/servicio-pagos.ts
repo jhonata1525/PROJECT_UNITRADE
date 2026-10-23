@@ -8,6 +8,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomInt } from 'node:crypto';
 import { calcularDesglose, DesglosePago, formatearCop } from '../comun/dinero.js';
 import { Prisma } from '../generated/prisma/client.js';
 import {
@@ -93,7 +94,11 @@ export class ServicioPagos {
       if (pagoPrevio) {
         this.verificarPropietarioDelPago(pagoPrevio, usuarioId);
         if (pagoPrevio.estado === EstadoPago.COMPLETADO) {
-          return this.respuestaExitosa(pagoPrevio);
+          return this.respuestaExitosa(
+            pagoPrevio,
+            undefined,
+            pagoPrevio.alquiler.codigoVerificacion ?? undefined,
+          );
         }
         throw new ConflictException(
           'Ya existe un pago con esa clave de idempotencia que no está completado.',
@@ -107,7 +112,7 @@ export class ServicioPagos {
       return this.respuestaExitosa({
         ...alquiler.pago,
         alquiler: { articulo: { titulo: alquiler.articulo.titulo } },
-      });
+      }, undefined, alquiler.codigoVerificacion ?? undefined);
     }
 
     if (!Number.isInteger(alquiler.subtotal) || alquiler.subtotal <= 0) {
@@ -268,6 +273,7 @@ export class ServicioPagos {
       metodo: pagado.metodo,
       desglose,
       fecha: (pagado.pagadoEn ?? pagado.creadoEn).toISOString(),
+      codigoDevolucion: alquiler.codigoVerificacion,
       mensaje: 'Pago aprobado en sandbox. Reserva confirmada y saldo abonado al propietario.',
     };
   }
@@ -434,6 +440,7 @@ export class ServicioPagos {
         articuloId: articulo.id,
         arrendatarioId: usuarioId,
         propietarioId: articulo.propietarioId,
+        codigoVerificacion: String(randomInt(1000, 10_000)),
         inicio,
         fin,
         horas: dto.horas,
@@ -467,6 +474,7 @@ export class ServicioPagos {
   private respuestaExitosa(
     pago: PagoParaRespuesta,
     mensaje = 'Pago ya estaba completado; se devolvió el mismo resultado sin cobrar dos veces.',
+    codigoDevolucion?: string,
   ) {
     const desglose: DesglosePago = {
       subtotal: pago.monto,
@@ -489,6 +497,7 @@ export class ServicioPagos {
       desglose,
       fecha: (pago.pagadoEn ?? pago.creadoEn).toISOString(),
       error: pago.errorMensaje,
+      ...(codigoDevolucion ? { codigoDevolucion } : {}),
       mensaje,
     };
   }

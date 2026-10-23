@@ -3,10 +3,22 @@ import type { ServicioPrisma } from '../prisma/servicio-prisma.js';
 import { ServicioReservas } from './servicio-reservas.js';
 
 function crearPrismaMock() {
-  return {
+  const prisma = {
     usuario: { findUnique: vi.fn() },
-    alquiler: { findUnique: vi.fn(), findMany: vi.fn() },
+    articulo: { update: vi.fn() },
+    alquiler: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      updateMany: vi.fn(),
+      count: vi.fn(),
+    },
+    $transaction: vi.fn(),
   };
+  prisma.$transaction.mockImplementation(
+    (callback: (tx: unknown) => unknown) => callback(prisma),
+  );
+  return prisma;
 }
 
 const reservaBase = {
@@ -21,7 +33,7 @@ const reservaBase = {
   comision: 7_200,
   total: 60_000,
   estado: 'PENDIENTE_ENTREGA',
-  codigoVerificacion: '1234',
+  codigoVerificacion: '4821',
   codigoQr: null,
   creadoEn: new Date('2026-10-21T12:00:00.000Z'),
   actualizadoEn: new Date('2026-10-21T12:00:00.000Z'),
@@ -78,6 +90,7 @@ describe('ServicioReservas', () => {
 
     expect(detalle).toMatchObject({
       id: 'alq-1',
+      codigoDevolucion: '4821',
       subtotal: 60_000,
       comision: 7_200,
       total: 60_000,
@@ -128,8 +141,93 @@ describe('ServicioReservas', () => {
     );
     expect(lista[0]).toMatchObject({
       id: 'alq-1',
+      codigoDevolucion: '4821',
       montoPropietario: 52_800,
       pago: { estado: 'COMPLETADO' },
     });
+  });
+
+  it('genera y guarda un código para una reserva activa antigua sin código', async () => {
+    prisma.alquiler.findMany.mockResolvedValue([
+      {
+        ...reservaBase,
+        codigoVerificacion: null,
+        articulo: { id: 'art-1', titulo: 'Mesa de estudio', imagenes: [] },
+      },
+    ]);
+    prisma.alquiler.updateMany.mockResolvedValue({ count: 1 });
+
+    const lista = await servicio.listar('usr-ana', {});
+
+    expect(lista[0].codigoDevolucion).toMatch(/^\d{4}$/);
+    expect(prisma.alquiler.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'alq-1',
+          codigoVerificacion: null,
+        }),
+        data: {
+          codigoVerificacion: lista[0].codigoDevolucion,
+        },
+      }),
+    );
+  });
+
+  it('no entrega el código de devolución al propietario', async () => {
+    prisma.alquiler.findMany.mockResolvedValue([
+      {
+        ...reservaBase,
+        articulo: { id: 'art-1', titulo: 'Mesa de estudio', imagenes: [] },
+      },
+    ]);
+
+    const lista = await servicio.listar('usr-ana', { rol: 'PROPIETARIO' });
+
+    expect(lista[0]).not.toHaveProperty('codigoDevolucion');
+  });
+
+  it('valida el código del arrendatario y confirma la devolución', async () => {
+    prisma.alquiler.findFirst.mockResolvedValue({
+      id: 'alq-1',
+      codigoVerificacion: '4821',
+      estado: 'PENDIENTE_ENTREGA',
+    });
+    prisma.alquiler.updateMany.mockResolvedValue({ count: 1 });
+    prisma.alquiler.count.mockResolvedValue(0);
+
+    const resultado = await servicio.confirmarDevolucion(
+      'art-1',
+      '4821',
+      'usr-laura',
+    );
+
+    expect(prisma.alquiler.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'alq-1',
+          codigoVerificacion: '4821',
+        }),
+        data: { estado: 'COMPLETADO' },
+      }),
+    );
+    expect(prisma.alquiler.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ codigoVerificacion: '4821' }),
+      }),
+    );
+    expect(prisma.articulo.update).toHaveBeenCalledWith({
+      where: { id: 'art-1' },
+      data: { activo: true },
+    });
+    expect(resultado.estado).toBe('COMPLETADO');
+  });
+
+  it('rechaza un código de devolución incorrecto', async () => {
+    prisma.alquiler.findFirst.mockResolvedValue(null);
+
+    await expect(
+      servicio.confirmarDevolucion('art-1', '0000', 'usr-laura'),
+    ).rejects.toThrow('El código no es correcto o no corresponde a un alquiler pendiente de devolución.');
+    expect(prisma.alquiler.updateMany).not.toHaveBeenCalled();
   });
 });

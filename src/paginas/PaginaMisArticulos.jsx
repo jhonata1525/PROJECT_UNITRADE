@@ -40,7 +40,13 @@ import {
   AlertCircle,
   X,
   CheckCircle2,
+  KeyRound,
 } from "lucide-react";
+import PinInput from "../componentes/comunes/PinInput";
+import {
+  confirmarDevolucion,
+  mensajeErrorReservas,
+} from "../servicios/servicioReservas";
 import {
   resumenDisponibilidad,
   hayDisponibilidad,
@@ -82,6 +88,10 @@ export const PaginaMisArticulos = () => {
   const [editandoArticulo, setEditandoArticulo] = React.useState(null);
   const [eliminandoId, setEliminandoId] = React.useState(null);
   const [cambiandoEstadoId, setCambiandoEstadoId] = React.useState(null);
+  const [articuloDevolucion, setArticuloDevolucion] = React.useState(null);
+  const [codigoDevolucion, setCodigoDevolucion] = React.useState("");
+  const [errorDevolucion, setErrorDevolucion] = React.useState("");
+  const [confirmandoDevolucion, setConfirmandoDevolucion] = React.useState(false);
   const [guardando, setGuardando] = React.useState(false);
   const [aviso, setAviso] = React.useState(null);
 
@@ -262,6 +272,13 @@ export const PaginaMisArticulos = () => {
   const handleCambiarEstado = async (art) => {
     if (!usuario?.id || guardando) return;
 
+    if (art.estado === "en_alquiler") {
+      setArticuloDevolucion(art);
+      setCodigoDevolucion("");
+      setErrorDevolucion("");
+      return;
+    }
+
     const nuevoEstado = art.estado === "disponible" ? "pausado" : "disponible";
     setCambiandoEstadoId(art.id);
     setAviso(null);
@@ -290,6 +307,36 @@ export const PaginaMisArticulos = () => {
       });
     } finally {
       setCambiandoEstadoId(null);
+    }
+  };
+
+  const handleConfirmarDevolucion = async (event) => {
+    event.preventDefault();
+    if (!usuario?.id || !articuloDevolucion || confirmandoDevolucion) return;
+
+    setConfirmandoDevolucion(true);
+    setErrorDevolucion("");
+
+    try {
+      const resultado = await confirmarDevolucion(
+        usuario.id,
+        articuloDevolucion.id,
+        codigoDevolucion
+      );
+      const datos = await listarMisArticulos(usuario.id);
+      setArticulos(datos);
+      setArticuloDevolucion(null);
+      setCodigoDevolucion("");
+      setAviso({
+        tipo: "éxito",
+        mensaje: resultado.mensaje || "Devolución confirmada. El artículo está disponible.",
+      });
+    } catch (error) {
+      setErrorDevolucion(
+        mensajeErrorReservas(error, "No se pudo confirmar la devolución.")
+      );
+    } finally {
+      setConfirmandoDevolucion(false);
     }
   };
 
@@ -597,6 +644,63 @@ export const PaginaMisArticulos = () => {
             initialData={editandoArticulo}
             loading={guardando}
           />
+          {articuloDevolucion && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="devolucion-titulo"
+            >
+              <form
+                onSubmit={handleConfirmarDevolucion}
+                className="glass-panel w-full max-w-md rounded-2xl p-6"
+              >
+                <div className="flex items-start gap-3 mb-5">
+                  <KeyRound className="w-6 h-6 text-[var(--color-neon)] flex-shrink-0" />
+                  <div>
+                    <h2 id="devolucion-titulo" className="text-xl font-bold text-white">
+                      Confirmar devolución
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Pide al arrendatario el código que recibió para{" "}
+                      <span className="text-white">{articuloDevolucion.nombre}</span>.
+                      Al validarlo, el artículo volverá a estar disponible.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-center mb-4">
+                  <PinInput
+                    value={codigoDevolucion}
+                    onChange={setCodigoDevolucion}
+                    disabled={confirmandoDevolucion}
+                    error={errorDevolucion}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setArticuloDevolucion(null);
+                      setErrorDevolucion("");
+                    }}
+                    disabled={confirmandoDevolucion}
+                    className="flex-1 btn-secondary"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={codigoDevolucion.length !== 4 || confirmandoDevolucion}
+                    className="flex-1 btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {confirmandoDevolucion && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {confirmandoDevolucion ? "Validando..." : "Validar y activar"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </main>
     </div>

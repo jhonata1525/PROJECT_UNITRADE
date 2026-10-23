@@ -17,6 +17,7 @@ import {
 } from './mapeo-articulos.js';
 
 const ESTADOS_CON_ALQUILER_ACTIVO: EstadoAlquiler[] = [
+  EstadoAlquiler.PENDIENTE_ENTREGA,
   EstadoAlquiler.ACTIVO,
   EstadoAlquiler.PENDIENTE_DEVOLUCION,
   EstadoAlquiler.EN_MORA,

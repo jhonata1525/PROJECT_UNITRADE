@@ -94,9 +94,33 @@ const ProveedorAutenticacion = ({ children }) => {
   }, []);
 
   const actualizarUsuario = useCallback(async (datosActualizados) => {
+    const actualizarDisponibilidad =
+      "sede" in datosActualizados ||
+      "puntoEntrega" in datosActualizados ||
+      "disponibilidad" in datosActualizados;
+    let datosPersistidos = {};
+
+    if (actualizarDisponibilidad) {
+      if (!usuario?.id) {
+        throw new Error("No se pudo identificar al usuario para guardar su perfil.");
+      }
+
+      const { data } = await servicioClienteApi.patch(
+        "/auth/perfil",
+        {
+          sede: datosActualizados.sede,
+          puntoEntrega: datosActualizados.puntoEntrega,
+          disponibilidad: datosActualizados.disponibilidad,
+        },
+        { headers: { "x-usuario-id": usuario.id } }
+      );
+      datosPersistidos = data;
+    }
+
     const usuarioActualizado = {
       ...usuario,
       ...datosActualizados,
+      ...datosPersistidos,
     };
     localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioActualizado));
     setUsuario(usuarioActualizado);

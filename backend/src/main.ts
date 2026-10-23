@@ -45,7 +45,7 @@ async function iniciar() {
   const documento = SwaggerModule.createDocument(app, configuracion);
   SwaggerModule.setup('api/docs', app, documento);
 
-  const puerto = process.env.PORT ?? 8080;
+  const puerto = process.env.PORT ?? 8081;
   await app.listen(puerto);
   console.log(`UniTrade API escuchando en http://localhost:${puerto}/api`);
   console.log(`Swagger: http://localhost:${puerto}/api/docs`);

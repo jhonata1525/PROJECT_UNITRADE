@@ -220,6 +220,7 @@ describe('ServicioPagos (HU-06)', () => {
     prisma.alquiler.create.mockResolvedValue({
       ...alquilerBase,
       id: 'alq-nuevo',
+      codigoVerificacion: '4821',
       horas: 2,
       subtotal: 30_000,
       comision: 3_600,
@@ -269,6 +270,7 @@ describe('ServicioPagos (HU-06)', () => {
     expect(prisma.alquiler.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          codigoVerificacion: expect.stringMatching(/^\d{4}$/),
           subtotal: 30_000,
           comision: 3_600,
           total: 30_000,
@@ -280,6 +282,7 @@ describe('ServicioPagos (HU-06)', () => {
       expect.objectContaining({ monto: 30_000 }),
     );
     expect(resultado.desglose.montoPropietario).toBe(26_400);
+    expect(resultado.codigoDevolucion).toBe('4821');
   });
 
   it('exige alquilerId o artículo + horas', async () => {

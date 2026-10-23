@@ -90,10 +90,11 @@ describe('mapearArticulo', () => {
     });
   });
 
-  it('marca en_alquiler y pausado según el estado real', () => {
+  it('prioriza el alquiler activo sobre el estado pausado del artículo', () => {
     expect(mapearArticulo(articulo, true).estado).toBe('en_alquiler');
     expect(mapearArticulo({ ...articulo, activo: false }, true).estado).toBe(
-      'pausado',
+      'en_alquiler',
     );
+    expect(mapearArticulo({ ...articulo, activo: false }).estado).toBe('pausado');
   });
 });

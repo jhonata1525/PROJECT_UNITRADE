@@ -29,6 +29,7 @@ import PaginaDashboard from "../paginas/PaginaDashboard";
 import PaginaBilletera from "../paginas/PaginaBilletera";
 import PaginaPagoReserva from "../paginas/PaginaPagoReserva";
 import PaginaMisArticulos from "../paginas/PaginaMisArticulos";
+import PaginaMisAlquileres from "../paginas/PaginaMisAlquileres";
 import PaginaCatalogo from "../paginas/PaginaCatalogo";
 import PaginaPerfil from "../paginas/PaginaPerfil";
 import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
@@ -119,6 +120,14 @@ const EnrutadorAplicacion = () => {
             element={
               <ProtectedRoute>
                 <PaginaMisArticulos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mis-alquileres"
+            element={
+              <ProtectedRoute>
+                <PaginaMisAlquileres />
               </ProtectedRoute>
             }
           />
