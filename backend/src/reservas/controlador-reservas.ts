@@ -21,6 +21,22 @@ export class ControladorReservas {
     return this.servicioReservas.listar(usuarioId, dto);
   }
 
+  @Post('articulos/:articuloId/entrega')
+  @ApiOperation({
+    summary: 'Confirma la entrega física con QR o PIN del arrendatario',
+  })
+  confirmarEntrega(
+    @Param('articuloId') articuloId: string,
+    @Body() dto: ConfirmarDevolucionDto,
+    @UsuarioId() usuarioId: string,
+  ) {
+    return this.servicioReservas.confirmarEntrega(
+      articuloId,
+      dto.codigo,
+      usuarioId,
+    );
+  }
+
   @Post('articulos/:articuloId/devolucion')
   @ApiOperation({
     summary: 'Confirma la devolución del artículo con el código del arrendatario',
@@ -35,6 +51,12 @@ export class ControladorReservas {
       dto.codigo,
       usuarioId,
     );
+  }
+
+  @Post(':id/pagar-mora')
+  @ApiOperation({ summary: 'Paga por checkout el recargo pendiente de una mora' })
+  pagarMora(@Param('id') id: string, @UsuarioId() usuarioId: string) {
+    return this.servicioReservas.pagarMora(id, usuarioId);
   }
 
   @Get(':id')

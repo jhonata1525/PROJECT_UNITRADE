@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length, Matches } from 'class-validator';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 
 export class ConfirmarDevolucionDto {
   @ApiProperty({
@@ -7,7 +7,7 @@ export class ConfirmarDevolucionDto {
     description: 'Código de devolución de 4 dígitos',
   })
   @IsString()
-  @Length(4, 4)
-  @Matches(/^\d{4}$/)
+  @MinLength(4)
+  @MaxLength(120)
   codigo: string;
 }

@@ -44,15 +44,17 @@ export class ServicioArticulos {
       include: {
         alquileres: {
           where: { estado: { in: ESTADOS_CON_ALQUILER_ACTIVO } },
-          select: { id: true },
+          select: { id: true, estado: true },
+          orderBy: { creadoEn: 'desc' },
           take: 1,
         },
       },
     });
 
-    return articulos.map((articulo) =>
-      mapearArticulo(articulo, articulo.alquileres.length > 0),
-    );
+    return articulos.map((articulo) => ({
+      ...mapearArticulo(articulo, articulo.alquileres.length > 0),
+      estadoAlquiler: articulo.alquileres[0]?.estado ?? null,
+    }));
   }
 
   async listarCatalogo(dto: ListarArticulosDto) {

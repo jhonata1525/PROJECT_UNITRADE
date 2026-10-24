@@ -49,6 +49,7 @@ enum TipoTransaccion {
   COMISION
   REEMBOLSO
   DEPOSITO
+  PENALIZACION
 }
 
 enum EstadoTransaccion {
@@ -81,17 +82,18 @@ model Usuario {
   puntoEntrega              String?
   fotoPerfil                String?
   disponibilidad            Json?
+  suspendidoPorMora         Boolean   @default(false)
   calificacion              Float     @default(0)
   totalResenas              Int       @default(0)
   creadoEn                  DateTime  @default(now())
   actualizadoEn             DateTime  @updatedAt
 
-  articulos                   Articulo[]
+  articulos                  Articulo[]
   alquileresComoArrendatario Alquiler[]      @relation("Arrendatario")
   alquileresComoPropietario  Alquiler[]      @relation("Propietario")
-  billetera                   Billetera?
-  tokensRefresco              TokenRefresco[]
-  codigosOtp                  CodigoOtp[]
+  billetera                  Billetera?
+  tokensRefresco             TokenRefresco[]
+  codigosOtp                 CodigoOtp[]
 
   @@index([telefono])
   @@map("usuario")
@@ -102,7 +104,7 @@ model Usuario {
 // ─────────────────────────────────────────────
 
 model Articulo {
-  id              String             @id @default(cuid())
+  id              String            @id @default(cuid())
   titulo          String
   descripcion     String
   categoria       String
@@ -113,12 +115,12 @@ model Articulo {
   imagenes        String[]
   disponibleDesde DateTime
   disponibleHasta DateTime
-  activo          Boolean            @default(true)
+  activo          Boolean           @default(true)
   propietarioId   String
   // Id del artículo en el navegador del usuario (migración desde localStorage).
   claveExterna    String?
-  creadoEn        DateTime           @default(now())
-  actualizadoEn   DateTime           @updatedAt
+  creadoEn        DateTime          @default(now())
+  actualizadoEn   DateTime          @updatedAt
 
   propietario Usuario    @relation(fields: [propietarioId], references: [id], onDelete: Cascade)
   alquileres  Alquiler[]
@@ -135,21 +137,29 @@ model Articulo {
 // ─────────────────────────────────────────────
 
 model Alquiler {
-  id                 String         @id @default(cuid())
-  articuloId         String
-  arrendatarioId     String
-  propietarioId      String
-  inicio             DateTime
-  fin                DateTime
-  horas              Int
-  subtotal           Int
-  comision           Int
-  total              Int
-  estado             EstadoAlquiler @default(PENDIENTE_ENTREGA)
-  codigoVerificacion String?
-  codigoQr           String?
-  creadoEn           DateTime       @default(now())
-  actualizadoEn      DateTime       @updatedAt
+  id                     String         @id @default(cuid())
+  articuloId             String
+  arrendatarioId         String
+  propietarioId          String
+  inicio                 DateTime
+  fin                    DateTime
+  horas                  Int
+  subtotal               Int
+  comision               Int
+  total                  Int
+  estado                 EstadoAlquiler @default(PENDIENTE_ENTREGA)
+  codigoEntrega          String?
+  codigoVerificacion     String?
+  codigoQrEntrega        String?        @unique
+  codigoQr               String?
+  entregaConfirmadaEn    DateTime?
+  devolucionConfirmadaEn DateTime?
+  moraMonto              Int            @default(0)
+  moraPagada             Int            @default(0)
+  moraPagoEstado         EstadoPago     @default(PENDIENTE)
+  moraTransaccionId      String?        @unique
+  creadoEn               DateTime       @default(now())
+  actualizadoEn          DateTime       @updatedAt
 
   articulo     Articulo @relation(fields: [articuloId], references: [id], onDelete: Restrict)
   arrendatario Usuario  @relation("Arrendatario", fields: [arrendatarioId], references: [id], onDelete: Restrict)
@@ -208,7 +218,7 @@ model Billetera {
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
 
-  usuario       Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario       Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   transacciones TransaccionBilletera[]
   retiros       Retiro[]
 
@@ -216,15 +226,15 @@ model Billetera {
 }
 
 model TransaccionBilletera {
-  id             String            @id @default(cuid())
-  billeteraId    String
-  tipo           TipoTransaccion
-  monto          Int
-  saldoDespues   Int
-  descripcion    String
-  estado         EstadoTransaccion @default(COMPLETADO)
-  metadata       Json?
-  creadoEn       DateTime          @default(now())
+  id           String            @id @default(cuid())
+  billeteraId  String
+  tipo         TipoTransaccion
+  monto        Int
+  saldoDespues Int
+  descripcion  String
+  estado       EstadoTransaccion @default(COMPLETADO)
+  metadata     Json?
+  creadoEn     DateTime          @default(now())
 
   billetera Billetera @relation(fields: [billeteraId], references: [id], onDelete: Cascade)
 

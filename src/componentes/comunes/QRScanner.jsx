@@ -23,23 +23,26 @@ const QRScanner = ({
   const [error, setError] = useState("");
   const [facingMode, setFacingMode] = useState("environment");
   const [torchEnabled, setTorchEnabled] = useState(false);
-  const scannerRef = useRef(null);
   const html5QrcodeRef = useRef(null);
   const containerRef = useRef(null);
 
   const stopScanner = useCallback(async () => {
-    if (html5QrcodeRef.current && scanning) {
+    if (html5QrcodeRef.current) {
       try {
         await html5QrcodeRef.current.stop();
+        html5QrcodeRef.current = null;
         setScanning(false);
       } catch (err) {
         console.warn("Error deteniendo scanner:", err);
+      } finally {
+        html5QrcodeRef.current = null;
+        setScanning(false);
       }
     }
-  }, [scanning]);
+  }, []);
 
   const startScanner = useCallback(async () => {
-    if (!containerRef.current || scanning) return;
+    if (!containerRef.current || html5QrcodeRef.current) return;
 
     try {
       const html5Qrcode = new Html5Qrcode(containerRef.current.id);
@@ -56,25 +59,27 @@ const QRScanner = ({
           stopScanner();
           onScan?.(decodedText);
         },
-        (errorMessage) => {
+        (_errorMessage) => {
           // Silenciar errores de escaneo continuo
         }
       );
       setScanning(true);
       setError("");
     } catch (err) {
+      html5QrcodeRef.current = null;
+      setScanning(false);
       setError("No se pudo acceder a la cámara. Verifica los permisos.");
       onError?.(err);
     }
-  }, [facingMode, torchEnabled, scanning, onScan, onError, stopScanner]);
+  }, [facingMode, torchEnabled, onScan, onError, stopScanner]);
 
   useEffect(() => {
     const checkPermission = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+        const stream = await globalThis.navigator.mediaDevices.getUserMedia({ video: { facingMode } });
         stream.getTracks().forEach(track => track.stop());
         setHasPermission(true);
-      } catch (err) {
+      } catch {
         setHasPermission(false);
         setError("Permiso de cámara denegado. Usa la entrada manual.");
       }

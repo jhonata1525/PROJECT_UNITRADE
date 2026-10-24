@@ -35,3 +35,21 @@ export const confirmarDevolucion = async (usuarioId, articuloId, codigo) => {
   );
   return data;
 };
+
+export const confirmarEntrega = async (usuarioId, articuloId, codigo) => {
+  const { data } = await servicioClienteApi.post(
+    `/reservas/articulos/${encodeURIComponent(articuloId)}/entrega`,
+    { codigo },
+    cabecerasUsuario(usuarioId)
+  );
+  return data;
+};
+
+export const pagarMora = async (usuarioId, alquilerId) => {
+  const { data } = await servicioClienteApi.post(
+    `/reservas/${encodeURIComponent(alquilerId)}/pagar-mora`,
+    {},
+    cabecerasUsuario(usuarioId)
+  );
+  return data;
+};

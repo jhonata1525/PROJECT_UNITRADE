@@ -8,7 +8,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { calcularDesglose, DesglosePago, formatearCop } from '../comun/dinero.js';
 import { Prisma } from '../generated/prisma/client.js';
 import {
@@ -97,11 +97,59 @@ export class ServicioPagos {
           return this.respuestaExitosa(
             pagoPrevio,
             undefined,
-            pagoPrevio.alquiler.codigoVerificacion ?? undefined,
+            {
+              codigoEntrega: pagoPrevio.alquiler.codigoEntrega,
+              codigoQrEntrega: pagoPrevio.alquiler.codigoQrEntrega,
+              codigoDevolucion: pagoPrevio.alquiler.codigoVerificacion,
+              codigoQrDevolucion: pagoPrevio.alquiler.codigoQr,
+            },
           );
         }
         throw new ConflictException(
           'Ya existe un pago con esa clave de idempotencia que no está completado.',
+        );
+      }
+    }
+
+    if (!dto.alquilerId) {
+      const ahora = new Date();
+      const bloqueado = await this.prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        select: { suspendidoPorMora: true },
+      });
+      const moraQueBloquea = await this.prisma.alquiler.findFirst({
+        where: {
+          arrendatarioId: usuarioId,
+          fin: { lt: new Date(ahora.getTime() - 2 * 60 * 60 * 1000) },
+          OR: [
+            {
+              estado: {
+                in: [EstadoAlquiler.ACTIVO, EstadoAlquiler.EN_MORA],
+              },
+            },
+            {
+              estado: EstadoAlquiler.COMPLETADO,
+              moraMonto: { gt: 0 },
+              moraPagoEstado: { not: EstadoPago.COMPLETADO },
+            },
+          ],
+        },
+        select: { id: true },
+      });
+      if (moraQueBloquea && !bloqueado?.suspendidoPorMora) {
+        await this.prisma.usuario.updateMany({
+          where: { id: usuarioId, suspendidoPorMora: false },
+          data: { suspendidoPorMora: true },
+        });
+      } else if (!moraQueBloquea && bloqueado?.suspendidoPorMora) {
+        await this.prisma.usuario.updateMany({
+          where: { id: usuarioId, suspendidoPorMora: true },
+          data: { suspendidoPorMora: false },
+        });
+      }
+      if (moraQueBloquea) {
+        throw new ConflictException(
+          'Tu cuenta está suspendida para nuevas reservas. Devuelve el artículo y paga el recargo por mora pendiente.',
         );
       }
     }
@@ -112,7 +160,12 @@ export class ServicioPagos {
       return this.respuestaExitosa({
         ...alquiler.pago,
         alquiler: { articulo: { titulo: alquiler.articulo.titulo } },
-      }, undefined, alquiler.codigoVerificacion ?? undefined);
+      }, undefined, {
+        codigoEntrega: alquiler.codigoEntrega,
+        codigoQrEntrega: alquiler.codigoQrEntrega,
+        codigoDevolucion: alquiler.codigoVerificacion,
+        codigoQrDevolucion: alquiler.codigoQr,
+      });
     }
 
     if (!Number.isInteger(alquiler.subtotal) || alquiler.subtotal <= 0) {
@@ -273,7 +326,10 @@ export class ServicioPagos {
       metodo: pagado.metodo,
       desglose,
       fecha: (pagado.pagadoEn ?? pagado.creadoEn).toISOString(),
+      codigoEntrega: alquiler.codigoEntrega,
+      codigoQrEntrega: alquiler.codigoQrEntrega,
       codigoDevolucion: alquiler.codigoVerificacion,
+      codigoQrDevolucion: alquiler.codigoQr,
       mensaje: 'Pago aprobado en sandbox. Reserva confirmada y saldo abonado al propietario.',
     };
   }
@@ -440,7 +496,10 @@ export class ServicioPagos {
         articuloId: articulo.id,
         arrendatarioId: usuarioId,
         propietarioId: articulo.propietarioId,
+        codigoEntrega: String(randomInt(1000, 10_000)),
         codigoVerificacion: String(randomInt(1000, 10_000)),
+        codigoQrEntrega: randomUUID(),
+        codigoQr: randomUUID(),
         inicio,
         fin,
         horas: dto.horas,
@@ -474,7 +533,12 @@ export class ServicioPagos {
   private respuestaExitosa(
     pago: PagoParaRespuesta,
     mensaje = 'Pago ya estaba completado; se devolvió el mismo resultado sin cobrar dos veces.',
-    codigoDevolucion?: string,
+    codigos?: {
+      codigoEntrega: string | null;
+      codigoQrEntrega: string | null;
+      codigoDevolucion: string | null;
+      codigoQrDevolucion: string | null;
+    },
   ) {
     const desglose: DesglosePago = {
       subtotal: pago.monto,
@@ -497,7 +561,16 @@ export class ServicioPagos {
       desglose,
       fecha: (pago.pagadoEn ?? pago.creadoEn).toISOString(),
       error: pago.errorMensaje,
-      ...(codigoDevolucion ? { codigoDevolucion } : {}),
+      ...(codigos?.codigoEntrega ? { codigoEntrega: codigos.codigoEntrega } : {}),
+      ...(codigos?.codigoQrEntrega
+        ? { codigoQrEntrega: codigos.codigoQrEntrega }
+        : {}),
+      ...(codigos?.codigoDevolucion
+        ? { codigoDevolucion: codigos.codigoDevolucion }
+        : {}),
+      ...(codigos?.codigoQrDevolucion
+        ? { codigoQrDevolucion: codigos.codigoQrDevolucion }
+        : {}),
       mensaje,
     };
   }

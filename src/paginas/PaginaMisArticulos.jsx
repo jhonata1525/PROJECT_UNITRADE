@@ -41,9 +41,11 @@ import {
   X,
   CheckCircle2,
   KeyRound,
+  Camera,
 } from "lucide-react";
 import PinInput from "../componentes/comunes/PinInput";
 import {
+  confirmarEntrega,
   confirmarDevolucion,
   mensajeErrorReservas,
 } from "../servicios/servicioReservas";
@@ -52,6 +54,10 @@ import {
   hayDisponibilidad,
   formatearSede,
 } from "../utils/perfil";
+
+const QRScanner = React.lazy(() =>
+  import("../componentes/comunes/QRScanner")
+);
 
 const CATEGORIAS = ["Todas", "Libros", "Laboratorio", "Calculadoras", "Tecnología", "Deportes", "Otros"];
 const STORAGE_KEY = "unitrade_mis_articulos";
@@ -92,6 +98,8 @@ export const PaginaMisArticulos = () => {
   const [codigoDevolucion, setCodigoDevolucion] = React.useState("");
   const [errorDevolucion, setErrorDevolucion] = React.useState("");
   const [confirmandoDevolucion, setConfirmandoDevolucion] = React.useState(false);
+  const [tipoConfirmacion, setTipoConfirmacion] = React.useState("devolucion");
+  const [escanerAbierto, setEscanerAbierto] = React.useState(false);
   const [guardando, setGuardando] = React.useState(false);
   const [aviso, setAviso] = React.useState(null);
 
@@ -273,9 +281,13 @@ export const PaginaMisArticulos = () => {
     if (!usuario?.id || guardando) return;
 
     if (art.estado === "en_alquiler") {
+      setTipoConfirmacion(
+        art.estadoAlquiler === "PENDIENTE_ENTREGA" ? "entrega" : "devolucion"
+      );
       setArticuloDevolucion(art);
       setCodigoDevolucion("");
       setErrorDevolucion("");
+      setEscanerAbierto(false);
       return;
     }
 
@@ -310,23 +322,28 @@ export const PaginaMisArticulos = () => {
     }
   };
 
-  const handleConfirmarDevolucion = async (event) => {
-    event.preventDefault();
+  const handleConfirmarDevolucion = async (event, codigoEscaneado) => {
+    event?.preventDefault();
     if (!usuario?.id || !articuloDevolucion || confirmandoDevolucion) return;
+    const codigo = codigoEscaneado || codigoDevolucion;
+    if (!codigo) return;
 
     setConfirmandoDevolucion(true);
     setErrorDevolucion("");
 
     try {
-      const resultado = await confirmarDevolucion(
+      const confirmar =
+        tipoConfirmacion === "entrega" ? confirmarEntrega : confirmarDevolucion;
+      const resultado = await confirmar(
         usuario.id,
         articuloDevolucion.id,
-        codigoDevolucion
+        codigo
       );
       const datos = await listarMisArticulos(usuario.id);
       setArticulos(datos);
       setArticuloDevolucion(null);
       setCodigoDevolucion("");
+      setEscanerAbierto(false);
       setAviso({
         tipo: "éxito",
         mensaje: resultado.mensaje || "Devolución confirmada. El artículo está disponible.",
@@ -587,7 +604,14 @@ export const PaginaMisArticulos = () => {
                             <Play className="w-4 h-4" />
                           )}
                           <span className="hidden sm:inline">
-                            {art.estado === "disponible" ? "Pausar" : "Activar"}
+                            {art.estado === "disponible"
+                              ? "Pausar"
+                              : art.estado === "en_alquiler" &&
+                                art.estadoAlquiler === "PENDIENTE_ENTREGA"
+                                ? "Confirmar entrega"
+                                : art.estado === "en_alquiler"
+                                  ? "Confirmar devolución"
+                                  : "Activar"}
                           </span>
                         </button>
                         <button
@@ -649,7 +673,7 @@ export const PaginaMisArticulos = () => {
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
               role="dialog"
               aria-modal="true"
-              aria-labelledby="devolucion-titulo"
+              aria-labelledby="validacion-reserva-titulo"
             >
               <form
                 onSubmit={handleConfirmarDevolucion}
@@ -658,31 +682,63 @@ export const PaginaMisArticulos = () => {
                 <div className="flex items-start gap-3 mb-5">
                   <KeyRound className="w-6 h-6 text-[var(--color-neon)] flex-shrink-0" />
                   <div>
-                    <h2 id="devolucion-titulo" className="text-xl font-bold text-white">
-                      Confirmar devolución
+                    <h2 id="validacion-reserva-titulo" className="text-xl font-bold text-white">
+                      {tipoConfirmacion === "entrega"
+                        ? "Confirmar entrega presencial"
+                        : "Confirmar devolución presencial"}
                     </h2>
                     <p className="text-sm text-gray-400 mt-1">
-                      Pide al arrendatario el código que recibió para{" "}
+                      El arrendatario debe presentar su QR o PIN de 4 dígitos
+                      en persona para{" "}
                       <span className="text-white">{articuloDevolucion.nombre}</span>.
-                      Al validarlo, el artículo volverá a estar disponible.
+                      {tipoConfirmacion === "devolucion" &&
+                        " Al confirmar se calcula el recargo por mora, si aplica."}
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-center mb-4">
-                  <PinInput
-                    value={codigoDevolucion}
-                    onChange={setCodigoDevolucion}
-                    disabled={confirmandoDevolucion}
-                    error={errorDevolucion}
-                    autoFocus
-                  />
-                </div>
+                {escanerAbierto ? (
+                  <React.Suspense
+                    fallback={<p className="text-sm text-gray-400">Cargando escáner...</p>}
+                  >
+                    <QRScanner
+                      onScan={(codigo) => handleConfirmarDevolucion(undefined, codigo)}
+                      onClose={() => setEscanerAbierto(false)}
+                      onError={(error) => setErrorDevolucion(
+                        mensajeErrorReservas(error, "No se pudo abrir la cámara.")
+                      )}
+                      className="mb-4"
+                    />
+                  </React.Suspense>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 mb-4">
+                    <PinInput
+                      value={codigoDevolucion}
+                      onChange={setCodigoDevolucion}
+                      disabled={confirmandoDevolucion}
+                      error={errorDevolucion}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setErrorDevolucion("");
+                        setEscanerAbierto(true);
+                      }}
+                      disabled={confirmandoDevolucion}
+                      className="btn-secondary inline-flex items-center gap-2"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Escanear QR con cámara
+                    </button>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       setArticuloDevolucion(null);
                       setErrorDevolucion("");
+                      setEscanerAbierto(false);
                     }}
                     disabled={confirmandoDevolucion}
                     className="flex-1 btn-secondary"
@@ -691,11 +747,19 @@ export const PaginaMisArticulos = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={codigoDevolucion.length !== 4 || confirmandoDevolucion}
+                    disabled={
+                      codigoDevolucion.length !== 4 ||
+                      confirmandoDevolucion ||
+                      escanerAbierto
+                    }
                     className="flex-1 btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {confirmandoDevolucion && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {confirmandoDevolucion ? "Validando..." : "Validar y activar"}
+                    {confirmandoDevolucion
+                      ? "Validando..."
+                      : tipoConfirmacion === "entrega"
+                        ? "Validar entrega"
+                        : "Validar devolución"}
                   </button>
                 </div>
               </form>

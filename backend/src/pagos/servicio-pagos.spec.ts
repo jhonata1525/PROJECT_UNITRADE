@@ -5,7 +5,7 @@ import { ServicioPagos } from './servicio-pagos.js';
 
 function crearPrismaMock() {
   const prisma = {
-    usuario: { findUnique: vi.fn() },
+    usuario: { findUnique: vi.fn(), updateMany: vi.fn() },
     articulo: { findUnique: vi.fn() },
     alquiler: {
       findUnique: vi.fn(),
@@ -289,6 +289,26 @@ describe('ServicioPagos (HU-06)', () => {
     await expect(servicio.checkout({ horas: 2 }, 'usr-ana')).rejects.toBeInstanceOf(
       BadRequestException,
     );
+    expect(pasarela.cobrar).not.toHaveBeenCalled();
+  });
+
+  it('bloquea nuevas reservas cuando el arrendatario supera dos horas de mora', async () => {
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce({ id: 'usr-ana' })
+      .mockResolvedValueOnce({ suspendidoPorMora: false });
+    prisma.alquiler.findFirst.mockResolvedValueOnce({ id: 'alq-vencido' });
+
+    await expect(
+      servicio.checkout({ articuloId: 'art-1', horas: 2 }, 'usr-ana'),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('suspendida para nuevas reservas'),
+    });
+
+    expect(prisma.usuario.updateMany).toHaveBeenCalledWith({
+      where: { id: 'usr-ana', suspendidoPorMora: false },
+      data: { suspendidoPorMora: true },
+    });
+    expect(prisma.alquiler.create).not.toHaveBeenCalled();
     expect(pasarela.cobrar).not.toHaveBeenCalled();
   });
 });

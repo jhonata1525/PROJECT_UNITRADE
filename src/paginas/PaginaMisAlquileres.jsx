@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
+  CreditCard,
   Clock,
   KeyRound,
   Loader2,
@@ -15,7 +16,10 @@ import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import {
   listarMisAlquileres,
   mensajeErrorReservas,
+  pagarMora,
 } from "../servicios/servicioReservas";
+import { QRCodeSVG } from "qrcode.react";
+import { formatCurrency } from "../utils/formatters";
 
 const ESTADOS_RESERVA = {
   PENDIENTE_ENTREGA: "Pendiente de entrega",
@@ -39,6 +43,24 @@ export const PaginaMisAlquileres = () => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [revision, setRevision] = React.useState(0);
+  const [pagandoMoraId, setPagandoMoraId] = React.useState(null);
+  const [aviso, setAviso] = React.useState("");
+
+  const handlePagarMora = async (alquilerId) => {
+    if (!usuarioId || pagandoMoraId) return;
+    setPagandoMoraId(alquilerId);
+    setAviso("");
+    setError("");
+    try {
+      const resultado = await pagarMora(usuarioId, alquilerId);
+      setAviso(resultado.mensaje);
+      setRevision((anterior) => anterior + 1);
+    } catch (err) {
+      setError(mensajeErrorReservas(err, "No se pudo pagar el recargo por mora."));
+    } finally {
+      setPagandoMoraId(null);
+    }
+  };
 
   React.useEffect(() => {
     let cancelado = false;
@@ -111,6 +133,11 @@ export const PaginaMisAlquileres = () => {
               </button>
             </div>
           )}
+          {aviso && (
+            <div role="status" className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+              {aviso}
+            </div>
+          )}
 
           {loading ? (
             <div className="glass-panel p-12 text-center">
@@ -173,28 +200,71 @@ export const PaginaMisAlquileres = () => {
                     </div>
                   </div>
 
-                  {reserva.codigoDevolucion ? (
-                    <div className="mt-5 rounded-xl border border-[var(--color-border-hover)] bg-[var(--color-canvas)] p-4">
-                      <p className="text-xs text-gray-400 flex items-center gap-2">
-                        <KeyRound className="w-4 h-4 text-[var(--color-neon)]" />
-                        Código para confirmar la devolución
-                      </p>
-                      <p
-                        className="mt-2 font-mono text-3xl tracking-[0.4em] text-white"
-                        aria-label={`Código de devolución ${reserva.codigoDevolucion}`}
-                      >
-                        {reserva.codigoDevolucion}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Muéstraselo al propietario cuando devuelvas el artículo.
-                      </p>
+                  {reserva.pago?.estado === "COMPLETADO" && (
+                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        {
+                          label: "Entrega",
+                          pin: reserva.codigoEntrega,
+                          qr: reserva.codigoQrEntrega,
+                          confirmado: reserva.estado !== "PENDIENTE_ENTREGA",
+                        },
+                        {
+                          label: "Devolución",
+                          pin: reserva.codigoDevolucion,
+                          qr: reserva.codigoQrDevolucion,
+                          confirmado: reserva.estado === "COMPLETADO",
+                        },
+                      ].map((codigo) => (
+                        <div key={codigo.label} className="rounded-xl border border-[var(--color-border-hover)] bg-[var(--color-canvas)] p-4">
+                          <p className="text-xs text-gray-400 flex items-center gap-2">
+                            <KeyRound className="w-4 h-4 text-[var(--color-neon)]" />
+                            Código PIN de {codigo.label.toLowerCase()}
+                            {codigo.confirmado && " · Validado"}
+                          </p>
+                          <p className="mt-2 font-mono text-3xl tracking-[0.4em] text-white">
+                            {codigo.pin || "----"}
+                          </p>
+                          {codigo.qr && (
+                            <div className="mt-3 inline-block rounded-lg bg-white p-2">
+                              <QRCodeSVG value={codigo.qr} size={120} level="M" />
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            {codigo.confirmado
+                              ? "Este paso ya se certificó presencialmente."
+                              : "Muéstrale el QR o PIN al propietario en persona."}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <p className="mt-4 text-sm text-gray-500">
-                      {reserva.pago?.estado === "COMPLETADO"
-                        ? "Esta reserva no tiene un código de devolución guardado."
-                        : "El código estará disponible cuando el pago quede confirmado."}
-                    </p>
+                  )}
+                  {reserva.moraMonto > 0 && (
+                    <div className={`mt-4 rounded-xl border p-4 ${
+                      reserva.moraPendiente > 0
+                        ? "border-amber-500/40 bg-amber-500/10"
+                        : "border-emerald-500/40 bg-emerald-500/10"
+                    }`}>
+                      <p className="font-semibold text-white">
+                        Recargo por mora: {formatCurrency(reserva.moraMonto)}
+                      </p>
+                      <p className="text-sm text-gray-300 mt-1">
+                        Pendiente: {formatCurrency(reserva.moraPendiente)}
+                      </p>
+                      {reserva.moraPendiente > 0 && reserva.estado === "COMPLETADO" && (
+                        <button
+                          type="button"
+                          onClick={() => handlePagarMora(reserva.id)}
+                          disabled={Boolean(pagandoMoraId)}
+                          className="btn-primary mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {pagandoMoraId === reserva.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <CreditCard className="w-4 h-4" />}
+                          {pagandoMoraId === reserva.id ? "Procesando..." : "Pagar recargo"}
+                        </button>
+                      )}
+                    </div>
                   )}
                   {reserva.estado === "COMPLETADO" && (
                     <p className="mt-3 text-xs text-emerald-300 flex items-center gap-2">

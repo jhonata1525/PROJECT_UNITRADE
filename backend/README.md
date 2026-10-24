@@ -90,7 +90,9 @@ dispersión simulada en sandbox.
 | `GET` | `/api/wallet/entidades` | Métodos de retiro disponibles |
 | `GET` | `/api/reservas` | Reservas del usuario con desglose |
 | `GET` | `/api/reservas/:id` | Detalle de una reserva y su pago |
-| `POST` | `/api/reservas/articulos/:articuloId/devolucion` | Valida el código del arrendatario y vuelve a publicar el artículo |
+| `POST` | `/api/reservas/articulos/:articuloId/entrega` | Certifica la entrega presencial con QR o PIN |
+| `POST` | `/api/reservas/articulos/:articuloId/devolucion` | Valida el código del arrendatario, liquida la mora y vuelve a publicar el artículo |
+| `POST` | `/api/reservas/:id/pagar-mora` | Paga por checkout el recargo que no cubrió la billetera |
 
 Mientras no exista el guard de JWT, identifica al usuario con el header
 `x-usuario-id` (o el campo `usuarioId` en el cuerpo). Para reintentos seguros

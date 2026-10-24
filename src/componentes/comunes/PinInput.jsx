@@ -13,7 +13,7 @@ const PIN_LENGTH = 4;
 const PIN_LABELS = ["Primer digito del PIN", "Segundo digito del PIN", "Tercer digito del PIN", "Cuarto digito del PIN"];
 
 const PinInput = forwardRef(({ value = "", onChange, disabled = false, error, autoFocus = true }, ref) => {
-  const inputsRef = useRef(Array.from({ length: PIN_LENGTH }, () => useRef(null))).current;
+  const inputsRef = useRef(Array(PIN_LENGTH).fill(null));
   const [values, setValues] = useState(value.split("").slice(0, PIN_LENGTH).concat(Array(PIN_LENGTH).fill("")));
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const PinInput = forwardRef(({ value = "", onChange, disabled = false, error, au
   }, [value]);
 
   useImperativeHandle(ref, () => ({
-    focus: () => inputsRef[0]?.current?.focus(),
+    focus: () => inputsRef.current[0]?.focus(),
     clear: () => {
       setValues(Array(PIN_LENGTH).fill(""));
       onChange("");
@@ -43,25 +43,25 @@ const PinInput = forwardRef(({ value = "", onChange, disabled = false, error, au
     onChange(finalValue);
 
     if (input && index < PIN_LENGTH - 1) {
-      inputsRef[index + 1]?.current?.focus();
+      inputsRef.current[index + 1]?.focus();
     } else if (!input && index > 0) {
-      inputsRef[index - 1]?.current?.focus();
+      inputsRef.current[index - 1]?.focus();
     }
 
     if (finalValue.length === PIN_LENGTH) {
-      inputsRef[PIN_LENGTH - 1]?.current?.blur();
+      inputsRef.current[PIN_LENGTH - 1]?.blur();
     }
   };
 
   const handleKeyDown = (index, e) => {
     if (e.key === "Backspace" && !values[index] && index > 0) {
-      inputsRef[index - 1]?.current?.focus();
+      inputsRef.current[index - 1]?.focus();
     }
     if (e.key === "ArrowLeft" && index > 0) {
-      inputsRef[index - 1]?.current?.focus();
+      inputsRef.current[index - 1]?.focus();
     }
     if (e.key === "ArrowRight" && index < PIN_LENGTH - 1) {
-      inputsRef[index + 1]?.current?.focus();
+      inputsRef.current[index + 1]?.focus();
     }
   };
 
@@ -72,15 +72,15 @@ const PinInput = forwardRef(({ value = "", onChange, disabled = false, error, au
       const newValues = pasted.split("");
       setValues(newValues);
       onChange(pasted);
-      inputsRef[PIN_LENGTH - 1]?.current?.blur();
+      inputsRef.current[PIN_LENGTH - 1]?.blur();
     }
   };
 
   useEffect(() => {
-    if (autoFocus && inputsRef[0]?.current) {
-      inputsRef[0].current.focus();
+    if (autoFocus && inputsRef.current[0]) {
+      inputsRef.current[0].focus();
     }
-  }, [autoFocus]);
+  }, [autoFocus, inputsRef]);
 
   const getInputClasses = (index) => {
     const base = "w-12 h-12 text-center text-2xl font-mono rounded-lg border-2 transition-all text-white bg-[var(--color-surface)]";
@@ -102,7 +102,9 @@ const PinInput = forwardRef(({ value = "", onChange, disabled = false, error, au
       {Array.from({ length: PIN_LENGTH }).map((_, index) => (
         <input
           key={index}
-          ref={inputsRef[index]}
+          ref={(input) => {
+            inputsRef.current[index] = input;
+          }}
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
