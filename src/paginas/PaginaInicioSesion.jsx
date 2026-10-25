@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexto/ContextoAutenticacion';
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexto/ContextoAutenticacion";
 
 export default function PaginaInicioSesion() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       await login({ email, password });
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión');
+      setError(err.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -41,6 +42,14 @@ export default function PaginaInicioSesion() {
         {error && (
           <div className="p-3 text-sm text-red-200 bg-red-900/50 border border-red-500/50 rounded-lg">
             {error}
+          </div>
+        )}
+        {location.state?.mensaje && (
+          <div
+            role="status"
+            className="p-3 text-sm text-amber-100 bg-amber-900/40 border border-amber-500/40 rounded-lg"
+          >
+            {location.state.mensaje}
           </div>
         )}
 
@@ -84,10 +93,19 @@ export default function PaginaInicioSesion() {
               disabled={loading}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-slate-900 disabled:opacity-50 relative overflow-hidden"
             >
-              {loading ? 'Cargando...' : 'Iniciar Sesión'}
+              {loading ? "Cargando..." : "Iniciar Sesión"}
             </button>
           </div>
         </form>
+        <p className="text-center text-sm text-gray-400">
+          ¿Todavía no tienes cuenta?{" "}
+          <Link
+            to="/registro"
+            className="font-medium text-blue-400 hover:text-blue-300 underline underline-offset-4"
+          >
+            Regístrate
+          </Link>
+        </p>
       </div>
     </div>
   );

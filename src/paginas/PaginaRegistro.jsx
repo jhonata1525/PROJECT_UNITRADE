@@ -1,37 +1,26 @@
-/**
- * @file PaginaRegistro.jsx
- * Página de registro para UniTrade.
- * - Validación de email @unisimon.edu.co (HU-01)
- * - Formulario con campos: email, password, terminos
- * - En producción: POST /api/auth/register con validación de dominio
- */
-
-import React from "react";
-import { Encabezado } from "../componentes/comunes/Encabezado";
+import { Link } from "react-router-dom";
 import FormularioRegistro from "../componentes/auth/FormularioRegistro";
-
-/**
- * PaginaRegistro - Página de registro de usuario
- * - Validación de email @unisimon.edu.co (HU-01)
- * - Campos: email, password, confirmPassword, terminos
- * - En producción: POST /api/auth/register con validación de dominio
- */
 
 export default function PaginaRegistro() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Encabezado />
-
-      <main className="max-w-7xl mx-auto py-12">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-gray-100">
-            Registro UniTrade
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[var(--color-canvas)] text-gray-100">
+      <div className="max-w-md w-full space-y-6 p-8 rounded-2xl shadow-2xl card-glass">
+        <div className="text-center">
+          <Link
+            to="/login"
+            className="text-sm text-blue-400 hover:text-blue-300"
+          >
+            UniTrade · Universidad Simón Bolívar
+          </Link>
+          <h1 className="mt-4 text-3xl font-extrabold text-white">
+            Crear cuenta
           </h1>
-
-          {/* Formulario de registro */}
-          <FormularioRegistro />
+          <p className="mt-2 text-sm text-gray-400">
+            Regístrate con tu correo institucional y datos de contacto.
+          </p>
         </div>
-      </main>
+        <FormularioRegistro />
+      </div>
     </div>
   );
 }

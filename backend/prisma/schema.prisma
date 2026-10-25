@@ -77,6 +77,7 @@ model Usuario {
   telefono                  String?
   telefonoVerificado        Boolean   @default(false)
   fechaVerificacionTelefono DateTime?
+  correoVerificado          Boolean   @default(false)
   rol                       Rol       @default(ESTUDIANTE)
   sede                      String?
   puntoEntrega              String?

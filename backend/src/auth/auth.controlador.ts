@@ -3,6 +3,7 @@ import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import { ActualizarPerfilDto } from './dto/actualizar-perfil.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { RegistroDto } from './dto/registro.dto.js';
 import { ServicioAuth } from './auth.servicio.js';
 
 @ApiTags('Autenticación')
@@ -18,6 +19,12 @@ export class ControladorAuth {
   @Post('login')
   iniciarSesion(@Body() credenciales: LoginDto) {
     return this.servicioAuth.iniciarSesion(credenciales);
+  }
+
+  @Post('registro')
+  @ApiOperation({ summary: 'Registra una cuenta con correo institucional' })
+  registrar(@Body() dto: RegistroDto) {
+    return this.servicioAuth.registrar(dto);
   }
 
   @Patch('perfil')

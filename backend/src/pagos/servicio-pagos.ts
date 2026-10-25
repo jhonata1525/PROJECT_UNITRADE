@@ -9,7 +9,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomInt, randomUUID } from 'node:crypto';
-import { calcularDesglose, DesglosePago, formatearCop } from '../comun/dinero.js';
+import {
+  calcularDesglose,
+  DesglosePago,
+  formatearCop,
+} from '../comun/dinero.js';
+import { intervaloDentroDisponibilidad } from '../comun/disponibilidad.js';
 import { Prisma } from '../generated/prisma/client.js';
 import {
   EstadoAlquiler,
@@ -26,7 +31,9 @@ import { CheckoutDto } from './dto/checkout.dto.js';
 import { HistorialPagosDto } from './dto/historial-pagos.dto.js';
 
 type PagoConAlquiler = Prisma.PagoGetPayload<{
-  include: { alquiler: { include: { articulo: { select: { titulo: true } } } } };
+  include: {
+    alquiler: { include: { articulo: { select: { titulo: true } } } };
+  };
 }>;
 
 /** Campos mínimos que necesita una respuesta de pago. */
@@ -77,33 +84,37 @@ export class ServicioPagos {
     private readonly pasarela: ServicioPasarelaSandbox,
   ) {}
 
-  async checkout(dto: CheckoutDto, usuarioId: string, claveIdempotencia?: string) {
+  async checkout(
+    dto: CheckoutDto,
+    usuarioId: string,
+    claveIdempotencia?: string,
+  ) {
     await this.validarUsuario(usuarioId);
 
     const clave = claveIdempotencia?.trim() || undefined;
     if (clave && clave.length > 120) {
-      throw new BadRequestException('La clave de idempotencia no puede superar 120 caracteres.');
+      throw new BadRequestException(
+        'La clave de idempotencia no puede superar 120 caracteres.',
+      );
     }
 
     if (clave) {
       const pagoPrevio = await this.prisma.pago.findUnique({
         where: { claveIdempotencia: clave },
-        include: { alquiler: { include: { articulo: { select: { titulo: true } } } } },
+        include: {
+          alquiler: { include: { articulo: { select: { titulo: true } } } },
+        },
       });
 
       if (pagoPrevio) {
         this.verificarPropietarioDelPago(pagoPrevio, usuarioId);
         if (pagoPrevio.estado === EstadoPago.COMPLETADO) {
-          return this.respuestaExitosa(
-            pagoPrevio,
-            undefined,
-            {
-              codigoEntrega: pagoPrevio.alquiler.codigoEntrega,
-              codigoQrEntrega: pagoPrevio.alquiler.codigoQrEntrega,
-              codigoDevolucion: pagoPrevio.alquiler.codigoVerificacion,
-              codigoQrDevolucion: pagoPrevio.alquiler.codigoQr,
-            },
-          );
+          return this.respuestaExitosa(pagoPrevio, undefined, {
+            codigoEntrega: pagoPrevio.alquiler.codigoEntrega,
+            codigoQrEntrega: pagoPrevio.alquiler.codigoQrEntrega,
+            codigoDevolucion: pagoPrevio.alquiler.codigoVerificacion,
+            codigoQrDevolucion: pagoPrevio.alquiler.codigoQr,
+          });
         }
         throw new ConflictException(
           'Ya existe un pago con esa clave de idempotencia que no está completado.',
@@ -157,15 +168,19 @@ export class ServicioPagos {
     const alquiler = await this.obtenerAlquiler(dto, usuarioId);
 
     if (alquiler.pago?.estado === EstadoPago.COMPLETADO) {
-      return this.respuestaExitosa({
-        ...alquiler.pago,
-        alquiler: { articulo: { titulo: alquiler.articulo.titulo } },
-      }, undefined, {
-        codigoEntrega: alquiler.codigoEntrega,
-        codigoQrEntrega: alquiler.codigoQrEntrega,
-        codigoDevolucion: alquiler.codigoVerificacion,
-        codigoQrDevolucion: alquiler.codigoQr,
-      });
+      return this.respuestaExitosa(
+        {
+          ...alquiler.pago,
+          alquiler: { articulo: { titulo: alquiler.articulo.titulo } },
+        },
+        undefined,
+        {
+          codigoEntrega: alquiler.codigoEntrega,
+          codigoQrEntrega: alquiler.codigoQrEntrega,
+          codigoDevolucion: alquiler.codigoVerificacion,
+          codigoQrDevolucion: alquiler.codigoQr,
+        },
+      );
     }
 
     if (!Number.isInteger(alquiler.subtotal) || alquiler.subtotal <= 0) {
@@ -223,7 +238,9 @@ export class ServicioPagos {
         forzarFallo: dto.forzarFallo,
       });
     } catch (error) {
-      this.logger.error(`Error de comunicación con la pasarela: ${String(error)}`);
+      this.logger.error(
+        `Error de comunicación con la pasarela: ${String(error)}`,
+      );
       await this.marcarPagoFallido(
         pago.id,
         'No fue posible comunicarse con la pasarela de pagos.',
@@ -243,7 +260,12 @@ export class ServicioPagos {
     }
 
     if (!cobro.exito) {
-      await this.marcarPagoFallido(pago.id, cobro.mensaje, cobro.codigoRespuesta, cobro.idTransaccion);
+      await this.marcarPagoFallido(
+        pago.id,
+        cobro.mensaje,
+        cobro.codigoRespuesta,
+        cobro.idTransaccion,
+      );
 
       throw new HttpException(
         {
@@ -330,7 +352,8 @@ export class ServicioPagos {
       codigoQrEntrega: alquiler.codigoQrEntrega,
       codigoDevolucion: alquiler.codigoVerificacion,
       codigoQrDevolucion: alquiler.codigoQr,
-      mensaje: 'Pago aprobado en sandbox. Reserva confirmada y saldo abonado al propietario.',
+      mensaje:
+        'Pago aprobado en sandbox. Reserva confirmada y saldo abonado al propietario.',
     };
   }
 
@@ -340,11 +363,15 @@ export class ServicioPagos {
       where: {
         OR: [{ idTransaccion: identificador }, { id: identificador }],
       },
-      include: { alquiler: { include: { articulo: { select: { titulo: true } } } } },
+      include: {
+        alquiler: { include: { articulo: { select: { titulo: true } } } },
+      },
     });
 
     if (!pago) {
-      throw new NotFoundException('No existe una transacción con ese identificador.');
+      throw new NotFoundException(
+        'No existe una transacción con ese identificador.',
+      );
     }
 
     return this.respuestaExitosa(
@@ -370,7 +397,9 @@ export class ServicioPagos {
       where,
       orderBy: { creadoEn: 'desc' },
       take: limite,
-      include: { alquiler: { include: { articulo: { select: { titulo: true } } } } },
+      include: {
+        alquiler: { include: { articulo: { select: { titulo: true } } } },
+      },
     });
 
     return pagos.map((pago) => ({
@@ -390,7 +419,7 @@ export class ServicioPagos {
     }));
   }
 
-  private async validarUsuario(usuarioId: string): Promise<void> {
+  private async validarUsuario(usuarioId: string): Promise<{ id: string }> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
       select: { id: true },
@@ -399,9 +428,13 @@ export class ServicioPagos {
     if (!usuario) {
       throw new NotFoundException('El usuario indicado no existe.');
     }
+    return usuario;
   }
 
-  private verificarPropietarioDelPago(pago: PagoConAlquiler, usuarioId: string): void {
+  private verificarPropietarioDelPago(
+    pago: PagoConAlquiler,
+    usuarioId: string,
+  ): void {
     const alquiler = pago.alquiler as PagoConAlquiler['alquiler'] & {
       arrendatarioId?: string;
     };
@@ -432,7 +465,9 @@ export class ServicioPagos {
         throw new ForbiddenException('La reserva pertenece a otro usuario.');
       }
       if (alquiler.estado === EstadoAlquiler.CANCELADO) {
-        throw new ConflictException('La reserva está cancelada y no se puede pagar.');
+        throw new ConflictException(
+          'La reserva está cancelada y no se puede pagar.',
+        );
       }
 
       return alquiler;
@@ -453,21 +488,38 @@ export class ServicioPagos {
       throw new NotFoundException('El artículo indicado no existe.');
     }
     if (!articulo.activo) {
-      throw new ConflictException('El artículo no está disponible para alquiler.');
+      throw new ConflictException(
+        'El artículo no está disponible para alquiler.',
+      );
     }
     if (articulo.propietarioId === usuarioId) {
       throw new BadRequestException('No puedes alquilar tu propio artículo.');
     }
 
     const inicio = dto.inicio ?? new Date();
-    const fin = dto.fin ?? new Date(inicio.getTime() + dto.horas * 60 * 60 * 1000);
+    const fin =
+      dto.fin ?? new Date(inicio.getTime() + dto.horas * 60 * 60 * 1000);
 
     if (fin <= inicio) {
-      throw new BadRequestException('La fecha de fin debe ser posterior a la de inicio.');
+      throw new BadRequestException(
+        'La fecha de fin debe ser posterior a la de inicio.',
+      );
     }
     if (inicio < articulo.disponibleDesde || fin > articulo.disponibleHasta) {
       throw new ConflictException(
         'El horario solicitado está fuera de la disponibilidad del artículo.',
+      );
+    }
+
+    const propietario = await this.prisma.usuario.findUnique({
+      where: { id: articulo.propietarioId },
+      select: { disponibilidad: true },
+    });
+    if (
+      !intervaloDentroDisponibilidad(propietario?.disponibilidad, inicio, fin)
+    ) {
+      throw new ConflictException(
+        'El horario solicitado está fuera de las franjas de disponibilidad del propietario en el campus.',
       );
     }
 
@@ -482,11 +534,15 @@ export class ServicioPagos {
     });
 
     if (cruce) {
-      throw new ConflictException('El artículo ya está reservado en ese horario.');
+      throw new ConflictException(
+        'El artículo ya está reservado en ese horario.',
+      );
     }
 
     if (articulo.tarifaHora <= 0) {
-      throw new ConflictException('El artículo no tiene una tarifa por hora válida.');
+      throw new ConflictException(
+        'El artículo no tiene una tarifa por hora válida.',
+      );
     }
 
     const desglose = calcularDesglose(dto.horas * articulo.tarifaHora);
@@ -561,7 +617,9 @@ export class ServicioPagos {
       desglose,
       fecha: (pago.pagadoEn ?? pago.creadoEn).toISOString(),
       error: pago.errorMensaje,
-      ...(codigos?.codigoEntrega ? { codigoEntrega: codigos.codigoEntrega } : {}),
+      ...(codigos?.codigoEntrega
+        ? { codigoEntrega: codigos.codigoEntrega }
+        : {}),
       ...(codigos?.codigoQrEntrega
         ? { codigoQrEntrega: codigos.codigoQrEntrega }
         : {}),

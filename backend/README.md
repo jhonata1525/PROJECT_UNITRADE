@@ -61,6 +61,16 @@ npm run start:dev
 
 ## Inicio de sesión
 
+`POST /api/auth/registro` crea la cuenta solo con un correo
+`@unisimon.edu.co`. La cuenta se crea con el correo y el teléfono sin verificar;
+por ahora no hay proveedor configurado para enviar códigos. El perfil muestra
+ambos estados, pero por ahora la falta de verificación no bloquea publicar ni
+alquilar artículos.
+
+La migración `20261024190000_registro_y_verificacion_dual` añade el estado de
+verificación del correo. Aplícala con `npm run prisma:deploy` desde `backend`
+antes de iniciar la versión actualizada.
+
 `POST /api/auth/login` recibe `email` y `password`, consulta el usuario en
 PostgreSQL y valida la contraseña contra `hashContrasena` con bcrypt. El correo
 debe pertenecer al dominio `@unisimon.edu.co`. La respuesta contiene los datos
@@ -69,8 +79,10 @@ estar generadas con bcrypt.
 
 El perfil devuelve también `sede`, `puntoEntrega` y `disponibilidad`. Para
 guardarlos, el frontend usa `PATCH /api/auth/perfil` con el header
-`x-usuario-id` y un cuerpo con esos tres campos. La sede, el punto de entrega y
-las franjas semanales quedan almacenados en la tabla `usuario`.
+`x-usuario-id` y un cuerpo con esos campos. La sede, el punto de entrega y las
+franjas semanales quedan almacenados en la tabla `usuario`. Para publicar, el
+prestador debe tener al menos una franja configurada; las reservas nuevas se
+validan contra el horario semanal del propietario en `America/Bogota`.
 
 ## Pagos y billetera (HU-06 / HU-10)
 

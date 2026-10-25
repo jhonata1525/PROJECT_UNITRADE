@@ -5,7 +5,13 @@
  * No realiza peticiones a backend - autenticación 100% local simulada.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import axios from "axios";
 import servicioClienteApi from "../servicios/servicioClienteApi";
 
@@ -13,6 +19,7 @@ const ContextoAutenticacion = createContext({
   usuario: null,
   cargando: true,
   login: async () => {},
+  registrar: async () => {},
   logout: () => {},
   actualizarUsuario: async () => {},
 });
@@ -53,7 +60,10 @@ const ProveedorAutenticacion = ({ children }) => {
         rol: data.usuario.rol.toLowerCase(),
       };
 
-      localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioAutenticado));
+      localStorage.setItem(
+        "usuario_unitrade",
+        JSON.stringify(usuarioAutenticado),
+      );
       setUsuario(usuarioAutenticado);
 
       return { usuario: usuarioAutenticado };
@@ -74,12 +84,48 @@ const ProveedorAutenticacion = ({ children }) => {
       }
 
       if (!error.response) {
-        throw new Error("No se pudo conectar con el servidor. Intenta de nuevo.", {
-          cause: error,
-        });
+        throw new Error(
+          "No se pudo conectar con el servidor. Intenta de nuevo.",
+          {
+            cause: error,
+          },
+        );
       }
 
       throw new Error("No se pudo iniciar sesión. Intenta de nuevo.", {
+        cause: error,
+      });
+    }
+  };
+
+  const registrar = async (datosRegistro) => {
+    try {
+      const { data } = await servicioClienteApi.post("/auth/registro", {
+        nombre: datosRegistro.nombre.trim(),
+        correo: datosRegistro.correo.trim(),
+        telefono: datosRegistro.telefono,
+        contrasena: datosRegistro.contrasena,
+      });
+      return data;
+    } catch (error) {
+      if (!axios.isAxiosError(error)) throw error;
+
+      const mensaje = error.response?.data?.message;
+      if (typeof mensaje === "string") {
+        throw new Error(mensaje, { cause: error });
+      }
+      if (Array.isArray(mensaje)) {
+        throw new Error(mensaje.join(", "), { cause: error });
+      }
+      if (!error.response) {
+        throw new Error(
+          "No se pudo conectar con el servidor. Intenta de nuevo.",
+          {
+            cause: error,
+          },
+        );
+      }
+      throw new Error("No se pudo crear la cuenta. Intenta de nuevo.", {
         cause: error,
       });
     }
@@ -93,42 +139,55 @@ const ProveedorAutenticacion = ({ children }) => {
     localStorage.removeItem("refreshToken");
   }, []);
 
-  const actualizarUsuario = useCallback(async (datosActualizados) => {
-    const actualizarDisponibilidad =
-      "sede" in datosActualizados ||
-      "puntoEntrega" in datosActualizados ||
-      "disponibilidad" in datosActualizados;
-    let datosPersistidos = {};
+  const actualizarUsuario = useCallback(
+    async (datosActualizados) => {
+      const actualizarDisponibilidad =
+        "sede" in datosActualizados ||
+        "puntoEntrega" in datosActualizados ||
+        "disponibilidad" in datosActualizados;
+      let datosPersistidos = {};
 
-    if (actualizarDisponibilidad) {
-      if (!usuario?.id) {
-        throw new Error("No se pudo identificar al usuario para guardar su perfil.");
+      if (actualizarDisponibilidad) {
+        if (!usuario?.id) {
+          throw new Error(
+            "No se pudo identificar al usuario para guardar su perfil.",
+          );
+        }
+
+        const { data } = await servicioClienteApi.patch(
+          "/auth/perfil",
+          {
+            nombre: datosActualizados.nombre,
+            fotoPerfil: datosActualizados.fotoPerfil,
+            telefono: datosActualizados.telefono,
+            sede: datosActualizados.sede,
+            puntoEntrega: datosActualizados.puntoEntrega,
+            disponibilidad: datosActualizados.disponibilidad,
+          },
+          { headers: { "x-usuario-id": usuario.id } },
+        );
+        datosPersistidos = data;
       }
 
-      const { data } = await servicioClienteApi.patch(
-        "/auth/perfil",
-        {
-          sede: datosActualizados.sede,
-          puntoEntrega: datosActualizados.puntoEntrega,
-          disponibilidad: datosActualizados.disponibilidad,
-        },
-        { headers: { "x-usuario-id": usuario.id } }
+      const usuarioActualizado = {
+        ...usuario,
+        ...datosActualizados,
+        ...datosPersistidos,
+      };
+      localStorage.setItem(
+        "usuario_unitrade",
+        JSON.stringify(usuarioActualizado),
       );
-      datosPersistidos = data;
-    }
-
-    const usuarioActualizado = {
-      ...usuario,
-      ...datosActualizados,
-      ...datosPersistidos,
-    };
-    localStorage.setItem("usuario_unitrade", JSON.stringify(usuarioActualizado));
-    setUsuario(usuarioActualizado);
-    return { usuario: usuarioActualizado };
-  }, [usuario]);
+      setUsuario(usuarioActualizado);
+      return { usuario: usuarioActualizado };
+    },
+    [usuario],
+  );
 
   return (
-    <ContextoAutenticacion.Provider value={{ usuario, cargando, login, logout, actualizarUsuario }}>
+    <ContextoAutenticacion.Provider
+      value={{ usuario, cargando, login, registrar, logout, actualizarUsuario }}
+    >
       {children}
     </ContextoAutenticacion.Provider>
   );

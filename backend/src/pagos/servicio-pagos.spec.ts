@@ -21,7 +21,9 @@ function crearPrismaMock() {
     },
     billetera: { upsert: vi.fn() },
     transaccionBilletera: { create: vi.fn() },
-    $transaction: vi.fn((callback: (tx: unknown) => unknown) => callback(prisma)),
+    $transaction: vi.fn((callback: (tx: unknown) => unknown) =>
+      callback(prisma),
+    ),
   };
 
   return prisma;
@@ -85,7 +87,15 @@ describe('ServicioPagos (HU-06)', () => {
       pasarela as unknown as ServicioPasarelaSandbox,
     );
 
-    prisma.usuario.findUnique.mockResolvedValue({ id: 'usr-ana' });
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 'usr-ana',
+      correoVerificado: false,
+      telefonoVerificado: false,
+      suspendidoPorMora: false,
+      disponibilidad: {
+        lunes: { activo: true, inicio: '08:00', fin: '12:00' },
+      },
+    });
     prisma.alquiler.findUnique.mockResolvedValue(alquilerBase);
     prisma.pago.upsert.mockResolvedValue(pagoBase);
   });
@@ -165,7 +175,10 @@ describe('ServicioPagos (HU-06)', () => {
       },
     });
 
-    const resultado = await servicio.checkout({ alquilerId: 'alq-1' }, 'usr-ana');
+    const resultado = await servicio.checkout(
+      { alquilerId: 'alq-1' },
+      'usr-ana',
+    );
 
     expect(pasarela.cobrar).not.toHaveBeenCalled();
     expect(resultado.exito).toBe(true);
@@ -204,7 +217,7 @@ describe('ServicioPagos (HU-06)', () => {
   });
 
   it('crea la reserva y calcula el monto con la tarifa del artículo', async () => {
-    const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const inicio = new Date('2026-10-26T14:00:00.000Z');
     const fin = new Date(inicio.getTime() + 2 * 60 * 60 * 1000);
 
     prisma.articulo.findUnique.mockResolvedValue({
@@ -267,6 +280,7 @@ describe('ServicioPagos (HU-06)', () => {
       'usr-ana',
     );
 
+    expect(resultado.exito).toBe(true);
     expect(prisma.alquiler.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -286,9 +300,9 @@ describe('ServicioPagos (HU-06)', () => {
   });
 
   it('exige alquilerId o artículo + horas', async () => {
-    await expect(servicio.checkout({ horas: 2 }, 'usr-ana')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      servicio.checkout({ horas: 2 }, 'usr-ana'),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(pasarela.cobrar).not.toHaveBeenCalled();
   });
 
@@ -310,5 +324,31 @@ describe('ServicioPagos (HU-06)', () => {
     });
     expect(prisma.alquiler.create).not.toHaveBeenCalled();
     expect(pasarela.cobrar).not.toHaveBeenCalled();
+  });
+
+  it('rechaza reservas fuera del horario semanal del propietario', async () => {
+    const inicio = new Date('2026-10-26T17:00:00.000Z');
+    const fin = new Date(inicio.getTime() + 60 * 60 * 1000);
+    prisma.articulo.findUnique.mockResolvedValue({
+      id: 'art-1',
+      titulo: 'Mesa de estudio',
+      tarifaHora: 15_000,
+      activo: true,
+      propietarioId: 'usr-laura',
+      disponibleDesde: new Date('2026-10-20T00:00:00.000Z'),
+      disponibleHasta: new Date('2026-11-01T00:00:00.000Z'),
+    });
+
+    await expect(
+      servicio.checkout(
+        { articuloId: 'art-1', horas: 1, inicio, fin },
+        'usr-ana',
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining(
+        'fuera de las franjas de disponibilidad',
+      ),
+    });
+    expect(prisma.alquiler.create).not.toHaveBeenCalled();
   });
 });

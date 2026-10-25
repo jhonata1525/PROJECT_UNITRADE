@@ -8,7 +8,6 @@
 import React from "react";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
-import { ModalVerificacionWhatsApp } from "../componentes/auth/ModalVerificacionWhatsApp";
 import { ModalEdicionPerfil } from "../componentes/perfil/ModalEdicionPerfil";
 import {
   User,
@@ -39,24 +38,7 @@ const formatPhone = (phone) => {
 
 export const PaginaPerfil = () => {
   const { usuario, actualizarUsuario } = useAuth();
-  const [verificandoWhatsApp, setVerificandoWhatsApp] = React.useState(false);
   const [editandoPerfil, setEditandoPerfil] = React.useState(false);
-
-  const handleVerificarWhatsApp = () => {
-    setVerificandoWhatsApp(true);
-  };
-
-  const handleVerificacionExitosa = async (usuarioActualizado) => {
-    try {
-      await actualizarUsuario({
-        telefono: usuarioActualizado.telefono,
-        telefonoVerificado: true,
-        fechaVerificacionTelefono: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error("Error actualizando perfil:", err);
-    }
-  };
 
   const handleGuardarPerfil = async (datosActualizados) => {
     await actualizarUsuario(datosActualizados);
@@ -64,6 +46,7 @@ export const PaginaPerfil = () => {
 
   const nombreCompleto = usuario?.nombre || "Estudiante UniTrade";
   const email = usuario?.email || "";
+  const correoVerificado = Boolean(usuario?.correoVerificado);
   const telefono = usuario?.telefono;
   const telefonoVerificado = usuario?.telefonoVerificado;
   const franjasDisponibles = obtenerFranjasDisponibles(usuario?.disponibilidad);
@@ -80,10 +63,7 @@ export const PaginaPerfil = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
-      <NavegacionLateral
-        onLogout={() => {}}
-        onProfileClick={() => {}}
-      />
+      <NavegacionLateral onLogout={() => {}} onProfileClick={() => {}} />
 
       <main className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container">
@@ -91,7 +71,9 @@ export const PaginaPerfil = () => {
           <div className="mb-8 animate-slide-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white">Mi Perfil</h1>
-              <p className="text-gray-400 mt-1">Configura tu cuenta, contacto y disponibilidad</p>
+              <p className="text-gray-400 mt-1">
+                Configura tu cuenta, contacto y disponibilidad
+              </p>
             </div>
             <button
               onClick={() => setEditandoPerfil(true)}
@@ -105,7 +87,10 @@ export const PaginaPerfil = () => {
           {/* ========================================
              SECCIÓN 1: CARNET DIGITAL ESTUDIANTIL USB
              ======================================== */}
-          <section className="mb-8 animate-slide-up" style={{ animationDelay: "100ms" }}>
+          <section
+            className="mb-8 animate-slide-up"
+            style={{ animationDelay: "100ms" }}
+          >
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <GraduationCap className="w-6 h-6 text-[var(--color-neon)]" />
               Carnet Digital Estudiantil USB
@@ -122,8 +107,12 @@ export const PaginaPerfil = () => {
                       <GraduationCap className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-white font-bold text-lg">Universidad Simón Bolívar</p>
-                      <p className="text-white/80 text-sm">Carnet Digital Estudiantil</p>
+                      <p className="text-white font-bold text-lg">
+                        Universidad Simón Bolívar
+                      </p>
+                      <p className="text-white/80 text-sm">
+                        Carnet Digital Estudiantil
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -144,7 +133,9 @@ export const PaginaPerfil = () => {
                 )}
 
                 <div>
-                  <p className="text-xl font-bold text-white">{nombreCompleto}</p>
+                  <p className="text-xl font-bold text-white">
+                    {nombreCompleto}
+                  </p>
                   <p className="text-sm text-gray-400">Estudiante UniTrade</p>
                 </div>
 
@@ -159,8 +150,12 @@ export const PaginaPerfil = () => {
                   <div className="flex items-center gap-3 text-sm text-gray-300">
                     <Shield className="w-5 h-5 text-blue-400 flex-shrink-0" />
                     <div>
-                      <p className="text-xs text-gray-500">Código Estudiantil</p>
-                      <p className="font-mono font-medium text-white">{codigoEstudiantil}</p>
+                      <p className="text-xs text-gray-500">
+                        Código Estudiantil
+                      </p>
+                      <p className="font-mono font-medium text-white">
+                        {codigoEstudiantil}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-gray-300">
@@ -178,13 +173,17 @@ export const PaginaPerfil = () => {
 
               {/* Código QR del carnet */}
               <div className="mt-4 pt-4 border-t border-[var(--color-border)] text-center">
-                <p className="text-xs text-gray-500 mb-2">Código de verificación del carnet</p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Código de verificación del carnet
+                </p>
                 <div className="w-24 h-24 mx-auto bg-white rounded p-1">
                   <div className="w-full h-full bg-[var(--color-canvas)] rounded relative flex items-center justify-center">
                     <div className="w-16 h-16 bg-white" />
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 font-mono">USB-{codigoEstudiantil}</p>
+                <p className="text-xs text-gray-500 mt-1 font-mono">
+                  USB-{codigoEstudiantil}
+                </p>
               </div>
             </div>
           </section>
@@ -192,7 +191,10 @@ export const PaginaPerfil = () => {
           {/* ========================================
              SECCIÓN 2: CONTACTO, SEDE Y DISPONIBILIDAD (HU-03)
              ======================================== */}
-          <section className="mb-8 animate-slide-up" style={{ animationDelay: "150ms" }}>
+          <section
+            className="mb-8 animate-slide-up"
+            style={{ animationDelay: "150ms" }}
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <User className="w-6 h-6 text-[var(--color-neon)]" />
@@ -217,17 +219,39 @@ export const PaginaPerfil = () => {
                 <dl className="space-y-3 text-sm">
                   <div>
                     <dt className="text-xs text-gray-500">Nombre</dt>
-                    <dd className="text-gray-200 font-medium">{nombreCompleto}</dd>
+                    <dd className="text-gray-200 font-medium">
+                      {nombreCompleto}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-500">Correo institucional</dt>
+                    <dt className="text-xs text-gray-500">
+                      Correo institucional
+                    </dt>
                     <dd className="text-gray-200 flex items-center gap-2 break-all">
                       <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       {email || "Sin registrar"}
                     </dd>
+                    <dd className="mt-1">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          correoVerificado
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        }`}
+                      >
+                        {correoVerificado ? (
+                          <BadgeCheck className="w-3 h-3" />
+                        ) : (
+                          <AlertCircle className="w-3 h-3" />
+                        )}
+                        {correoVerificado ? "Verificado" : "Sin verificar"}
+                      </span>
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-500">Teléfono / WhatsApp</dt>
+                    <dt className="text-xs text-gray-500">
+                      Teléfono / WhatsApp
+                    </dt>
                     <dd className="text-gray-200 flex flex-wrap items-center gap-2">
                       <span className="font-mono">
                         {telefono ? formatPhone(telefono) : "Sin registrar"}
@@ -258,11 +282,15 @@ export const PaginaPerfil = () => {
                   <div className="space-y-3 text-sm">
                     <div>
                       <p className="text-xs text-gray-500">Sede</p>
-                      <p className="text-gray-200 font-medium">{usuario.sede}</p>
+                      <p className="text-gray-200 font-medium">
+                        {usuario.sede}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Punto de entrega</p>
-                      <p className="text-gray-200 font-medium">{usuario.puntoEntrega}</p>
+                      <p className="text-gray-200 font-medium">
+                        {usuario.puntoEntrega}
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -317,90 +345,52 @@ export const PaginaPerfil = () => {
           {/* ========================================
              SECCIÓN 3: VERIFICACIÓN WHATSAPP OTP (HU-02)
              ======================================== */}
-          <section className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+          <section
+            className="animate-slide-up"
+            style={{ animationDelay: "200ms" }}
+          >
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
               <MessageSquare className="w-6 h-6 text-green-500" />
               Verificación WhatsApp OTP
             </h2>
 
-            {!telefonoVerificado ? (
-              /* Banner de verificación requerida */
-              <div className="glass-card p-6 border-l-4 border-amber-500 bg-amber-500/10 animate-pulse">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <div
+              className={`glass-card p-6 border-l-4 ${
+                telefonoVerificado
+                  ? "border-emerald-500 bg-emerald-500/10"
+                  : "border-amber-500 bg-amber-500/10"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    telefonoVerificado ? "bg-emerald-500/20" : "bg-amber-500/20"
+                  }`}
+                >
+                  {telefonoVerificado ? (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                  ) : (
                     <AlertCircle className="w-6 h-6 text-amber-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">
-                      Verificación de Seguridad Requerida
-                    </h3>
-                    <p className="text-gray-300 mb-4">
-                      Para garantizar la seguridad de tu cuenta y habilitar todas las funciones de UniTrade,
-                      debes verificar tu número de teléfono mediante WhatsApp OTP.
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-1">
+                    WhatsApp:{" "}
+                    {telefonoVerificado ? "Verificado" : "Sin verificar"}
+                  </h3>
+                  <p className="text-gray-300">
+                    {telefonoVerificado
+                      ? `El número ${formatPhone(telefono)} está verificado.`
+                      : "La verificación por WhatsApp aún no está configurada. Por ahora puedes usar las funciones de UniTrade aunque aparezca Sin verificar."}
+                  </p>
+                  {!correoVerificado && (
+                    <p className="text-sm text-amber-200 mt-2">
+                      El correo institucional también aparece como Sin
+                      verificar.
                     </p>
-                    <button
-                      onClick={handleVerificarWhatsApp}
-                      className="btn-primary flex items-center gap-2"
-                    >
-                      <MessageSquare className="w-5 h-5" />
-                      Verificar Teléfono vía WhatsApp
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
-            ) : (
-              /* Teléfono verificado */
-              <div className="glass-card p-6 border-l-4 border-emerald-500 bg-emerald-500/10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-7 h-7 text-emerald-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">
-                      Teléfono Verificado
-                    </h3>
-                    <p className="text-gray-300 mb-2">
-                      Tu número de teléfono ha sido verificado exitosamente.
-                    </p>
-                    <p className="font-mono text-lg font-medium text-emerald-400 flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5" />
-                      {formatPhone(telefono)}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      <BadgeCheck className="w-4 h-4" />
-                      Verificado
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Información adicional */}
-            <div className="mt-6 glass-panel p-4">
-              <h3 className="font-medium text-white mb-3 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-[var(--color-neon)]" />
-                ¿Por qué verificar tu teléfono?
-              </h3>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  Seguridad: Autenticación de dos factores para proteger tu cuenta
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  Recuperación: Recupera tu acceso si olvidas tu contraseña
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  Notificaciones: Recibe alertas de reservas y pagos por WhatsApp
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  Confianza: Verificación obligatoria para arrendar y publicar artículos
-                </li>
-              </ul>
             </div>
           </section>
 
@@ -410,14 +400,6 @@ export const PaginaPerfil = () => {
             onClose={() => setEditandoPerfil(false)}
             usuario={usuario}
             onSave={handleGuardarPerfil}
-          />
-
-          {/* Modal Verificación WhatsApp */}
-          <ModalVerificacionWhatsApp
-            isOpen={verificandoWhatsApp}
-            onClose={() => setVerificandoWhatsApp(false)}
-            usuario={usuario}
-            onVerificado={handleVerificacionExitosa}
           />
         </div>
       </main>

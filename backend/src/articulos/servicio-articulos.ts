@@ -1,13 +1,18 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { EstadoAlquiler } from '../generated/prisma/enums.js';
+import { tieneDisponibilidadConfigurada } from '../comun/disponibilidad.js';
 import { ServicioPrisma } from '../prisma/servicio-prisma.js';
-import { ActualizarArticuloDto, ListarArticulosDto } from './dto/actualizar-articulo.dto.js';
+import {
+  ActualizarArticuloDto,
+  ListarArticulosDto,
+} from './dto/actualizar-articulo.dto.js';
 import { CrearArticuloDto } from './dto/crear-articulo.dto.js';
 import { ImportarArticulosDto } from './dto/importar-articulos.dto.js';
 import {
@@ -111,6 +116,7 @@ export class ServicioArticulos {
 
   async crear(dto: CrearArticuloDto, usuarioId: string) {
     const usuario = await this.obtenerUsuario(usuarioId);
+    this.validarDisponibilidadPublicacion(usuario);
     const { datos, error } = normalizarArticulo(dto, {
       ubicacionPorDefecto: this.ubicacionPorDefecto(usuario),
     });
@@ -145,6 +151,14 @@ export class ServicioArticulos {
 
   async actualizar(id: string, dto: ActualizarArticuloDto, usuarioId: string) {
     const actual = await this.obtenerPropio(id, usuarioId);
+    if (
+      (dto.activo === true || dto.estado === 'disponible') &&
+      !actual.activo
+    ) {
+      this.validarDisponibilidadPublicacion(
+        await this.obtenerUsuario(usuarioId),
+      );
+    }
 
     const fusion: EntradaArticulo = {
       titulo: dto.titulo ?? dto.nombre ?? actual.titulo,
@@ -163,8 +177,7 @@ export class ServicioArticulos {
       disponibleDesde: dto.disponibleDesde ?? actual.disponibleDesde,
       disponibleHasta: dto.disponibleHasta ?? actual.disponibleHasta,
       activo:
-        dto.activo ??
-        (dto.estado ? dto.estado !== 'pausado' : actual.activo),
+        dto.activo ?? (dto.estado ? dto.estado !== 'pausado' : actual.activo),
     };
 
     const { datos, error } = normalizarArticulo(fusion, {
@@ -222,13 +235,18 @@ export class ServicioArticulos {
    */
   async importar(dto: ImportarArticulosDto, usuarioId: string) {
     const usuario = await this.obtenerUsuario(usuarioId);
+    this.validarDisponibilidadPublicacion(usuario);
     const ubicacionPorDefecto = this.ubicacionPorDefecto(usuario);
 
     const entradas = dto.articulos.slice(0, 200);
     let creados = 0;
     let actualizados = 0;
     let omitidos = 0;
-    const errores: Array<{ indice: number; referencia: string; motivo: string }> = [];
+    const errores: Array<{
+      indice: number;
+      referencia: string;
+      motivo: string;
+    }> = [];
 
     for (const [indice, entrada] of entradas.entries()) {
       if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) {
@@ -313,6 +331,7 @@ export class ServicioArticulos {
         nombre: true,
         sede: true,
         puntoEntrega: true,
+        disponibilidad: true,
       },
     });
 
@@ -321,6 +340,16 @@ export class ServicioArticulos {
     }
 
     return usuario;
+  }
+
+  private validarDisponibilidadPublicacion(usuario: {
+    disponibilidad: Prisma.JsonValue | null;
+  }): void {
+    if (!tieneDisponibilidadConfigurada(usuario.disponibilidad)) {
+      throw new ConflictException(
+        'Configura al menos una franja de disponibilidad en el campus antes de publicar artículos.',
+      );
+    }
   }
 
   private ubicacionPorDefecto(usuario: {
