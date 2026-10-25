@@ -100,7 +100,7 @@ const ProveedorAutenticacion = ({ children }) => {
 
   const registrar = async (datosRegistro) => {
     try {
-      const { data } = await servicioClienteApi.post("/auth/registro", {
+      const { data } = await servicioClienteApi.post("/auth/register", {
         nombre: datosRegistro.nombre.trim(),
         correo: datosRegistro.correo.trim(),
         telefono: datosRegistro.telefono,

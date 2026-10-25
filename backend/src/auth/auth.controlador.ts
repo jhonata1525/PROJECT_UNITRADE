@@ -21,14 +21,25 @@ export class ControladorAuth {
     return this.servicioAuth.iniciarSesion(credenciales);
   }
 
-  @Post('registro')
+  @Post('register')
   @ApiOperation({ summary: 'Registra una cuenta con correo institucional' })
   registrar(@Body() dto: RegistroDto) {
     return this.servicioAuth.registrar(dto);
   }
 
+  @Post('registro')
+  @ApiOperation({
+    summary: 'Ruta heredada para registrar una cuenta con correo institucional',
+  })
+  registrarCompatibilidad(@Body() dto: RegistroDto) {
+    return this.servicioAuth.registrar(dto);
+  }
+
   @Patch('perfil')
-  @ApiOperation({ summary: 'Guarda la sede y disponibilidad del usuario' })
+  @ApiOperation({
+    summary:
+      'Actualiza los datos de contacto, foto, sede, punto de entrega y disponibilidad del usuario',
+  })
   actualizarPerfil(
     @Body() dto: ActualizarPerfilDto,
     @UsuarioId() usuarioId: string,

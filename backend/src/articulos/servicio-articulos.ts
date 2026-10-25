@@ -81,7 +81,17 @@ export class ServicioArticulos {
       orderBy: { creadoEn: 'desc' },
       take: dto.limite ?? 30,
       include: {
-        propietario: { select: { id: true, nombre: true, sede: true } },
+        propietario: {
+          select: {
+            id: true,
+            nombre: true,
+            telefono: true,
+            fotoPerfil: true,
+            sede: true,
+            puntoEntrega: true,
+            disponibilidad: true,
+          },
+        },
         alquileres: {
           where: { estado: { in: ESTADOS_CON_ALQUILER_ACTIVO } },
           select: { id: true },
@@ -100,7 +110,17 @@ export class ServicioArticulos {
     const articulo = await this.prisma.articulo.findUnique({
       where: { id },
       include: {
-        propietario: { select: { id: true, nombre: true, sede: true } },
+        propietario: {
+          select: {
+            id: true,
+            nombre: true,
+            telefono: true,
+            fotoPerfil: true,
+            sede: true,
+            puntoEntrega: true,
+            disponibilidad: true,
+          },
+        },
       },
     });
 
