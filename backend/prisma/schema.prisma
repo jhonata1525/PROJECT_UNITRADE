@@ -50,6 +50,7 @@ enum TipoTransaccion {
   REEMBOLSO
   DEPOSITO
   PENALIZACION
+  PAGO_ALQUILER
 }
 
 enum EstadoTransaccion {

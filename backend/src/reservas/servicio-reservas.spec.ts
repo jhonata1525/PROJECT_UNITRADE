@@ -345,6 +345,62 @@ describe('ServicioReservas', () => {
     });
   });
 
+  it('cobra dos horas al devolver a la 1 p. m. un alquiler que vencía a las 11 a. m.', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-26T18:00:00.000Z'));
+    prisma.alquiler.findFirst
+      .mockResolvedValueOnce({
+        id: 'alq-1',
+        fin: new Date('2026-10-26T16:00:00.000Z'),
+        arrendatarioId: 'usr-ana',
+        moraMonto: 0,
+        moraPagada: 0,
+        moraPagoEstado: 'PENDIENTE',
+        articulo: { tarifaHora: 5_000 },
+      })
+      .mockResolvedValueOnce(null);
+    prisma.billetera.findUnique.mockResolvedValue({
+      id: 'bill-ana',
+      saldoDisponible: 30_000,
+    });
+    prisma.billetera.findUniqueOrThrow.mockResolvedValue({
+      id: 'bill-ana',
+      saldoDisponible: 20_000,
+    });
+    prisma.billetera.updateMany.mockResolvedValue({ count: 1 });
+
+    try {
+      const resultado = await servicio.confirmarDevolucion(
+        'art-1',
+        '4821',
+        'usr-laura',
+      );
+
+      expect(prisma.billetera.updateMany).toHaveBeenCalledWith({
+        where: { id: 'bill-ana', saldoDisponible: { gte: 10_000 } },
+        data: { saldoDisponible: { decrement: 10_000 } },
+      });
+      expect(prisma.transaccionBilletera.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tipo: 'PENALIZACION',
+            monto: 10_000,
+            saldoDespues: 20_000,
+            estado: 'COMPLETADO',
+          }),
+        }),
+      );
+      expect(resultado).toMatchObject({
+        moraMonto: 10_000,
+        moraPagada: 10_000,
+        moraPendiente: 0,
+        pagoMora: 'BILLETERA',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('aplica una hora de recargo después de los 15 minutos de gracia', async () => {
     const ahora = new Date('2026-10-23T21:00:00.000Z');
     prisma.alquiler.findMany.mockResolvedValue([

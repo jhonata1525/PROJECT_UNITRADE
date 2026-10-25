@@ -18,6 +18,11 @@ import {
   mensajeErrorReservas,
   pagarMora,
 } from "../servicios/servicioReservas";
+import {
+  generarClaveIdempotencia,
+  mensajeErrorPagos,
+  procesarCheckout,
+} from "../servicios/servicioPagos";
 import { QRCodeSVG } from "qrcode.react";
 import { formatCurrency } from "../utils/formatters";
 
@@ -44,6 +49,8 @@ export const PaginaMisAlquileres = () => {
   const [error, setError] = React.useState("");
   const [revision, setRevision] = React.useState(0);
   const [pagandoMoraId, setPagandoMoraId] = React.useState(null);
+  const [pagandoReservaId, setPagandoReservaId] = React.useState(null);
+  const [reservaSinSaldoId, setReservaSinSaldoId] = React.useState(null);
   const [aviso, setAviso] = React.useState("");
 
   const handlePagarMora = async (alquilerId) => {
@@ -59,6 +66,33 @@ export const PaginaMisAlquileres = () => {
       setError(mensajeErrorReservas(err, "No se pudo pagar el recargo por mora."));
     } finally {
       setPagandoMoraId(null);
+    }
+  };
+
+  const handleCompletarPago = async (alquilerId) => {
+    if (!usuarioId || pagandoReservaId) return;
+    setPagandoReservaId(alquilerId);
+    setReservaSinSaldoId(null);
+    setAviso("");
+    setError("");
+    try {
+      const resultado = await procesarCheckout(
+        usuarioId,
+        { alquilerId },
+        generarClaveIdempotencia(),
+      );
+      if (!resultado?.exito) {
+        throw new Error(resultado?.mensaje || "No se pudo completar el pago.");
+      }
+      setAviso("Pago completado. Ya puedes consultar los códigos de entrega y devolución.");
+      setRevision((anterior) => anterior + 1);
+    } catch (err) {
+      setError(mensajeErrorPagos(err, "No se pudo completar el pago."));
+      if (err?.response?.data?.codigo === "SALDO_INSUFICIENTE") {
+        setReservaSinSaldoId(alquilerId);
+      }
+    } finally {
+      setPagandoReservaId(null);
     }
   };
 
@@ -239,6 +273,35 @@ export const PaginaMisAlquileres = () => {
                       ))}
                     </div>
                   )}
+                  {reserva.estado !== "CANCELADO" &&
+                    reserva.pago?.estado !== "COMPLETADO" && (
+                      <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                        <p className="text-sm text-amber-200">
+                          El pago de esta reserva no se ha completado. Los códigos aparecerán cuando el pago sea aprobado.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleCompletarPago(reserva.id)}
+                          disabled={Boolean(pagandoReservaId)}
+                          className="btn-primary mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {pagandoReservaId === reserva.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <CreditCard className="w-4 h-4" />}
+                          {pagandoReservaId === reserva.id
+                            ? "Procesando pago..."
+                            : "Completar pago y ver códigos"}
+                        </button>
+                        {reservaSinSaldoId === reserva.id && (
+                          <Link
+                            to="/billetera"
+                            className="ml-3 inline-block text-sm text-[var(--color-neon)] hover:underline"
+                          >
+                            Recargar billetera
+                          </Link>
+                        )}
+                      </div>
+                    )}
                   {reserva.moraMonto > 0 && (
                     <div className={`mt-4 rounded-xl border p-4 ${
                       reserva.moraPendiente > 0

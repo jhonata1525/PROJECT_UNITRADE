@@ -2,15 +2,16 @@
  * @file ModalReservaHoras.jsx
  * Reserva y pago por horas (HU-05 + HU-06).
  *
- * El pago se procesa en el backend con la pasarela sandbox:
+ * El pago se procesa en el backend desde la billetera del arrendatario:
  * - El arrendatario paga el subtotal.
  * - UniTrade retiene el 12% de comisión.
  * - El propietario recibe el resto en su billetera.
  *
- * No se descuenta dinero real ni se usan tarjetas reales.
+ * Si el saldo es insuficiente, la reserva no se confirma y se debe recargar.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   X,
   Clock,
@@ -34,11 +35,11 @@ const HORA_INICIO = 8;
 const HORA_FIN = 18;
 const HORAS_INICIO = Array.from(
   { length: HORA_FIN - HORA_INICIO - 1 },
-  (_, i) => HORA_INICIO + i
+  (_, i) => HORA_INICIO + i,
 );
 const HORAS_FIN = Array.from(
   { length: HORA_FIN - HORA_INICIO - 1 },
-  (_, i) => HORA_INICIO + i + 1
+  (_, i) => HORA_INICIO + i + 1,
 );
 const COMISION = 0.12;
 
@@ -91,11 +92,12 @@ export const ModalReservaHoras = ({
   const [confirmando, setConfirmando] = useState(false);
   const [reservaConfirmada, setReservaConfirmada] = useState(null);
   const [error, setError] = useState("");
+  const [saldoInsuficiente, setSaldoInsuficiente] = useState(false);
   const idempotenciaRef = useRef(null);
 
   const { inicio, fin, esManana } = useMemo(
     () => calcularFechas(horaInicio, horaFin),
-    [horaInicio, horaFin]
+    [horaInicio, horaFin],
   );
 
   const horasSeleccionadas = horaFin - horaInicio;
@@ -109,6 +111,7 @@ export const ModalReservaHoras = ({
     if (!isOpen) return;
     setReservaConfirmada(null);
     setError("");
+    setSaldoInsuficiente(false);
     setHoraInicio(HORA_INICIO);
     setHoraFin(HORA_INICIO + 1);
     idempotenciaRef.current = null;
@@ -161,18 +164,18 @@ export const ModalReservaHoras = ({
           horas: horasSeleccionadas,
           inicio: inicio.toISOString(),
           fin: fin.toISOString(),
-          metodo: "sandbox",
+          metodo: "billetera",
         },
-        idempotenciaRef.current
+        idempotenciaRef.current,
       );
 
       if (!respuesta?.exito) {
         throw new Error(respuesta?.mensaje || "El pago no fue aprobado.");
       }
 
-      if (!respuesta.codigoDevolucion) {
+      if (!respuesta.codigoEntrega) {
         throw new Error(
-          "El pago se aprobó, pero no se recibió el código de devolución. Consulta Mis Alquileres antes de entregar el artículo."
+          "El pago se aprobó, pero no se recibió el código de entrega. Consulta Mis Alquileres antes de entregar el artículo.",
         );
       }
 
@@ -189,15 +192,14 @@ export const ModalReservaHoras = ({
         horas: horasSeleccionadas,
         tarifaHora,
         total: respuesta.desglose?.total ?? total,
-        desglose:
-          respuesta.desglose ?? {
-            subtotal,
-            comision,
-            total,
-            montoPropietario,
-            porcentajeComision: COMISION,
-          },
-        pin: respuesta.codigoDevolucion,
+        desglose: respuesta.desglose ?? {
+          subtotal,
+          comision,
+          total,
+          montoPropietario,
+          porcentajeComision: COMISION,
+        },
+        pin: respuesta.codigoEntrega,
         estado: respuesta.estado,
         mensaje: respuesta.mensaje,
       };
@@ -206,6 +208,9 @@ export const ModalReservaHoras = ({
       onReservaExitosa?.(reserva);
     } catch (err) {
       setError(mensajeErrorPagos(err, "No se pudo procesar el pago."));
+      setSaldoInsuficiente(
+        err?.response?.data?.codigo === "SALDO_INSUFICIENTE",
+      );
       // Una nueva intención necesita una nueva clave si la anterior falló.
       idempotenciaRef.current = null;
     } finally {
@@ -232,7 +237,10 @@ export const ModalReservaHoras = ({
         <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] animate-scale-in">
           {!reservaConfirmada && (
             <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)] sticky top-0 bg-[var(--color-surface)] z-10">
-              <h2 id="modal-reserva-title" className="text-xl font-bold text-white">
+              <h2
+                id="modal-reserva-title"
+                className="text-xl font-bold text-white"
+              >
                 Reservar por Horas
               </h2>
               <button
@@ -283,7 +291,9 @@ export const ModalReservaHoras = ({
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">Hora de inicio</label>
+                      <label className="block text-xs text-gray-400 mb-1">
+                        Hora de inicio
+                      </label>
                       <select
                         value={horaInicio}
                         onChange={(e) => manejarCambioInicio(e.target.value)}
@@ -298,7 +308,9 @@ export const ModalReservaHoras = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">Hora de fin</label>
+                      <label className="block text-xs text-gray-400 mb-1">
+                        Hora de fin
+                      </label>
                       <select
                         value={horaFin}
                         onChange={(e) => setHoraFin(Number(e.target.value))}
@@ -314,7 +326,8 @@ export const ModalReservaHoras = ({
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    {horasSeleccionadas} hora{horasSeleccionadas !== 1 ? "s" : ""} seleccionada
+                    {horasSeleccionadas} hora
+                    {horasSeleccionadas !== 1 ? "s" : ""} seleccionada
                     {horasSeleccionadas !== 1 ? "s" : ""}
                   </p>
                 </div>
@@ -323,31 +336,43 @@ export const ModalReservaHoras = ({
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-300">Tarifa por hora</span>
-                      <span className="font-medium text-white">{formatCOP(tarifaHora)}</span>
+                      <span className="font-medium text-white">
+                        {formatCOP(tarifaHora)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-300">Horas</span>
-                      <span className="font-medium text-white">{horasSeleccionadas} h</span>
+                      <span className="font-medium text-white">
+                        {horasSeleccionadas} h
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-300">Subtotal</span>
-                      <span className="font-medium text-white">{formatCOP(subtotal)}</span>
+                      <span className="font-medium text-white">
+                        {formatCOP(subtotal)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400 text-xs">
                         Comisión UniTrade (12%)
                       </span>
-                      <span className="text-xs text-gray-400">-{formatCOP(comision)}</span>
+                      <span className="text-xs text-gray-400">
+                        -{formatCOP(comision)}
+                      </span>
                     </div>
                     <div className="flex justify-between border-t border-[var(--color-border)] pt-2">
-                      <span className="text-white font-medium">Total a pagar</span>
+                      <span className="text-white font-medium">
+                        Total a pagar
+                      </span>
                       <span className="text-xl font-bold text-[var(--color-neon)]">
                         {formatCOP(total)}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs text-gray-400">
                       <span>Recibe el propietario</span>
-                      <span className="font-mono">{formatCOP(montoPropietario)}</span>
+                      <span className="font-mono">
+                        {formatCOP(montoPropietario)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -355,12 +380,12 @@ export const ModalReservaHoras = ({
                 <div className="glass-panel p-4">
                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                    Pago en sandbox
+                    Pago desde tu billetera
                   </h4>
                   <p className="text-sm text-gray-400">
-                    Se simula el cobro con una tarjeta de prueba. No se descuenta
-                    dinero real. Al aprobarse, la reserva queda creada y el saldo
-                    del propietario se abona automáticamente.
+                    Se descontarán {formatCOP(total)} de tu saldo disponible.
+                    Si no alcanza, tendrás que recargar la billetera antes de
+                    reservar. El propietario recibirá el valor menos la comisión.
                   </p>
                 </div>
 
@@ -370,7 +395,17 @@ export const ModalReservaHoras = ({
                     role="alert"
                   >
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>{error}</span>
+                    <span>
+                      {error}
+                      {saldoInsuficiente && (
+                        <Link
+                          to="/billetera"
+                          className="block mt-2 font-medium text-[var(--color-neon)] hover:underline"
+                        >
+                          Ir a mi billetera para recargar
+                        </Link>
+                      )}
+                    </span>
                   </div>
                 )}
 
@@ -413,10 +448,11 @@ export const ModalReservaHoras = ({
                     Pago aprobado y reserva creada
                   </h3>
                   <p className="text-gray-400 text-sm">
-                    {reservaConfirmada.articuloNombre} · {reservaConfirmada.fechaTexto}
+                    {reservaConfirmada.articuloNombre} ·{" "}
+                    {reservaConfirmada.fechaTexto}
                   </p>
                   <span className="mt-3 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
-                    Sandbox · sin dinero real
+                    Pagado desde la billetera
                   </span>
                 </div>
 
@@ -468,7 +504,9 @@ export const ModalReservaHoras = ({
                       <div className="flex justify-between gap-3">
                         <span>Recibe el propietario</span>
                         <span className="font-mono text-gray-200">
-                          {formatCOP(reservaConfirmada.desglose.montoPropietario)}
+                          {formatCOP(
+                            reservaConfirmada.desglose.montoPropietario,
+                          )}
                         </span>
                       </div>
                       <div className="flex justify-between gap-3 border-t border-[var(--color-border)] pt-1">
@@ -478,7 +516,7 @@ export const ModalReservaHoras = ({
                         </span>
                       </div>
                       <div className="flex justify-between gap-3">
-                        <span>Transacción sandbox</span>
+                        <span>Transacción</span>
                         <span className="font-mono text-xs break-all text-right text-gray-300">
                           {reservaConfirmada.transaccionId}
                         </span>
@@ -487,7 +525,9 @@ export const ModalReservaHoras = ({
                   </div>
 
                   <div className="p-3 rounded-lg bg-gradient-to-r from-[var(--color-neon)]/10 to-[var(--color-accent-500)]/10 border border-[var(--color-neon)]/30">
-                    <p className="text-xs text-gray-400 mb-2">Código para confirmar la devolución</p>
+                    <p className="text-xs text-gray-400 mb-2">
+                      Código para confirmar la entrega
+                    </p>
                     <div className="flex justify-center">
                       <PinInput
                         value={reservaConfirmada.pin}
@@ -497,7 +537,9 @@ export const ModalReservaHoras = ({
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      Guarda este código y muéstraselo al propietario cuando devuelvas el artículo. También podrás consultarlo en Mis Alquileres.
+                      Guarda este código y muéstraselo al propietario cuando
+                      recibas el artículo. También podrás consultarlo en Mis
+                      Alquileres.
                     </p>
                   </div>
                 </div>

@@ -1,7 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsDate,
   IsIn,
   IsInt,
@@ -69,9 +68,9 @@ export class CheckoutDto {
   @IsNotEmpty()
   usuarioId?: string;
 
-  @ApiPropertyOptional({ default: 'sandbox', example: 'sandbox' })
+  @ApiPropertyOptional({ default: 'billetera', example: 'billetera' })
   @IsOptional()
-  @IsString()
+  @IsIn(['billetera'])
   @MaxLength(40)
   metodo?: string;
 
@@ -79,11 +78,4 @@ export class CheckoutDto {
   @IsOptional()
   @IsIn(['COP'])
   moneda?: 'COP';
-
-  @ApiPropertyOptional({
-    description: 'Solo sandbox: fuerza el rechazo para probar el flujo de error',
-  })
-  @IsOptional()
-  @IsBoolean()
-  forzarFallo?: boolean;
 }

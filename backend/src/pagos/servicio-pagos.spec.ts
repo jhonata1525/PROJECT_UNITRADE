@@ -1,5 +1,4 @@
 import { BadRequestException, HttpException } from '@nestjs/common';
-import type { ServicioPasarelaSandbox } from '../pasarela/servicio-pasarela-sandbox.js';
 import type { ServicioPrisma } from '../prisma/servicio-prisma.js';
 import { ServicioPagos } from './servicio-pagos.js';
 
@@ -18,8 +17,14 @@ function crearPrismaMock() {
       findMany: vi.fn(),
       upsert: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
     },
-    billetera: { upsert: vi.fn() },
+    billetera: {
+      updateMany: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      upsert: vi.fn(),
+    },
     transaccionBilletera: { create: vi.fn() },
     $transaction: vi.fn((callback: (tx: unknown) => unknown) =>
       callback(prisma),
@@ -27,13 +32,6 @@ function crearPrismaMock() {
   };
 
   return prisma;
-}
-
-function crearPasarelaMock() {
-  return {
-    cobrar: vi.fn(),
-    dispersar: vi.fn(),
-  };
 }
 
 const alquilerBase = {
@@ -64,7 +62,7 @@ const pagoBase = {
   montoPropietario: 52_800,
   moneda: 'COP',
   estado: 'PROCESANDO',
-  metodo: 'sandbox',
+  metodo: 'billetera',
   idTransaccion: null,
   claveIdempotencia: null,
   errorMensaje: null,
@@ -76,16 +74,11 @@ const pagoBase = {
 
 describe('ServicioPagos (HU-06)', () => {
   let prisma: ReturnType<typeof crearPrismaMock>;
-  let pasarela: ReturnType<typeof crearPasarelaMock>;
   let servicio: ServicioPagos;
 
   beforeEach(() => {
     prisma = crearPrismaMock();
-    pasarela = crearPasarelaMock();
-    servicio = new ServicioPagos(
-      prisma as unknown as ServicioPrisma,
-      pasarela as unknown as ServicioPasarelaSandbox,
-    );
+    servicio = new ServicioPagos(prisma as unknown as ServicioPrisma);
 
     prisma.usuario.findUnique.mockResolvedValue({
       id: 'usr-ana',
@@ -98,23 +91,27 @@ describe('ServicioPagos (HU-06)', () => {
     });
     prisma.alquiler.findUnique.mockResolvedValue(alquilerBase);
     prisma.pago.upsert.mockResolvedValue(pagoBase);
-  });
-
-  it('cobra el total, retiene 12% y abona 52.800 al propietario', async () => {
-    pasarela.cobrar.mockResolvedValue({
-      exito: true,
-      idTransaccion: 'sbx_tx_1',
-      estado: 'APROBADO',
-      codigoRespuesta: 'APROBADO',
-      mensaje: 'ok',
-      fecha: new Date(),
-    });
-    prisma.pago.update.mockResolvedValue({
+    prisma.pago.updateMany.mockResolvedValue({ count: 1 });
+    prisma.pago.findUniqueOrThrow.mockResolvedValue({
       ...pagoBase,
       estado: 'COMPLETADO',
-      idTransaccion: 'sbx_tx_1',
+      idTransaccion: 'wallet_tx_1',
       pagadoEn: new Date(),
+      alquiler: { articulo: { titulo: 'Mesa de estudio' } },
     });
+    prisma.billetera.updateMany.mockResolvedValue({ count: 1 });
+    prisma.billetera.findUniqueOrThrow.mockResolvedValue({
+      id: 'bill-ana',
+      usuarioId: 'usr-ana',
+      saldoDisponible: 40_000,
+      saldoPendiente: 0,
+      totalGanado: 0,
+      totalRetirado: 0,
+      moneda: 'COP',
+    });
+  });
+
+  it('descuenta el total del arrendatario y abona 52.800 al propietario', async () => {
     prisma.billetera.upsert.mockResolvedValue({
       id: 'bill-laura',
       usuarioId: 'usr-laura',
@@ -130,14 +127,8 @@ describe('ServicioPagos (HU-06)', () => {
       'usr-ana',
     );
 
-    expect(pasarela.cobrar).toHaveBeenCalledWith(
-      expect.objectContaining({
-        monto: 60_000,
-        moneda: 'COP',
-        referencia: 'alquiler:alq-1',
-      }),
-    );
     expect(resultado.exito).toBe(true);
+    expect(resultado.metodo).toBe('billetera');
     expect(resultado.desglose).toMatchObject({
       subtotal: 60_000,
       comision: 7_200,
@@ -153,11 +144,29 @@ describe('ServicioPagos (HU-06)', () => {
         },
       }),
     );
+    expect(prisma.billetera.updateMany).toHaveBeenCalledWith({
+      where: {
+        usuarioId: 'usr-ana',
+        saldoDisponible: { gte: 60_000 },
+      },
+      data: { saldoDisponible: { decrement: 60_000 } },
+    });
     expect(prisma.transaccionBilletera.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           tipo: 'INGRESO',
           monto: 52_800,
+          estado: 'COMPLETADO',
+        }),
+      }),
+    );
+    expect(prisma.transaccionBilletera.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          billeteraId: 'bill-ana',
+          tipo: 'PAGO_ALQUILER',
+          monto: 60_000,
+          saldoDespues: 40_000,
           estado: 'COMPLETADO',
         }),
       }),
@@ -170,7 +179,7 @@ describe('ServicioPagos (HU-06)', () => {
       pago: {
         ...pagoBase,
         estado: 'COMPLETADO',
-        idTransaccion: 'sbx_tx_previo',
+        idTransaccion: 'wallet_tx_previo',
         pagadoEn: new Date(),
       },
     });
@@ -180,21 +189,14 @@ describe('ServicioPagos (HU-06)', () => {
       'usr-ana',
     );
 
-    expect(pasarela.cobrar).not.toHaveBeenCalled();
+    expect(prisma.billetera.updateMany).not.toHaveBeenCalled();
     expect(resultado.exito).toBe(true);
-    expect(resultado.transaccionId).toBe('sbx_tx_previo');
+    expect(resultado.transaccionId).toBe('wallet_tx_previo');
     expect(resultado.mensaje).toContain('sin cobrar dos veces');
   });
 
-  it('marca el pago como fallido si la pasarela rechaza', async () => {
-    pasarela.cobrar.mockResolvedValue({
-      exito: false,
-      idTransaccion: 'sbx_tx_rechazo',
-      estado: 'RECHAZADO',
-      codigoRespuesta: 'TARJETA_RECHAZADA',
-      mensaje: 'Rechazado',
-      fecha: new Date(),
-    });
+  it('rechaza el pago si el saldo de la billetera no alcanza', async () => {
+    prisma.billetera.updateMany.mockResolvedValue({ count: 0 });
     prisma.pago.update.mockResolvedValue({
       ...pagoBase,
       estado: 'FALLIDO',
@@ -204,15 +206,33 @@ describe('ServicioPagos (HU-06)', () => {
       servicio.checkout({ alquilerId: 'alq-1' }, 'usr-ana'),
     ).rejects.toBeInstanceOf(HttpException);
 
-    expect(prisma.pago.update).toHaveBeenCalledWith(
+    expect(prisma.pago.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        where: { id: 'pago-1', estado: 'PROCESANDO' },
         data: expect.objectContaining({
           estado: 'FALLIDO',
-          errorMensaje: 'Rechazado',
+          errorMensaje: expect.stringContaining('Saldo insuficiente'),
         }),
       }),
     );
     expect(prisma.billetera.upsert).not.toHaveBeenCalled();
+    expect(prisma.transaccionBilletera.create).not.toHaveBeenCalled();
+  });
+
+  it('no vuelve a debitar si otra solicitud ya reclamó el pago', async () => {
+    prisma.pago.updateMany.mockResolvedValue({ count: 0 });
+    prisma.pago.findUnique.mockResolvedValue({
+      ...pagoBase,
+      estado: 'PROCESANDO',
+    });
+
+    await expect(
+      servicio.checkout({ alquilerId: 'alq-1' }, 'usr-ana'),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('ya se está procesando'),
+    });
+
+    expect(prisma.billetera.updateMany).not.toHaveBeenCalled();
     expect(prisma.transaccionBilletera.create).not.toHaveBeenCalled();
   });
 
@@ -249,15 +269,7 @@ describe('ServicioPagos (HU-06)', () => {
       comision: 3_600,
       montoPropietario: 26_400,
     });
-    pasarela.cobrar.mockResolvedValue({
-      exito: true,
-      idTransaccion: 'sbx_tx_nuevo',
-      estado: 'APROBADO',
-      codigoRespuesta: 'APROBADO',
-      mensaje: 'ok',
-      fecha: new Date(),
-    });
-    prisma.pago.update.mockResolvedValue({
+    prisma.pago.findUniqueOrThrow.mockResolvedValue({
       ...pagoBase,
       id: 'pago-nuevo',
       alquilerId: 'alq-nuevo',
@@ -265,8 +277,9 @@ describe('ServicioPagos (HU-06)', () => {
       comision: 3_600,
       montoPropietario: 26_400,
       estado: 'COMPLETADO',
-      idTransaccion: 'sbx_tx_nuevo',
+      idTransaccion: 'wallet_tx_nuevo',
       pagadoEn: new Date(),
+      alquiler: { articulo: { titulo: 'Mesa de estudio' } },
     });
     prisma.billetera.upsert.mockResolvedValue({
       id: 'bill-laura',
@@ -292,18 +305,70 @@ describe('ServicioPagos (HU-06)', () => {
         }),
       }),
     );
-    expect(pasarela.cobrar).toHaveBeenCalledWith(
-      expect.objectContaining({ monto: 30_000 }),
-    );
+    expect(prisma.billetera.updateMany).toHaveBeenCalledWith({
+      where: {
+        usuarioId: 'usr-ana',
+        saldoDisponible: { gte: 30_000 },
+      },
+      data: { saldoDisponible: { decrement: 30_000 } },
+    });
     expect(resultado.desglose.montoPropietario).toBe(26_400);
     expect(resultado.codigoDevolucion).toBe('4821');
+  });
+
+  it('cancela una reserva nueva cuando el saldo no alcanza', async () => {
+    const inicio = new Date('2026-10-26T14:00:00.000Z');
+    const fin = new Date(inicio.getTime() + 60 * 60 * 1000);
+    prisma.articulo.findUnique.mockResolvedValue({
+      id: 'art-1',
+      titulo: 'Mesa de estudio',
+      tarifaHora: 15_000,
+      activo: true,
+      propietarioId: 'usr-laura',
+      disponibleDesde: new Date('2026-10-20T00:00:00.000Z'),
+      disponibleHasta: new Date('2026-11-01T00:00:00.000Z'),
+    });
+    prisma.alquiler.findFirst.mockResolvedValue(null);
+    prisma.alquiler.create.mockResolvedValue({
+      ...alquilerBase,
+      id: 'alq-nuevo',
+      horas: 1,
+      subtotal: 15_000,
+      comision: 1_800,
+      total: 15_000,
+      inicio,
+      fin,
+    });
+    prisma.pago.upsert.mockResolvedValue({
+      ...pagoBase,
+      id: 'pago-nuevo',
+      alquilerId: 'alq-nuevo',
+      monto: 15_000,
+    });
+    prisma.billetera.updateMany.mockResolvedValue({ count: 0 });
+
+    const error = await servicio
+      .checkout({ articuloId: 'art-1', horas: 1, inicio, fin }, 'usr-ana')
+      .catch((capturado: unknown) => capturado);
+
+    expect(error).toBeInstanceOf(HttpException);
+    if (!(error instanceof HttpException)) throw error;
+    expect(error.getResponse()).toMatchObject({
+      codigo: 'SALDO_INSUFICIENTE',
+      mensaje: expect.stringContaining('Saldo insuficiente'),
+    });
+
+    expect(prisma.alquiler.update).toHaveBeenCalledWith({
+      where: { id: 'alq-nuevo' },
+      data: { estado: 'CANCELADO' },
+    });
+    expect(prisma.transaccionBilletera.create).not.toHaveBeenCalled();
   });
 
   it('exige alquilerId o artículo + horas', async () => {
     await expect(
       servicio.checkout({ horas: 2 }, 'usr-ana'),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(pasarela.cobrar).not.toHaveBeenCalled();
   });
 
   it('bloquea nuevas reservas cuando el arrendatario supera dos horas de mora', async () => {
@@ -323,7 +388,6 @@ describe('ServicioPagos (HU-06)', () => {
       data: { suspendidoPorMora: true },
     });
     expect(prisma.alquiler.create).not.toHaveBeenCalled();
-    expect(pasarela.cobrar).not.toHaveBeenCalled();
   });
 
   it('rechaza reservas fuera del horario semanal del propietario', async () => {

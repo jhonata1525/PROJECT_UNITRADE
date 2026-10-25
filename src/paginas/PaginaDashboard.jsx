@@ -11,6 +11,15 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import {
+  obtenerBalance,
+  mensajeErrorBilletera,
+} from "../servicios/servicioBilletera";
+import {
+  listarMisArticulos,
+  mensajeErrorArticulos,
+} from "../servicios/servicioArticulos";
+import { formatCurrency } from "../utils/formatters";
+import {
   Wallet,
   CreditCard,
   Package,
@@ -28,22 +37,20 @@ import {
 const STAT_CARDS = [
   {
     title: "Saldo Disponible",
-    value: "$0",
     icon: Wallet,
     color: "from-emerald-500 to-teal-500",
     bg: "from-emerald-500/10 to-teal-500/10",
     border: "border-emerald-500/20",
-    trend: "+12.5%",
+    trend: "Saldo actual de tu billetera",
     trendColor: "text-emerald-400",
   },
   {
-    title: "Alquileres Activos",
-    value: "0",
+    title: "Artículos Publicados",
     icon: Package,
     color: "from-blue-500 to-cyan-500",
     bg: "from-blue-500/10 to-cyan-500/10",
     border: "border-blue-500/20",
-    trend: "+3 esta semana",
+    trend: "Productos que subiste para alquilar",
     trendColor: "text-blue-400",
   },
   {
@@ -136,19 +143,104 @@ const FEATURES = [
 
 export const PaginaDashboard = () => {
   const { usuario } = useAuth();
+  const [resultadoSaldo, setResultadoSaldo] = React.useState(null);
+  const [resultadoArticulos, setResultadoArticulos] = React.useState(null);
+  const usuarioId = usuario?.id;
+
+  React.useEffect(() => {
+    if (!usuarioId) return undefined;
+
+    let cancelado = false;
+
+    obtenerBalance(usuarioId)
+      .then((balance) => {
+        if (!Number.isFinite(balance?.saldoDisponible)) {
+          throw new Error("El servidor devolvió un saldo inválido.");
+        }
+        if (!cancelado) {
+          setResultadoSaldo({
+            usuarioId,
+            valor: balance.saldoDisponible,
+            error: "",
+          });
+        }
+      })
+      .catch((error) => {
+        if (!cancelado) {
+          setResultadoSaldo({
+            usuarioId,
+            valor: null,
+            error: mensajeErrorBilletera(error, "No se pudo cargar el saldo."),
+          });
+        }
+      });
+
+    listarMisArticulos(usuarioId)
+      .then((articulos) => {
+        if (!Array.isArray(articulos)) {
+          throw new Error(
+            "El servidor devolvió una lista de artículos inválida.",
+          );
+        }
+        if (!cancelado) {
+          setResultadoArticulos({
+            usuarioId,
+            valor: articulos.length,
+            error: "",
+          });
+        }
+      })
+      .catch((error) => {
+        if (!cancelado) {
+          setResultadoArticulos({
+            usuarioId,
+            valor: null,
+            error: mensajeErrorArticulos(
+              error,
+              "No se pudo cargar la cantidad de artículos.",
+            ),
+          });
+        }
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [usuarioId]);
+
+  const saldoActual =
+    resultadoSaldo?.usuarioId === usuarioId ? resultadoSaldo : null;
+  const articulosActuales =
+    resultadoArticulos?.usuarioId === usuarioId ? resultadoArticulos : null;
+  const valoresDinamicos = [
+    saldoActual?.error || !usuarioId
+      ? "No disponible"
+      : saldoActual === null
+        ? "Cargando..."
+        : formatCurrency(saldoActual.valor),
+    articulosActuales?.error || !usuarioId
+      ? "No disponible"
+      : articulosActuales === null
+        ? "Cargando..."
+        : String(articulosActuales.valor),
+  ];
+  const erroresDinamicos = [
+    !usuarioId
+      ? "No se pudo identificar al usuario."
+      : saldoActual?.error || "",
+    !usuarioId
+      ? "No se pudo identificar al usuario."
+      : articulosActuales?.error || "",
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
       <NavegacionLateral />
 
-      <main
-        className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6"
-      >
+      <main className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container">
           <div className="mb-8 animate-slide-up">
-            <h1 className="text-3xl font-bold text-white">
-              Panel de Control
-            </h1>
+            <h1 className="text-3xl font-bold text-white">Panel de Control</h1>
             <p className="text-gray-400 mt-1">
               Bienvenido,{" "}
               <span className="font-medium text-gradient">
@@ -160,10 +252,21 @@ export const PaginaDashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {STAT_CARDS.map((stat, index) => {
               const Icon = stat.icon;
+              const valor =
+                index < valoresDinamicos.length
+                  ? valoresDinamicos[index]
+                  : stat.value;
+              const error = erroresDinamicos[index];
               return (
                 <Link
                   key={stat.title}
-                  to={index === 0 ? "/billetera" : index === 1 ? "/mis-articulos" : "/pago"}
+                  to={
+                    index === 0
+                      ? "/billetera"
+                      : index === 1
+                        ? "/mis-articulos"
+                        : "/pago"
+                  }
                   className={`glass-card-hover p-5 group ${stat.border} ${stat.bg} ${stat.hoverColor}`}
                 >
                   <div className="flex items-start justify-between">
@@ -172,10 +275,10 @@ export const PaginaDashboard = () => {
                         {stat.title}
                       </p>
                       <p className="text-2xl font-bold text-white mt-1">
-                        {stat.value}
+                        {valor}
                       </p>
                       <p className={`text-xs mt-2 ${stat.trendColor}`}>
-                        {stat.trend}
+                        {error || stat.trend}
                       </p>
                     </div>
                     <div
@@ -190,7 +293,10 @@ export const PaginaDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div className="lg:col-span-2 animate-slide-up" style={{ animationDelay: "100ms" }}>
+            <div
+              className="lg:col-span-2 animate-slide-up"
+              style={{ animationDelay: "100ms" }}
+            >
               <div className="glass-card-hover p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-white">
@@ -228,7 +334,10 @@ export const PaginaDashboard = () => {
               </div>
             </div>
 
-            <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+            <div
+              className="animate-slide-up"
+              style={{ animationDelay: "200ms" }}
+            >
               <div className="glass-card-hover p-6 h-full">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] flex items-center justify-center">
@@ -265,7 +374,10 @@ export const PaginaDashboard = () => {
             </div>
           </div>
 
-          <div className="glass-card-hover p-6 animate-slide-up" style={{ animationDelay: "300ms" }}>
+          <div
+            className="glass-card-hover p-6 animate-slide-up"
+            style={{ animationDelay: "300ms" }}
+          >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-white">
                 Próximos Pasos

@@ -22,10 +22,6 @@ import {
   EstadoTransaccion,
   TipoTransaccion,
 } from '../generated/prisma/enums.js';
-import {
-  ServicioPasarelaSandbox,
-  type ResultadoCobro,
-} from '../pasarela/servicio-pasarela-sandbox.js';
 import { ServicioPrisma } from '../prisma/servicio-prisma.js';
 import { CheckoutDto } from './dto/checkout.dto.js';
 import { HistorialPagosDto } from './dto/historial-pagos.dto.js';
@@ -64,6 +60,8 @@ const ESTADOS_QUE_OCUPAN_AGENDA: EstadoAlquiler[] = [
   EstadoAlquiler.EN_MORA,
 ];
 
+class SaldoInsuficienteError extends Error {}
+
 /**
  * HU-06 — Procesamiento de pago y comisión.
  *
@@ -72,17 +70,14 @@ const ESTADOS_QUE_OCUPAN_AGENDA: EstadoAlquiler[] = [
  * - El arrendatario paga el subtotal y el propietario recibe
  *   `subtotal - comisión` en su billetera.
  * - Los montos se calculan en el servidor; nunca se confía en el cliente.
- * - El cobro se simula con la pasarela sandbox y es idempotente por
+ * - El pago se debita de la billetera del arrendatario y es idempotente por
  *   `alquilerId` y por el header `Idempotency-Key`.
  */
 @Injectable()
 export class ServicioPagos {
   private readonly logger = new Logger(ServicioPagos.name);
 
-  constructor(
-    private readonly prisma: ServicioPrisma,
-    private readonly pasarela: ServicioPasarelaSandbox,
-  ) {}
+  constructor(private readonly prisma: ServicioPrisma) {}
 
   async checkout(
     dto: CheckoutDto,
@@ -189,7 +184,7 @@ export class ServicioPagos {
 
     const desglose = calcularDesglose(alquiler.subtotal);
     const moneda = dto.moneda ?? 'COP';
-    const metodo = dto.metodo?.trim().toLowerCase() || 'sandbox';
+    const metodo = 'billetera';
 
     if (
       alquiler.comision !== desglose.comision ||
@@ -210,7 +205,6 @@ export class ServicioPagos {
       montoPropietario: desglose.montoPropietario,
       moneda,
       metodo,
-      estado: EstadoPago.PROCESANDO,
       errorMensaje: null,
     };
 
@@ -219,6 +213,7 @@ export class ServicioPagos {
       create: {
         alquilerId: alquiler.id,
         claveIdempotencia: clave,
+        estado: EstadoPago.PENDIENTE,
         ...datosPago,
       },
       update: {
@@ -227,111 +222,157 @@ export class ServicioPagos {
       },
     });
 
-    const referencia = `alquiler:${alquiler.id}`;
-    let cobro: ResultadoCobro;
+    const reclamo = await this.prisma.pago.updateMany({
+      where: {
+        id: pago.id,
+        estado: { in: [EstadoPago.PENDIENTE, EstadoPago.FALLIDO] },
+      },
+      data: {
+        estado: EstadoPago.PROCESANDO,
+        errorMensaje: null,
+        idTransaccion: null,
+        pagadoEn: null,
+        ...(clave ? { claveIdempotencia: clave } : {}),
+      },
+    });
 
-    try {
-      cobro = await this.pasarela.cobrar({
-        monto: pago.monto,
-        moneda: pago.moneda,
-        referencia,
-        forzarFallo: dto.forzarFallo,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Error de comunicación con la pasarela: ${String(error)}`,
-      );
-      await this.marcarPagoFallido(
-        pago.id,
-        'No fue posible comunicarse con la pasarela de pagos.',
-        'ERROR_PASARELA',
-      );
-      throw new HttpException(
-        {
-          exito: false,
-          codigo: 'ERROR_PASARELA',
-          mensaje: 'No fue posible comunicarse con la pasarela de pagos.',
-          pagoId: pago.id,
-          alquilerId: alquiler.id,
-          desglose,
+    if (reclamo.count === 0) {
+      const pagoActual = await this.prisma.pago.findUnique({
+        where: { id: pago.id },
+        include: {
+          alquiler: { include: { articulo: { select: { titulo: true } } } },
         },
-        HttpStatus.BAD_GATEWAY,
+      });
+      if (pagoActual?.estado === EstadoPago.COMPLETADO) {
+        return this.respuestaExitosa(pagoActual);
+      }
+      throw new ConflictException(
+        'Este pago ya se está procesando. Espera un momento y consulta el estado de la reserva.',
       );
     }
 
-    if (!cobro.exito) {
-      await this.marcarPagoFallido(
-        pago.id,
-        cobro.mensaje,
-        cobro.codigoRespuesta,
-        cobro.idTransaccion,
-      );
+    const idTransaccion = randomUUID();
+    const fechaPago = new Date();
+    let pagado: PagoConAlquiler;
 
+    try {
+      pagado = await this.prisma.$transaction(async (tx) => {
+        const descuento = await tx.billetera.updateMany({
+          where: {
+            usuarioId,
+            saldoDisponible: { gte: pago.monto },
+          },
+          data: { saldoDisponible: { decrement: pago.monto } },
+        });
+
+        if (descuento.count === 0) {
+          throw new SaldoInsuficienteError();
+        }
+
+        const billeteraArrendatario = await tx.billetera.findUniqueOrThrow({
+          where: { usuarioId },
+        });
+        const pagoActualizado = await tx.pago.updateMany({
+          where: { id: pago.id, estado: EstadoPago.PROCESANDO },
+          data: {
+            estado: EstadoPago.COMPLETADO,
+            idTransaccion,
+            pagadoEn: fechaPago,
+            errorMensaje: null,
+            metadata: {
+              proveedor: 'billetera',
+              alquilerId: alquiler.id,
+              total: desglose.total,
+            },
+          },
+        });
+        if (pagoActualizado.count === 0) {
+          throw new ConflictException(
+            'El pago cambió de estado y no pudo completarse.',
+          );
+        }
+
+        const pagoCompletado = await tx.pago.findUniqueOrThrow({
+          where: { id: pago.id },
+          include: {
+            alquiler: { include: { articulo: { select: { titulo: true } } } },
+          },
+        });
+        const billeteraPropietario = await tx.billetera.upsert({
+          where: { usuarioId: alquiler.propietarioId },
+          create: {
+            usuarioId: alquiler.propietarioId,
+            saldoDisponible: desglose.montoPropietario,
+            totalGanado: desglose.montoPropietario,
+          },
+          update: {
+            saldoDisponible: { increment: desglose.montoPropietario },
+            totalGanado: { increment: desglose.montoPropietario },
+          },
+        });
+
+        await tx.transaccionBilletera.create({
+          data: {
+            billeteraId: billeteraArrendatario.id,
+            tipo: TipoTransaccion.PAGO_ALQUILER,
+            monto: pago.monto,
+            saldoDespues: billeteraArrendatario.saldoDisponible,
+            descripcion: `Pago de alquiler: ${alquiler.articulo.titulo}`,
+            estado: EstadoTransaccion.COMPLETADO,
+            metadata: { pagoId: pago.id, alquilerId: alquiler.id },
+          },
+        });
+        await tx.transaccionBilletera.create({
+          data: {
+            billeteraId: billeteraPropietario.id,
+            tipo: TipoTransaccion.INGRESO,
+            monto: desglose.montoPropietario,
+            saldoDespues: billeteraPropietario.saldoDisponible,
+            descripcion: `Pago de alquiler: ${alquiler.articulo.titulo}`,
+            estado: EstadoTransaccion.COMPLETADO,
+            metadata: {
+              pagoId: pagoCompletado.id,
+              alquilerId: alquiler.id,
+              transaccionId: idTransaccion,
+              subtotal: desglose.subtotal,
+              comision: desglose.comision,
+              total: desglose.total,
+            },
+          },
+        });
+
+        return pagoCompletado;
+      });
+    } catch (error) {
+      if (!(error instanceof SaldoInsuficienteError)) {
+        await this.marcarPagoFallido(
+          pago.id,
+          'No se pudo completar el pago desde la billetera.',
+          'ERROR_BILLETERA',
+        );
+        throw error;
+      }
+
+      const mensaje = `Saldo insuficiente. Recarga tu billetera: necesitas ${formatearCop(pago.monto)}.`;
+      await this.marcarPagoFallido(pago.id, mensaje, 'SALDO_INSUFICIENTE');
+      if (!dto.alquilerId) {
+        await this.prisma.alquiler.update({
+          where: { id: alquiler.id },
+          data: { estado: EstadoAlquiler.CANCELADO },
+        });
+      }
       throw new HttpException(
         {
           exito: false,
-          codigo: cobro.codigoRespuesta,
-          mensaje: cobro.mensaje,
+          codigo: 'SALDO_INSUFICIENTE',
+          mensaje,
           pagoId: pago.id,
           alquilerId: alquiler.id,
-          transaccionId: cobro.idTransaccion,
-          estado: EstadoPago.FALLIDO,
           desglose,
         },
         HttpStatus.PAYMENT_REQUIRED,
       );
     }
-
-    const pagado = await this.prisma.$transaction(async (tx) => {
-      const pagoCompletado = await tx.pago.update({
-        where: { id: pago.id },
-        data: {
-          estado: EstadoPago.COMPLETADO,
-          idTransaccion: cobro.idTransaccion,
-          pagadoEn: cobro.fecha,
-          errorMensaje: null,
-          metadata: {
-            pasarela: 'sandbox',
-            codigoRespuesta: cobro.codigoRespuesta,
-            referencia,
-          },
-        },
-      });
-
-      const billetera = await tx.billetera.upsert({
-        where: { usuarioId: alquiler.propietarioId },
-        create: {
-          usuarioId: alquiler.propietarioId,
-          saldoDisponible: desglose.montoPropietario,
-          totalGanado: desglose.montoPropietario,
-        },
-        update: {
-          saldoDisponible: { increment: desglose.montoPropietario },
-          totalGanado: { increment: desglose.montoPropietario },
-        },
-      });
-
-      await tx.transaccionBilletera.create({
-        data: {
-          billeteraId: billetera.id,
-          tipo: TipoTransaccion.INGRESO,
-          monto: desglose.montoPropietario,
-          saldoDespues: billetera.saldoDisponible,
-          descripcion: `Pago de alquiler: ${alquiler.articulo.titulo}`,
-          estado: EstadoTransaccion.COMPLETADO,
-          metadata: {
-            pagoId: pagoCompletado.id,
-            alquilerId: alquiler.id,
-            transaccionId: cobro.idTransaccion,
-            subtotal: desglose.subtotal,
-            comision: desglose.comision,
-            total: desglose.total,
-          },
-        },
-      });
-
-      return pagoCompletado;
-    });
 
     this.logger.log(
       `Pago ${pagado.id} completado. Propietario ${alquiler.propietarioId} recibe ${formatearCop(desglose.montoPropietario)}.`,
@@ -353,11 +394,11 @@ export class ServicioPagos {
       codigoDevolucion: alquiler.codigoVerificacion,
       codigoQrDevolucion: alquiler.codigoQr,
       mensaje:
-        'Pago aprobado en sandbox. Reserva confirmada y saldo abonado al propietario.',
+        'Pago descontado de tu billetera. Reserva confirmada y saldo abonado al propietario.',
     };
   }
 
-  /** Consulta una transacción por su id de pasarela o por el id del pago. */
+  /** Consulta una transacción por su id de billetera o por el id del pago. */
   async consultarEstado(identificador: string) {
     const pago = await this.prisma.pago.findFirst({
       where: {
@@ -573,15 +614,13 @@ export class ServicioPagos {
     pagoId: string,
     mensaje: string,
     codigo: string,
-    idTransaccion?: string,
   ): Promise<void> {
-    await this.prisma.pago.update({
-      where: { id: pagoId },
+    await this.prisma.pago.updateMany({
+      where: { id: pagoId, estado: EstadoPago.PROCESANDO },
       data: {
         estado: EstadoPago.FALLIDO,
         errorMensaje: mensaje,
-        idTransaccion,
-        metadata: { pasarela: 'sandbox', codigoRespuesta: codigo },
+        metadata: { proveedor: 'billetera', codigoRespuesta: codigo },
       },
     });
   }

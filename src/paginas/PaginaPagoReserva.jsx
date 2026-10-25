@@ -51,7 +51,7 @@ export default function PaginaPagoReserva() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white">Pago y Reserva</h1>
           <p className="mt-1 text-gray-400">
-            Confirma el pago en sandbox y revisa el desglose de la comisión.
+            Confirma el pago desde tu billetera y revisa el desglose de la comisión.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function PaginaPagoReserva() {
               <div className="glass-card p-5 text-sm text-gray-400 space-y-3">
                 <h2 className="font-semibold text-white">¿Cómo funciona?</h2>
                 <p>
-                  1. Se simula el cobro con una tarjeta de prueba en sandbox.
+                  1. El total se descuenta del saldo disponible de tu billetera.
                 </p>
                 <p>
                   2. UniTrade retiene el 12% de comisión sobre el subtotal.
@@ -105,7 +105,7 @@ export default function PaginaPagoReserva() {
                   propietario.
                 </p>
                 <p className="text-xs text-amber-300">
-                  Proyecto universitario: no se procesan pagos reales.
+                  Si el saldo no alcanza, recarga la billetera para continuar.
                 </p>
                 <Link to="/billetera" className="inline-block text-[var(--color-neon)] hover:underline">
                   Ver mi billetera

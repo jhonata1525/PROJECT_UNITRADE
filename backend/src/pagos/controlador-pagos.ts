@@ -24,7 +24,7 @@ export class ControladorPagos {
   @ApiOperation({
     summary: 'Procesa el pago de una reserva y reparte la comisión',
     description:
-      'Calcula el 12% de comisión, simula el cobro en sandbox y abona al propietario el subtotal menos la comisión.',
+      'Descuenta el total de la billetera del arrendatario, calcula el 12% de comisión y abona al propietario el subtotal menos la comisión.',
   })
   checkout(
     @Body() dto: CheckoutDto,
@@ -35,7 +35,7 @@ export class ControladorPagos {
   }
 
   @Get('status/:transactionId')
-  @ApiOperation({ summary: 'Consulta el estado de una transacción por id de pago o de pasarela' })
+  @ApiOperation({ summary: 'Consulta el estado de un pago por id de pago o transacción' })
   consultarEstado(@Param('transactionId') transactionId: string) {
     return this.servicioPagos.consultarEstado(transactionId);
   }

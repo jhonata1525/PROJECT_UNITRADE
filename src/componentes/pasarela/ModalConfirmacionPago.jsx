@@ -3,7 +3,7 @@
  * Tarjeta de confirmación y pago de una reserva (HU-06).
  *
  * Se usa en la página /pago y también puede reutilizarse en otros flujos.
- * El backend calcula los montos y procesa el cobro en sandbox.
+ * El backend calcula los montos y descuenta el pago de la billetera.
  */
 
 import React, { useEffect, useRef, useState } from "react";
@@ -83,7 +83,7 @@ const ModalConfirmacionPago = ({
         {
           articuloId: articulo.id,
           horas,
-          metodo: "sandbox",
+          metodo: "billetera",
         },
         idempotenciaRef.current
       );
@@ -182,11 +182,12 @@ const ModalConfirmacionPago = ({
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm text-emerald-200/90">
             <p className="flex items-center gap-2 font-medium">
               <ShieldCheck className="w-4 h-4" />
-              Cobro simulado en sandbox
+              Pago desde tu billetera
             </p>
             <p className="mt-1 text-xs text-emerald-200/70">
-              No se descuenta dinero real. El backend calcula la comisión y abona
-              el saldo al propietario.
+              Se descontará el total de tu saldo disponible. Si no alcanza,
+              recarga tu billetera. El backend calcula la comisión y abona el
+              saldo restante al propietario.
             </p>
           </div>
 
@@ -214,7 +215,7 @@ const ModalConfirmacionPago = ({
             ) : (
               <>
                 <CreditCard className="w-5 h-5" />
-                Confirmar y pagar (sandbox)
+                Confirmar y pagar
               </>
             )}
           </button>
@@ -233,7 +234,7 @@ const ModalConfirmacionPago = ({
 
           <div className="rounded-xl border border-[var(--color-border)] p-4 text-sm space-y-2">
             <p className="flex items-center gap-2 font-medium text-white">
-              <Receipt className="w-4 h-4" /> Recibo sandbox
+              <Receipt className="w-4 h-4" /> Recibo de billetera
             </p>
             <div className="flex justify-between gap-3 text-gray-400">
               <span>Pago</span>

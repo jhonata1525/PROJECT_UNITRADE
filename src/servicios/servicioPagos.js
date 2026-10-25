@@ -6,7 +6,7 @@
  * el propietario. El frontend nunca envía montos: solo artículo y horas.
  *
  * Endpoints:
- * - POST /payments/checkout       → cobra en sandbox y abona al propietario
+ * - POST /payments/checkout       → descuenta de la billetera y abona al propietario
  * - GET  /payments/status/:id     → consulta una transacción
  * - GET  /payments/history        → historial de pagos del usuario
  */
@@ -59,7 +59,7 @@ export const procesarCheckout = async (
     "/payments/checkout",
     {
       ...datosPago,
-      metodo: datosPago?.metodo || "sandbox",
+      metodo: "billetera",
       moneda: "COP",
     },
     cabecerasUsuario(usuarioId, claveIdempotencia)

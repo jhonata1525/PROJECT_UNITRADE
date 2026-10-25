@@ -62,6 +62,13 @@ const TIPOS_CONFIG = {
     montoColor: "text-gray-300",
     prefix: "-",
   },
+  PAGO_ALQUILER: {
+    icon: ArrowUpRight,
+    bg: "bg-blue-500/10",
+    text: "text-blue-400",
+    montoColor: "text-gray-300",
+    prefix: "-",
+  },
   COMISION: {
     icon: ArrowUpRight,
     bg: "bg-red-500/10",
