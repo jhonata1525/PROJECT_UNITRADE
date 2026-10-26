@@ -69,7 +69,9 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     this.temporizadorMora = setInterval(() => {
       void this.actualizarMoras().catch((error: unknown) => {
-        this.logger.error(`No se pudieron actualizar las moras: ${String(error)}`);
+        this.logger.error(
+          `No se pudieron actualizar las moras: ${String(error)}`,
+        );
       });
     }, 60_000);
     this.temporizadorMora.unref?.();
@@ -161,7 +163,32 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
       take: dto.limite ?? 20,
       include: {
         articulo: { select: { id: true, titulo: true, imagenes: true } },
+        propietario: {
+          select: {
+            id: true,
+            nombre: true,
+            calificacion: true,
+            totalResenas: true,
+          },
+        },
+        arrendatario: {
+          select: {
+            id: true,
+            nombre: true,
+            calificacion: true,
+            totalResenas: true,
+          },
+        },
         pago: { select: { id: true, estado: true, idTransaccion: true } },
+        calificaciones: {
+          where: { evaluadorId: usuarioId },
+          select: {
+            id: true,
+            estrellas: true,
+            comentario: true,
+            creadoEn: true,
+          },
+        },
       },
     });
 
@@ -191,8 +218,7 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
           const codigoQrEntrega = codigos.codigoQrEntrega ?? randomUUID();
           const codigoDevolucion =
             codigos.codigoDevolucion ?? String(randomInt(1000, 10_000));
-          const codigoQrDevolucion =
-            codigos.codigoQrDevolucion ?? randomUUID();
+          const codigoQrDevolucion = codigos.codigoQrDevolucion ?? randomUUID();
           const actualizacion = await this.prisma.alquiler.updateMany({
             where: {
               id: reserva.id,
@@ -220,6 +246,9 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
         return {
           id: reserva.id,
           estado: reserva.estado,
+          usuarioCalificado:
+            rol === 'ARRENDATARIO' ? reserva.propietario : reserva.arrendatario,
+          calificacionPropia: reserva.calificaciones?.[0] ?? null,
           ...(puedeVerCodigo ? codigos : {}),
           inicio: reserva.inicio.toISOString(),
           fin: reserva.fin.toISOString(),
@@ -451,6 +480,28 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
       throw new ConflictException('No se pudo confirmar la devolución.');
     }
 
+    let moraPagada = resultado.moraPagada;
+    let pagoAutomaticoConPasarela = false;
+    let errorCobroAutomatico: string | null = null;
+    if (moraMonto > moraPagada) {
+      try {
+        const cobro = await this.pagarMora(
+          reserva.id,
+          reserva.arrendatarioId,
+        );
+        moraPagada = cobro.moraPagada;
+        pagoAutomaticoConPasarela = moraPagada >= moraMonto;
+      } catch (error) {
+        if (!(error instanceof BadRequestException)) {
+          throw error;
+        }
+        errorCobroAutomatico = error.message;
+        this.logger.warn(
+          `El cobro automático de mora del alquiler ${reserva.id} quedó pendiente: ${error.message}`,
+        );
+      }
+    }
+
     await this.actualizarBloqueoPorMora(reserva.arrendatarioId);
     const alquileresPendientes = await this.prisma.alquiler.count({
       where: {
@@ -464,20 +515,22 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
       articuloId,
       estado: EstadoAlquiler.COMPLETADO,
       moraMonto,
-      moraPagada: resultado.moraPagada,
-      moraPendiente: Math.max(0, moraMonto - resultado.moraPagada),
+      moraPagada,
+      moraPendiente: Math.max(0, moraMonto - moraPagada),
       pagoMora:
         moraMonto === 0
           ? 'NO_APLICA'
-          : resultado.pagoConBilletera
+          : moraPagada >= moraMonto && resultado.pagoConBilletera
             ? 'BILLETERA'
-            : 'PENDIENTE',
+            : moraPagada >= moraMonto && pagoAutomaticoConPasarela
+              ? 'PASARELA_AUTOMATICA'
+              : 'PENDIENTE',
       mensaje:
-        moraMonto > resultado.moraPagada
-          ? `Devolución confirmada. Recargo por mora pendiente: ${moraMonto - resultado.moraPagada} COP. Págalo desde Mis Alquileres.`
+        moraMonto > moraPagada
+          ? `Devolución confirmada, pero no se pudo cobrar automáticamente el recargo (${moraMonto - moraPagada} COP pendientes). ${errorCobroAutomatico ?? 'Verifica tu medio de pago e inténtalo nuevamente desde Mis Alquileres.'}`
           : alquileresPendientes > 0
-            ? 'Devolución confirmada y recargo pagado. El artículo sigue reservado en otro alquiler.'
-            : 'Devolución confirmada y recargo pagado. El artículo ya está disponible.',
+            ? `Devolución confirmada y recargo cobrado${pagoAutomaticoConPasarela ? ' automáticamente por la pasarela' : ''}. El artículo sigue reservado en otro alquiler.`
+            : `Devolución confirmada y recargo cobrado${pagoAutomaticoConPasarela ? ' automáticamente por la pasarela' : ''}. El artículo ya está disponible.`,
     };
   }
 
@@ -552,7 +605,9 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
         where: { id: alquilerId, moraPagoEstado: EstadoPago.PROCESANDO },
         data: { moraPagoEstado: EstadoPago.PENDIENTE },
       });
-      this.logger.error(`Error al cobrar la mora del alquiler ${alquilerId}: ${String(error)}`);
+      this.logger.error(
+        `Error al cobrar la mora del alquiler ${alquilerId}: ${String(error)}`,
+      );
       throw new BadRequestException(
         'No se pudo procesar el pago del recargo. Inténtalo nuevamente.',
       );
@@ -648,7 +703,10 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
     });
 
     await this.prisma.usuario.updateMany({
-      where: { id: usuarioId, suspendidoPorMora: moraQueBloquea ? false : true },
+      where: {
+        id: usuarioId,
+        suspendidoPorMora: moraQueBloquea ? false : true,
+      },
       data: { suspendidoPorMora: Boolean(moraQueBloquea) },
     });
   }
@@ -708,7 +766,10 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private verificarParticipante(reserva: ReservaDetalle, usuarioId: string): void {
+  private verificarParticipante(
+    reserva: ReservaDetalle,
+    usuarioId: string,
+  ): void {
     if (
       reserva.arrendatarioId !== usuarioId &&
       reserva.propietarioId !== usuarioId

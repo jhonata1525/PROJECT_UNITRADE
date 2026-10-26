@@ -85,6 +85,8 @@ export class ServicioArticulos {
           select: {
             id: true,
             nombre: true,
+            calificacion: true,
+            totalResenas: true,
             telefono: true,
             fotoPerfil: true,
             sede: true,
@@ -114,6 +116,8 @@ export class ServicioArticulos {
           select: {
             id: true,
             nombre: true,
+            calificacion: true,
+            totalResenas: true,
             telefono: true,
             fotoPerfil: true,
             sede: true,

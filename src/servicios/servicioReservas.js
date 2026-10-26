@@ -19,11 +19,24 @@ export const mensajeErrorReservas = (
   return mensajePorDefecto;
 };
 
-export const listarMisAlquileres = async (usuarioId) => {
+export const listarMisAlquileres = async (usuarioId, rol = "ARRENDATARIO") => {
   const { data } = await servicioClienteApi.get("/reservas", {
     ...cabecerasUsuario(usuarioId),
-    params: { rol: "ARRENDATARIO", limite: 100 },
+    params: { rol, limite: 100 },
   });
+  return data;
+};
+
+export const crearCalificacion = async (
+  usuarioId,
+  alquilerId,
+  calificacion,
+) => {
+  const { data } = await servicioClienteApi.post(
+    `/calificaciones/${encodeURIComponent(alquilerId)}`,
+    calificacion,
+    cabecerasUsuario(usuarioId),
+  );
   return data;
 };
 
@@ -40,7 +53,7 @@ export const confirmarEntrega = async (usuarioId, articuloId, codigo) => {
   const { data } = await servicioClienteApi.post(
     `/reservas/articulos/${encodeURIComponent(articuloId)}/entrega`,
     { codigo },
-    cabecerasUsuario(usuarioId)
+    cabecerasUsuario(usuarioId),
   );
   return data;
 };
@@ -49,7 +62,7 @@ export const pagarMora = async (usuarioId, alquilerId) => {
   const { data } = await servicioClienteApi.post(
     `/reservas/${encodeURIComponent(alquilerId)}/pagar-mora`,
     {},
-    cabecerasUsuario(usuarioId)
+    cabecerasUsuario(usuarioId),
   );
   return data;
 };

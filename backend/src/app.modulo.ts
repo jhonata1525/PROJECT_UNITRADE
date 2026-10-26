@@ -10,6 +10,7 @@ import { ModuloPasarela } from './pasarela/modulo-pasarela.js';
 import { ModuloArticulos } from './articulos/modulo-articulos.js';
 import { ModuloPrisma } from './prisma/modulo-prisma.js';
 import { ModuloReservas } from './reservas/modulo-reservas.js';
+import { ModuloCalificaciones } from './calificaciones/modulo-calificaciones.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ModuloReservas } from './reservas/modulo-reservas.js';
     ModuloPagos,
     ModuloBilletera,
     ModuloReservas,
+    ModuloCalificaciones,
     ModuloArticulos,
   ],
   controllers: [ControladorApp, ControladorAuth],

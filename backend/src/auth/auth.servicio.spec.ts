@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { hash } from 'bcryptjs';
@@ -102,6 +103,8 @@ describe('ServicioAuth', () => {
       telefonoVerificado: false,
       fechaVerificacionTelefono: null,
       rol: 'ESTUDIANTE',
+      calificacion: 4.5,
+      totalResenas: 2,
       sede: 'Sede Barranquilla',
       puntoEntrega: 'Cafetería sede 1',
       disponibilidad: {
@@ -126,6 +129,8 @@ describe('ServicioAuth', () => {
       id: 'usuario-1',
       correo: 'ana@unisimon.edu.co',
       correoVerificado: false,
+      calificacion: 4.5,
+      totalResenas: 2,
     });
     expect(resultado.usuario).not.toHaveProperty('hashContrasena');
     expect(resultado.usuario).toMatchObject({
@@ -176,6 +181,8 @@ describe('ServicioAuth', () => {
         fotoPerfil: true,
         telefono: true,
         telefonoVerificado: true,
+        calificacion: true,
+        totalResenas: true,
         sede: true,
         puntoEntrega: true,
         disponibilidad: true,
@@ -195,6 +202,29 @@ describe('ServicioAuth', () => {
       }),
     ).rejects.toThrow('El usuario indicado no existe.');
     expect(actualizarUsuario).not.toHaveBeenCalled();
+  });
+
+  it('consulta el promedio y total de reseñas del usuario', async () => {
+    buscarUsuarioPorId.mockResolvedValue({
+      calificacion: 4.5,
+      totalResenas: 2,
+    });
+
+    await expect(
+      servicio.obtenerResumenCalificacion('usuario-1'),
+    ).resolves.toEqual({ calificacion: 4.5, totalResenas: 2 });
+    expect(buscarUsuarioPorId).toHaveBeenCalledWith({
+      where: { id: 'usuario-1' },
+      select: { calificacion: true, totalResenas: true },
+    });
+  });
+
+  it('responde 404 si el usuario del resumen no existe', async () => {
+    buscarUsuarioPorId.mockResolvedValue(null);
+
+    await expect(
+      servicio.obtenerResumenCalificacion('inexistente'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('rechaza las credenciales que no coinciden', async () => {

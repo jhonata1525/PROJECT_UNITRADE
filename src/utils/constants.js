@@ -40,7 +40,7 @@ export const DIAS_SEMANA = [
   { id: 'domingo', label: 'Domingo', short: 'Dom' },
 ]
 
-export const HORAS_ATENCION = Array.from({ length: 11 }, (_, i) => {
+export const HORAS_ATENCION = Array.from({ length: 14 }, (_, i) => {
   const hora = 8 + i
   return `${String(hora).padStart(2, '0')}:00`
 })

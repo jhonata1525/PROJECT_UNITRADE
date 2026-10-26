@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Search,
   Phone,
+  Star,
   User,
   X,
 } from "lucide-react";
@@ -484,7 +485,18 @@ export const PaginaCatalogo = () => {
                     <p className="font-semibold text-white">
                       {articuloDetalle.propietario?.nombre || "Estudiante UniTrade"}
                     </p>
-                    <p className="text-sm text-gray-400">Propietario del artículo</p>
+                    <div className="mt-1 flex items-center gap-1.5 text-sm">
+                      <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+                      <span className="font-medium text-amber-200">
+                        {Number(articuloDetalle.propietario?.calificacion || 0).toFixed(1)}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        ({articuloDetalle.propietario?.totalResenas || 0}{" "}
+                        {(articuloDetalle.propietario?.totalResenas || 0) === 1
+                          ? "reseña"
+                          : "reseñas"})
+                      </span>
+                    </div>
                   </div>
                 </div>
 

@@ -54,6 +54,8 @@ export class ServicioAuth {
         correoVerificado: true,
         telefonoVerificado: true,
         rol: true,
+        calificacion: true,
+        totalResenas: true,
       },
     });
 
@@ -83,6 +85,8 @@ export class ServicioAuth {
         telefonoVerificado: true,
         fechaVerificacionTelefono: true,
         rol: true,
+        calificacion: true,
+        totalResenas: true,
         sede: true,
         puntoEntrega: true,
         disponibilidad: true,
@@ -104,6 +108,8 @@ export class ServicioAuth {
         telefonoVerificado: usuario.telefonoVerificado,
         fechaVerificacionTelefono: usuario.fechaVerificacionTelefono,
         rol: usuario.rol,
+        calificacion: usuario.calificacion,
+        totalResenas: usuario.totalResenas,
         sede: usuario.sede,
         puntoEntrega: usuario.puntoEntrega,
         disponibilidad: usuario.disponibilidad,
@@ -149,11 +155,26 @@ export class ServicioAuth {
         fotoPerfil: true,
         telefono: true,
         telefonoVerificado: true,
+        calificacion: true,
+        totalResenas: true,
         sede: true,
         puntoEntrega: true,
         disponibilidad: true,
       },
     });
+  }
+
+  async obtenerResumenCalificacion(usuarioId: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { calificacion: true, totalResenas: true },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('El usuario indicado no existe.');
+    }
+
+    return usuario;
   }
 
   private normalizarTelefono(telefono: string): string {

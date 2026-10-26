@@ -32,13 +32,13 @@ import {
 } from "../../servicios/servicioPagos";
 
 const HORA_INICIO = 8;
-const HORA_FIN = 18;
+const HORA_FIN = 21;
 const HORAS_INICIO = Array.from(
-  { length: HORA_FIN - HORA_INICIO - 1 },
+  { length: HORA_FIN - HORA_INICIO },
   (_, i) => HORA_INICIO + i,
 );
 const HORAS_FIN = Array.from(
-  { length: HORA_FIN - HORA_INICIO - 1 },
+  { length: HORA_FIN - HORA_INICIO },
   (_, i) => HORA_INICIO + i + 1,
 );
 const COMISION = 0.12;

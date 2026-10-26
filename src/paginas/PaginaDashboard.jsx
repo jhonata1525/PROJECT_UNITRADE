@@ -19,6 +19,7 @@ import {
   mensajeErrorArticulos,
 } from "../servicios/servicioArticulos";
 import { formatCurrency } from "../utils/formatters";
+import { servicioClienteApi } from "../servicios/servicioClienteApi";
 import {
   Wallet,
   CreditCard,
@@ -30,6 +31,7 @@ import {
   Users,
   ArrowRight,
   Shield,
+  Star,
   Zap,
   Sparkles,
 } from "lucide-react";
@@ -65,12 +67,10 @@ const STAT_CARDS = [
   },
   {
     title: "Rating Promedio",
-    value: "5.0",
-    icon: Shield,
+    icon: Star,
     color: "from-amber-500 to-orange-500",
     bg: "from-amber-500/10 to-orange-500/10",
     border: "border-amber-500/20",
-    trend: "Basado en 0 reseñas",
     trendColor: "text-amber-400",
   },
 ];
@@ -145,6 +145,7 @@ export const PaginaDashboard = () => {
   const { usuario } = useAuth();
   const [resultadoSaldo, setResultadoSaldo] = React.useState(null);
   const [resultadoArticulos, setResultadoArticulos] = React.useState(null);
+  const [resultadoCalificacion, setResultadoCalificacion] = React.useState(null);
   const usuarioId = usuario?.id;
 
   React.useEffect(() => {
@@ -203,6 +204,41 @@ export const PaginaDashboard = () => {
         }
       });
 
+    servicioClienteApi
+      .get("/auth/perfil", {
+        headers: { "x-usuario-id": usuarioId },
+      })
+      .then(({ data }) => {
+        if (
+          !Number.isFinite(data?.calificacion) ||
+          !Number.isInteger(data?.totalResenas) ||
+          data.totalResenas < 0
+        ) {
+          throw new Error("El servidor devolvió una calificación inválida.");
+        }
+        if (!cancelado) {
+          setResultadoCalificacion({
+            usuarioId,
+            valor: data.calificacion,
+            resenas: data.totalResenas,
+            error: "",
+          });
+        }
+      })
+      .catch((error) => {
+        if (!cancelado) {
+          const mensaje = error?.response?.data?.message;
+          setResultadoCalificacion({
+            usuarioId,
+            valor: null,
+            resenas: null,
+            error:
+              (Array.isArray(mensaje) ? mensaje.join(", ") : mensaje) ||
+              "No se pudo cargar el promedio.",
+          });
+        }
+      });
+
     return () => {
       cancelado = true;
     };
@@ -212,6 +248,10 @@ export const PaginaDashboard = () => {
     resultadoSaldo?.usuarioId === usuarioId ? resultadoSaldo : null;
   const articulosActuales =
     resultadoArticulos?.usuarioId === usuarioId ? resultadoArticulos : null;
+  const calificacionActual =
+    resultadoCalificacion?.usuarioId === usuarioId
+      ? resultadoCalificacion
+      : null;
   const valoresDinamicos = [
     saldoActual?.error || !usuarioId
       ? "No disponible"
@@ -255,8 +295,32 @@ export const PaginaDashboard = () => {
               const valor =
                 index < valoresDinamicos.length
                   ? valoresDinamicos[index]
-                  : stat.value;
-              const error = erroresDinamicos[index];
+                  : index === 3
+                    ? calificacionActual?.error || !usuarioId
+                      ? "No disponible"
+                      : calificacionActual === null
+                        ? "Cargando..."
+                        : calificacionActual.valor.toFixed(1)
+                    : stat.value;
+              const error =
+                index < erroresDinamicos.length
+                  ? erroresDinamicos[index]
+                  : index === 3
+                    ? calificacionActual?.error ||
+                      (!usuarioId ? "No se pudo identificar al usuario." : "")
+                    : "";
+              const tendencia =
+                index === 3
+                  ? calificacionActual
+                    ? calificacionActual.resenas === 0
+                      ? "Aún no tienes reseñas"
+                      : `Basado en ${calificacionActual.resenas} ${
+                          calificacionActual.resenas === 1
+                            ? "reseña"
+                            : "reseñas"
+                        }`
+                    : stat.trend || "Calificaciones de tus alquileres completados"
+                  : stat.trend;
               return (
                 <Link
                   key={stat.title}
@@ -265,7 +329,9 @@ export const PaginaDashboard = () => {
                       ? "/billetera"
                       : index === 1
                         ? "/mis-articulos"
-                        : "/pago"
+                        : index === 3
+                          ? "/perfil"
+                          : "/pago"
                   }
                   className={`glass-card-hover p-5 group ${stat.border} ${stat.bg} ${stat.hoverColor}`}
                 >
@@ -278,7 +344,7 @@ export const PaginaDashboard = () => {
                         {valor}
                       </p>
                       <p className={`text-xs mt-2 ${stat.trendColor}`}>
-                        {error || stat.trend}
+                        {error || tendencia}
                       </p>
                     </div>
                     <div

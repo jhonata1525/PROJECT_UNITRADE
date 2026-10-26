@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import { ActualizarPerfilDto } from './dto/actualizar-perfil.dto.js';
@@ -33,6 +33,12 @@ export class ControladorAuth {
   })
   registrarCompatibilidad(@Body() dto: RegistroDto) {
     return this.servicioAuth.registrar(dto);
+  }
+
+  @Get('perfil')
+  @ApiOperation({ summary: 'Consulta el promedio de calificaciones del usuario' })
+  obtenerResumenCalificacion(@UsuarioId() usuarioId: string) {
+    return this.servicioAuth.obtenerResumenCalificacion(usuarioId);
   }
 
   @Patch('perfil')

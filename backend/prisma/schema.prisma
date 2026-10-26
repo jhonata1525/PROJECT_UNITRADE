@@ -93,6 +93,8 @@ model Usuario {
   articulos                  Articulo[]
   alquileresComoArrendatario Alquiler[]      @relation("Arrendatario")
   alquileresComoPropietario  Alquiler[]      @relation("Propietario")
+  calificacionesDadas        Calificacion[]  @relation("CalificacionesDadas")
+  calificacionesRecibidas    Calificacion[]  @relation("CalificacionesRecibidas")
   billetera                  Billetera?
   tokensRefresco             TokenRefresco[]
   codigosOtp                 CodigoOtp[]
@@ -163,16 +165,35 @@ model Alquiler {
   creadoEn               DateTime       @default(now())
   actualizadoEn          DateTime       @updatedAt
 
-  articulo     Articulo @relation(fields: [articuloId], references: [id], onDelete: Restrict)
-  arrendatario Usuario  @relation("Arrendatario", fields: [arrendatarioId], references: [id], onDelete: Restrict)
-  propietario  Usuario  @relation("Propietario", fields: [propietarioId], references: [id], onDelete: Restrict)
-  pago         Pago?
+  articulo       Articulo       @relation(fields: [articuloId], references: [id], onDelete: Restrict)
+  arrendatario   Usuario        @relation("Arrendatario", fields: [arrendatarioId], references: [id], onDelete: Restrict)
+  propietario    Usuario        @relation("Propietario", fields: [propietarioId], references: [id], onDelete: Restrict)
+  pago           Pago?
+  calificaciones Calificacion[]
 
   @@index([arrendatarioId])
   @@index([propietarioId])
   @@index([articuloId])
   @@index([estado])
   @@map("alquiler")
+}
+
+model Calificacion {
+  id          String   @id @default(cuid())
+  alquilerId  String
+  evaluadorId String
+  evaluadoId  String
+  estrellas   Int
+  comentario  String?  @db.VarChar(1000)
+  creadoEn    DateTime @default(now())
+
+  alquiler  Alquiler @relation(fields: [alquilerId], references: [id], onDelete: Cascade)
+  evaluador Usuario  @relation("CalificacionesDadas", fields: [evaluadorId], references: [id], onDelete: Restrict)
+  evaluado  Usuario  @relation("CalificacionesRecibidas", fields: [evaluadoId], references: [id], onDelete: Restrict)
+
+  @@unique([alquilerId, evaluadorId])
+  @@index([evaluadoId, creadoEn])
+  @@map("calificacion")
 }
 
 // ─────────────────────────────────────────────

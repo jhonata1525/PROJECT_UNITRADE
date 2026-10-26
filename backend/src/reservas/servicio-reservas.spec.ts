@@ -345,6 +345,106 @@ describe('ServicioReservas', () => {
     });
   });
 
+  it('cobra automáticamente con la pasarela si la billetera no tiene saldo suficiente', async () => {
+    prisma.alquiler.findFirst
+      .mockResolvedValueOnce({
+        id: 'alq-1',
+        fin: new Date(Date.now() - 16 * 60 * 1000),
+        arrendatarioId: 'usr-ana',
+        moraMonto: 0,
+        moraPagada: 0,
+        moraPagoEstado: 'PENDIENTE',
+        articulo: { tarifaHora: 15_000 },
+      })
+      .mockResolvedValue(null);
+    prisma.billetera.findUnique.mockResolvedValue({
+      id: 'bill-ana',
+      saldoDisponible: 1_000,
+    });
+    prisma.billetera.updateMany.mockResolvedValue({ count: 0 });
+    prisma.alquiler.findUnique.mockResolvedValue({
+      id: 'alq-1',
+      articuloId: 'art-1',
+      arrendatarioId: 'usr-ana',
+      estado: 'COMPLETADO',
+      moraMonto: 15_000,
+      moraPagada: 0,
+      moraPagoEstado: 'PENDIENTE',
+    });
+    pasarela.cobrar.mockResolvedValue({
+      exito: true,
+      idTransaccion: 'sbx-mora-automatico',
+    });
+
+    const resultado = await servicio.confirmarDevolucion(
+      'art-1',
+      '4821',
+      'usr-laura',
+    );
+
+    expect(pasarela.cobrar).toHaveBeenCalledWith({
+      monto: 15_000,
+      moneda: 'COP',
+      referencia: 'mora:alq-1',
+    });
+    expect(resultado).toMatchObject({
+      moraMonto: 15_000,
+      moraPagada: 15_000,
+      moraPendiente: 0,
+      pagoMora: 'PASARELA_AUTOMATICA',
+    });
+    expect(resultado.mensaje).toContain('cobrado automáticamente');
+  });
+
+  it('deja explícita la mora pendiente si falla el cobro automático', async () => {
+    prisma.alquiler.findFirst
+      .mockResolvedValueOnce({
+        id: 'alq-1',
+        fin: new Date(Date.now() - 16 * 60 * 1000),
+        arrendatarioId: 'usr-ana',
+        moraMonto: 0,
+        moraPagada: 0,
+        moraPagoEstado: 'PENDIENTE',
+        articulo: { tarifaHora: 15_000 },
+      })
+      .mockResolvedValue(null);
+    prisma.alquiler.findUnique.mockResolvedValue({
+      id: 'alq-1',
+      articuloId: 'art-1',
+      arrendatarioId: 'usr-ana',
+      estado: 'COMPLETADO',
+      moraMonto: 15_000,
+      moraPagada: 0,
+      moraPagoEstado: 'PENDIENTE',
+    });
+    pasarela.cobrar.mockResolvedValue({
+      exito: false,
+      idTransaccion: 'sbx-mora-rechazada',
+      mensaje: 'Medio de pago rechazado.',
+    });
+
+    const resultado = await servicio.confirmarDevolucion(
+      'art-1',
+      '4821',
+      'usr-laura',
+    );
+
+    expect(resultado).toMatchObject({
+      estado: 'COMPLETADO',
+      moraMonto: 15_000,
+      moraPagada: 0,
+      moraPendiente: 15_000,
+      pagoMora: 'PENDIENTE',
+    });
+    expect(resultado.mensaje).toContain('no se pudo cobrar automáticamente');
+    expect(prisma.alquiler.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ moraPagoEstado: 'PROCESANDO' }),
+        data: { moraPagoEstado: 'PENDIENTE' },
+      }),
+    );
+  });
+
   it('cobra dos horas al devolver a la 1 p. m. un alquiler que vencía a las 11 a. m.', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-26T18:00:00.000Z'));

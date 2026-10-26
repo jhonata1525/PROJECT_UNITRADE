@@ -92,6 +92,8 @@ describe('ServicioArticulos: registro y disponibilidad', () => {
         propietario: {
           id: 'usr-ana',
           nombre: 'Ana',
+          calificacion: 4.5,
+          totalResenas: 2,
           telefono: '+573001234567',
           fotoPerfil: 'data:image/jpeg;base64,foto',
           sede: 'Sede Barranquilla',
@@ -107,6 +109,8 @@ describe('ServicioArticulos: registro y disponibilidad', () => {
     expect(resultado[0].propietario).toEqual({
       id: 'usr-ana',
       nombre: 'Ana',
+      calificacion: 4.5,
+      totalResenas: 2,
       telefono: '+573001234567',
       fotoPerfil: 'data:image/jpeg;base64,foto',
       sede: 'Sede Barranquilla',
@@ -120,6 +124,8 @@ describe('ServicioArticulos: registro y disponibilidad', () => {
             select: {
               id: true,
               nombre: true,
+              calificacion: true,
+              totalResenas: true,
               telefono: true,
               fotoPerfil: true,
               sede: true,

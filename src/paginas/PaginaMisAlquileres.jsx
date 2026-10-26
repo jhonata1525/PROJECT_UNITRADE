@@ -15,6 +15,7 @@ import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import {
   listarMisAlquileres,
+  crearCalificacion,
   mensajeErrorReservas,
   pagarMora,
 } from "../servicios/servicioReservas";
@@ -25,6 +26,7 @@ import {
 } from "../servicios/servicioPagos";
 import { QRCodeSVG } from "qrcode.react";
 import { formatCurrency } from "../utils/formatters";
+import { FormularioCalificacion } from "../componentes/reservas/FormularioCalificacion";
 
 const ESTADOS_RESERVA = {
   PENDIENTE_ENTREGA: "Pendiente de entrega",
@@ -52,6 +54,7 @@ export const PaginaMisAlquileres = () => {
   const [pagandoReservaId, setPagandoReservaId] = React.useState(null);
   const [reservaSinSaldoId, setReservaSinSaldoId] = React.useState(null);
   const [aviso, setAviso] = React.useState("");
+  const [rol, setRol] = React.useState("ARRENDATARIO");
 
   const handlePagarMora = async (alquilerId) => {
     if (!usuarioId || pagandoMoraId) return;
@@ -63,7 +66,9 @@ export const PaginaMisAlquileres = () => {
       setAviso(resultado.mensaje);
       setRevision((anterior) => anterior + 1);
     } catch (err) {
-      setError(mensajeErrorReservas(err, "No se pudo pagar el recargo por mora."));
+      setError(
+        mensajeErrorReservas(err, "No se pudo pagar el recargo por mora."),
+      );
     } finally {
       setPagandoMoraId(null);
     }
@@ -84,7 +89,9 @@ export const PaginaMisAlquileres = () => {
       if (!resultado?.exito) {
         throw new Error(resultado?.mensaje || "No se pudo completar el pago.");
       }
-      setAviso("Pago completado. Ya puedes consultar los códigos de entrega y devolución.");
+      setAviso(
+        "Pago completado. Ya puedes consultar los códigos de entrega y devolución.",
+      );
       setRevision((anterior) => anterior + 1);
     } catch (err) {
       setError(mensajeErrorPagos(err, "No se pudo completar el pago."));
@@ -93,6 +100,22 @@ export const PaginaMisAlquileres = () => {
       }
     } finally {
       setPagandoReservaId(null);
+    }
+  };
+
+  const handleCalificar = async (alquilerId, calificacion) => {
+    if (!usuarioId) return;
+    try {
+      await crearCalificacion(usuarioId, alquilerId, calificacion);
+      setAviso(
+        "Tu calificación fue guardada. Gracias por compartir tu experiencia.",
+      );
+      setRevision((anterior) => anterior + 1);
+    } catch (err) {
+      throw new Error(
+        mensajeErrorReservas(err, "No se pudo guardar la calificación."),
+        { cause: err },
+      );
     }
   };
 
@@ -109,7 +132,7 @@ export const PaginaMisAlquileres = () => {
       setLoading(true);
       setError("");
       try {
-        const datos = await listarMisAlquileres(usuarioId);
+        const datos = await listarMisAlquileres(usuarioId, rol);
         if (!cancelado) setReservas(Array.isArray(datos) ? datos : []);
       } catch (err) {
         if (!cancelado) {
@@ -126,7 +149,7 @@ export const PaginaMisAlquileres = () => {
     return () => {
       cancelado = true;
     };
-  }, [usuarioId, revision]);
+  }, [usuarioId, revision, rol]);
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
@@ -150,6 +173,30 @@ export const PaginaMisAlquileres = () => {
             </Link>
           </div>
 
+          <div
+            className="mb-6 inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1"
+            aria-label="Filtrar alquileres por participación"
+          >
+            {[
+              { valor: "ARRENDATARIO", etiqueta: "Como arrendatario" },
+              { valor: "PROPIETARIO", etiqueta: "Como propietario" },
+            ].map((opcion) => (
+              <button
+                key={opcion.valor}
+                type="button"
+                onClick={() => setRol(opcion.valor)}
+                aria-pressed={rol === opcion.valor}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  rol === opcion.valor
+                    ? "bg-[var(--color-neon)] text-slate-950"
+                    : "text-gray-300 hover:text-white"
+                }`}
+              >
+                {opcion.etiqueta}
+              </button>
+            ))}
+          </div>
+
           {error && (
             <div
               role="alert"
@@ -168,7 +215,10 @@ export const PaginaMisAlquileres = () => {
             </div>
           )}
           {aviso && (
-            <div role="status" className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            <div
+              role="status"
+              className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+            >
               {aviso}
             </div>
           )}
@@ -250,7 +300,10 @@ export const PaginaMisAlquileres = () => {
                           confirmado: reserva.estado === "COMPLETADO",
                         },
                       ].map((codigo) => (
-                        <div key={codigo.label} className="rounded-xl border border-[var(--color-border-hover)] bg-[var(--color-canvas)] p-4">
+                        <div
+                          key={codigo.label}
+                          className="rounded-xl border border-[var(--color-border-hover)] bg-[var(--color-canvas)] p-4"
+                        >
                           <p className="text-xs text-gray-400 flex items-center gap-2">
                             <KeyRound className="w-4 h-4 text-[var(--color-neon)]" />
                             Código PIN de {codigo.label.toLowerCase()}
@@ -261,7 +314,11 @@ export const PaginaMisAlquileres = () => {
                           </p>
                           {codigo.qr && (
                             <div className="mt-3 inline-block rounded-lg bg-white p-2">
-                              <QRCodeSVG value={codigo.qr} size={120} level="M" />
+                              <QRCodeSVG
+                                value={codigo.qr}
+                                size={120}
+                                level="M"
+                              />
                             </div>
                           )}
                           <p className="text-xs text-gray-500 mt-2">
@@ -277,7 +334,8 @@ export const PaginaMisAlquileres = () => {
                     reserva.pago?.estado !== "COMPLETADO" && (
                       <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
                         <p className="text-sm text-amber-200">
-                          El pago de esta reserva no se ha completado. Los códigos aparecerán cuando el pago sea aprobado.
+                          El pago de esta reserva no se ha completado. Los
+                          códigos aparecerán cuando el pago sea aprobado.
                         </p>
                         <button
                           type="button"
@@ -285,9 +343,11 @@ export const PaginaMisAlquileres = () => {
                           disabled={Boolean(pagandoReservaId)}
                           className="btn-primary mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                          {pagandoReservaId === reserva.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <CreditCard className="w-4 h-4" />}
+                          {pagandoReservaId === reserva.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CreditCard className="w-4 h-4" />
+                          )}
                           {pagandoReservaId === reserva.id
                             ? "Procesando pago..."
                             : "Completar pago y ver códigos"}
@@ -303,30 +363,37 @@ export const PaginaMisAlquileres = () => {
                       </div>
                     )}
                   {reserva.moraMonto > 0 && (
-                    <div className={`mt-4 rounded-xl border p-4 ${
-                      reserva.moraPendiente > 0
-                        ? "border-amber-500/40 bg-amber-500/10"
-                        : "border-emerald-500/40 bg-emerald-500/10"
-                    }`}>
+                    <div
+                      className={`mt-4 rounded-xl border p-4 ${
+                        reserva.moraPendiente > 0
+                          ? "border-amber-500/40 bg-amber-500/10"
+                          : "border-emerald-500/40 bg-emerald-500/10"
+                      }`}
+                    >
                       <p className="font-semibold text-white">
                         Recargo por mora: {formatCurrency(reserva.moraMonto)}
                       </p>
                       <p className="text-sm text-gray-300 mt-1">
                         Pendiente: {formatCurrency(reserva.moraPendiente)}
                       </p>
-                      {reserva.moraPendiente > 0 && reserva.estado === "COMPLETADO" && (
-                        <button
-                          type="button"
-                          onClick={() => handlePagarMora(reserva.id)}
-                          disabled={Boolean(pagandoMoraId)}
-                          className="btn-primary mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          {pagandoMoraId === reserva.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <CreditCard className="w-4 h-4" />}
-                          {pagandoMoraId === reserva.id ? "Procesando..." : "Pagar recargo"}
-                        </button>
-                      )}
+                      {reserva.moraPendiente > 0 &&
+                        reserva.estado === "COMPLETADO" && (
+                          <button
+                            type="button"
+                            onClick={() => handlePagarMora(reserva.id)}
+                            disabled={Boolean(pagandoMoraId)}
+                            className="btn-primary mt-3 inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {pagandoMoraId === reserva.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <CreditCard className="w-4 h-4" />
+                            )}
+                            {pagandoMoraId === reserva.id
+                              ? "Procesando..."
+                              : "Pagar recargo"}
+                          </button>
+                        )}
                     </div>
                   )}
                   {reserva.estado === "COMPLETADO" && (
@@ -335,6 +402,18 @@ export const PaginaMisAlquileres = () => {
                       Devolución confirmada
                     </p>
                   )}
+                  {reserva.estado === "COMPLETADO" &&
+                    reserva.usuarioCalificado && (
+                      <FormularioCalificacion
+                        calificacion={reserva.calificacionPropia}
+                        nombreUsuario={reserva.usuarioCalificado.nombre}
+                        promedio={reserva.usuarioCalificado.calificacion}
+                        totalResenas={reserva.usuarioCalificado.totalResenas}
+                        onSubmit={(calificacion) =>
+                          handleCalificar(reserva.id, calificacion)
+                        }
+                      />
+                    )}
                 </article>
               ))}
             </div>

@@ -23,6 +23,7 @@ import {
   Phone,
   Mail,
   CalendarDays,
+  Star,
 } from "lucide-react";
 import { obtenerFranjasDisponibles, formatearSede } from "../utils/perfil";
 
@@ -49,6 +50,8 @@ export const PaginaPerfil = () => {
   const correoVerificado = Boolean(usuario?.correoVerificado);
   const telefono = usuario?.telefono;
   const telefonoVerificado = usuario?.telefonoVerificado;
+  const calificacion = Number(usuario?.calificacion) || 0;
+  const totalResenas = Number(usuario?.totalResenas) || 0;
   const franjasDisponibles = obtenerFranjasDisponibles(usuario?.disponibilidad);
   const sedeCompleta = formatearSede(usuario);
   const programa = "Ingeniería de Sistemas / Administración";
@@ -137,6 +140,18 @@ export const PaginaPerfil = () => {
                     {nombreCompleto}
                   </p>
                   <p className="text-sm text-gray-400">Estudiante UniTrade</p>
+                  <div
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-sm"
+                    aria-label={`Promedio de ${calificacion.toFixed(1)} de 5 estrellas, ${totalResenas} reseñas`}
+                  >
+                    <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+                    <span className="font-semibold text-amber-200">
+                      {calificacion.toFixed(1)}
+                    </span>
+                    <span className="text-amber-100/70">
+                      ({totalResenas} {totalResenas === 1 ? "reseña" : "reseñas"})
+                    </span>
+                  </div>
                 </div>
 
                 <div className="w-full pt-2 border-t border-[var(--color-border)] space-y-2 text-left">
