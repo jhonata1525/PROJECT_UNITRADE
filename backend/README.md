@@ -84,6 +84,55 @@ franjas semanales quedan almacenados en la tabla `usuario`. Para publicar, el
 prestador debe tener al menos una franja configurada; las reservas nuevas se
 validan contra el horario semanal del propietario en `America/Bogota`.
 
+## Carnet digital y verificación por QR
+
+La migración `20261026120000_carnet_digital_qr` agrega `tokenCarnet`,
+`codigoEstudiantil` y `carnetVigenteHasta` a `usuario`. Aplícala con
+`npm run prisma:deploy` antes de iniciar esta versión.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/carnet/mio` | Emite o devuelve el token y código del carnet del usuario (`x-usuario-id`) |
+| `GET` | `/api/carnet/verificar/:token` | Verificación pública del carnet contenido en el QR |
+
+El carnet se emite la primera vez que el usuario abre su perfil y tiene una
+vigencia de un año. El QR contiene una URL
+`FRONTEND_URL/verificar/<token>`; el token es un UUID opaco y **no** incluye
+datos personales, correo ni teléfono.
+
+`GET /api/carnet/verificar/:token` no requiere sesión, está limitado a 30
+consultas por minuto por IP y devuelve solo datos públicos:
+
+```json
+{
+  "valido": true,
+  "motivos": [],
+  "carnet": {
+    "nombre": "Ana Martínez",
+    "codigo": "USB-2026-AB12CD34",
+    "fotoPerfil": "data:image/jpeg;base64,...",
+    "sede": "Sede Cúcuta",
+    "cuentaUniTrade": "ACTIVA",
+    "universidad": {
+      "correoInstitucionalVerificado": true,
+      "inscripcion": "NO_VERIFICADA"
+    },
+    "vigenteHasta": "2027-10-26T12:00:00.000Z"
+  },
+  "verificadoEn": "2026-10-26T12:00:00.000Z"
+}
+```
+
+Un token inexistente responde `404`. Un carnet vencido o una cuenta suspendida
+responden `200` con `valido: false` y los motivos `CARNET_VENCIDO` /
+`CUENTA_SUSPENDIDA`.
+
+> **Alcance:** el backend certifica que la cuenta existe en UniTrade y que el
+> correo institucional está verificado. La matrícula oficial aún no se consulta
+> porque la universidad no expone un listado; por eso no se debe mostrar como
+> "inscrito verificado por la universidad".
+
+
 ## Pagos y billetera (HU-06 / HU-10)
 
 El backend implementa el cobro de reservas con comisión del 12%, el abono a la

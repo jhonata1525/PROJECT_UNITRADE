@@ -154,27 +154,6 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.glass-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background-color: var(--color-canvas);
-  border: 1px solid var(--color-border);
-  color: white;
-  transition: all 0.2s;
-}
-
-.glass-input::placeholder {
-  color: rgb(156 163 175);
-}
-
-.glass-input:focus {
-  outline: none;
-  ring: 2px;
-  ring-color: var(--color-neon);
-  border-color: transparent;
-}
-
 .glass-btn-primary {
   display: inline-flex;
   align-items: center;
@@ -425,6 +404,25 @@
     ring-color: var(--color-neon);
     ring-offset: 2px;
     ring-offset-color: var(--color-canvas);
+  }
+
+  .glass-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--color-canvas);
+    border: 1px solid var(--color-border);
+    color: white;
+    transition: all 0.2s;
+  }
+  .glass-input::placeholder {
+    color: rgb(156 163 175);
+  }
+  .glass-input:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--color-neon);
+    border-color: transparent;
   }
 
   .input-field {

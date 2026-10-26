@@ -6,6 +6,8 @@
  */
 
 import React from "react";
+import { Link } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 import { NavegacionLateral } from "../componentes/comunes/NavegacionLateral";
 import { ModalEdicionPerfil } from "../componentes/perfil/ModalEdicionPerfil";
@@ -24,8 +26,14 @@ import {
   Mail,
   CalendarDays,
   Star,
+  ExternalLink,
+  QrCode,
+  Copy,
+  Check,
 } from "lucide-react";
 import { obtenerFranjasDisponibles, formatearSede } from "../utils/perfil";
+import { obtenerMiCarnet } from "../servicios/servicioCarnet";
+import { esUrlLocal, obtenerUrlBasePublica } from "../utils/urlPublica";
 
 const formatPhone = (phone) => {
   if (!phone) return "";
@@ -40,6 +48,64 @@ const formatPhone = (phone) => {
 export const PaginaPerfil = () => {
   const { usuario, actualizarUsuario } = useAuth();
   const [editandoPerfil, setEditandoPerfil] = React.useState(false);
+  const [carnet, setCarnet] = React.useState(null);
+  const [cargandoCarnet, setCargandoCarnet] = React.useState(true);
+  const [copiado, setCopiado] = React.useState("");
+  const temporizadorCopiado = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!usuario?.id) {
+      setCargandoCarnet(false);
+      return undefined;
+    }
+
+    let activo = true;
+    setCargandoCarnet(true);
+    obtenerMiCarnet(usuario.id)
+      .then((data) => {
+        if (activo) setCarnet(data);
+      })
+      .catch(() => {
+        // Sin backend disponible el carnet muestra un QR de respaldo.
+        if (activo) setCarnet(null);
+      })
+      .finally(() => {
+        if (activo) setCargandoCarnet(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [usuario?.id]);
+
+  React.useEffect(() => {
+    return () => clearTimeout(temporizadorCopiado.current);
+  }, []);
+
+  const copiarTexto = async (texto, tipo) => {
+    try {
+      if (globalThis.navigator?.clipboard?.writeText) {
+        await globalThis.navigator.clipboard.writeText(texto);
+      } else {
+        const area = document.createElement("textarea");
+        area.value = texto;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        const copiadoOk = document.execCommand("copy");
+        area.remove();
+        if (!copiadoOk) throw new Error("No se pudo copiar");
+      }
+
+      setCopiado(tipo);
+      clearTimeout(temporizadorCopiado.current);
+      temporizadorCopiado.current = setTimeout(() => setCopiado(""), 2000);
+    } catch {
+      // El código queda visible para copiarlo manualmente.
+    }
+  };
 
   const handleGuardarPerfil = async (datosActualizados) => {
     await actualizarUsuario(datosActualizados);
@@ -55,7 +121,16 @@ export const PaginaPerfil = () => {
   const franjasDisponibles = obtenerFranjasDisponibles(usuario?.disponibilidad);
   const sedeCompleta = formatearSede(usuario);
   const programa = "Ingeniería de Sistemas / Administración";
-  const codigoEstudiantil = "2026-USB-10293";
+  const codigoEstudiantil =
+    carnet?.codigo || usuario?.codigoEstudiantil || "USB-2026-10293";
+  const tokenCarnet = carnet?.token || usuario?.tokenCarnet;
+  const urlBasePublica = obtenerUrlBasePublica();
+  const enlaceVerificacion = tokenCarnet
+    ? `${urlBasePublica}/verificar/${tokenCarnet}`
+    : null;
+  const enlaceApuntaALocalhost = enlaceVerificacion
+    ? esUrlLocal(urlBasePublica)
+    : false;
 
   const iniciales = nombreCompleto
     .split(" ")
@@ -78,13 +153,22 @@ export const PaginaPerfil = () => {
                 Configura tu cuenta, contacto y disponibilidad
               </p>
             </div>
-            <button
-              onClick={() => setEditandoPerfil(true)}
-              className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
-            >
-              <Pencil className="w-5 h-5" />
-              Editar perfil
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Link
+                to="/escanear-carnet"
+                className="btn-secondary flex items-center justify-center gap-2"
+              >
+                <QrCode className="w-5 h-5" />
+                Escanear carnet
+              </Link>
+              <button
+                onClick={() => setEditandoPerfil(true)}
+                className="btn-primary flex items-center justify-center gap-2"
+              >
+                <Pencil className="w-5 h-5" />
+                Editar perfil
+              </button>
+            </div>
           </div>
 
           {/* ========================================
@@ -189,16 +273,124 @@ export const PaginaPerfil = () => {
               {/* Código QR del carnet */}
               <div className="mt-4 pt-4 border-t border-[var(--color-border)] text-center">
                 <p className="text-xs text-gray-500 mb-2">
-                  Código de verificación del carnet
+                  Escanea para verificar el carnet
                 </p>
-                <div className="w-24 h-24 mx-auto bg-white rounded p-1">
-                  <div className="w-full h-full bg-[var(--color-canvas)] rounded relative flex items-center justify-center">
-                    <div className="w-16 h-16 bg-white" />
-                  </div>
+                <div className="w-fit mx-auto rounded-lg bg-white p-3">
+                  {cargandoCarnet ? (
+                    <div className="w-44 h-44 flex items-center justify-center">
+                      <svg
+                        className="animate-spin h-6 w-6 text-[var(--color-neon)]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-label="Generando código QR"
+                      >
+                        <circle className="opacity-25" cx="12" cy="12" r="10" />
+                        <path className="opacity-75" d="M12 2a10 10 0 0 1 10 10" />
+                      </svg>
+                    </div>
+                  ) : enlaceVerificacion ? (
+                    <QRCodeSVG
+                      value={enlaceVerificacion}
+                      size={168}
+                      level="M"
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                      title="Código QR de verificación del carnet estudiantil"
+                    />
+                  ) : (
+                    <div className="w-44 h-44 flex flex-col items-center justify-center px-3 text-center text-gray-500">
+                      <QrCode className="w-10 h-10 mb-2" />
+                      <p className="text-[11px] leading-snug">
+                        QR no disponible sin conexión con UniTrade
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1 font-mono">
-                  USB-{codigoEstudiantil}
-                </p>
+
+                <div className="mt-2 space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Código estudiantil:{" "}
+                    <span className="font-mono text-gray-300">
+                      {codigoEstudiantil}
+                    </span>
+                  </p>
+
+                  {enlaceVerificacion ? (
+                    <>
+                      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                        <a
+                          href={enlaceVerificacion}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-[var(--color-neon)] hover:underline"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Abrir verificación
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copiarTexto(enlaceVerificacion, "enlace")
+                          }
+                          className="inline-flex items-center gap-1 text-xs text-[var(--color-neon)] hover:underline"
+                        >
+                          {copiado === "enlace" ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                          {copiado === "enlace"
+                            ? "Enlace copiado"
+                            : "Copiar enlace"}
+                        </button>
+                      </div>
+
+                      <div className="mx-auto max-w-xs rounded-lg border border-[var(--color-border)] bg-black/20 p-2 text-left">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                            Código de verificación
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => copiarTexto(tokenCarnet, "codigo")}
+                            className="inline-flex items-center gap-1 text-[11px] text-[var(--color-neon)] hover:underline"
+                          >
+                            {copiado === "codigo" ? (
+                              <Check className="w-3 h-3" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            {copiado === "codigo" ? "Copiado" : "Copiar"}
+                          </button>
+                        </div>
+                        <code className="mt-1 block break-all font-mono text-[11px] leading-relaxed text-gray-300">
+                          {tokenCarnet}
+                        </code>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-amber-400">
+                      Verificación en línea no disponible
+                    </p>
+                  )}
+
+                  {enlaceApuntaALocalhost && (
+                    <p className="text-xs text-amber-400">
+                      Este QR apunta a localhost y el celular no podrá abrirlo.
+                      Abre UniTrade con la IP de tu PC o define
+                      VITE_PUBLIC_APP_URL.
+                    </p>
+                  )}
+
+                  {carnet?.vigenteHasta && (
+                    <p className="text-xs text-gray-500">
+                      Vigente hasta{" "}
+                      {new Date(carnet.vigenteHasta).toLocaleDateString("es-CO")}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </section>

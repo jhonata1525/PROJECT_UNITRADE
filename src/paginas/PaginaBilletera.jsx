@@ -106,7 +106,7 @@ export const PaginaBilletera = () => {
         "No se pudo procesar la recarga."
       );
       setError(mensaje);
-      throw new Error(mensaje);
+      throw new Error(mensaje, { cause: err });
     }
   };
 

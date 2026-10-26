@@ -11,6 +11,7 @@ import { ModuloArticulos } from './articulos/modulo-articulos.js';
 import { ModuloPrisma } from './prisma/modulo-prisma.js';
 import { ModuloReservas } from './reservas/modulo-reservas.js';
 import { ModuloCalificaciones } from './calificaciones/modulo-calificaciones.js';
+import { ModuloCarnet } from './carnet/modulo-carnet.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ModuloCalificaciones } from './calificaciones/modulo-calificaciones.js'
     ModuloBilletera,
     ModuloReservas,
     ModuloCalificaciones,
+    ModuloCarnet,
     ModuloArticulos,
   ],
   controllers: [ControladorApp, ControladorAuth],

@@ -32,6 +32,10 @@ Abre `http://localhost:5173`.
 
 La app usa `VITE_API_BASE_URL` (por defecto `/api`, que Vite redirige a `http://localhost:8081` con el proxy de `vite.config.js`). Así funciona también desde el celular en la red local (`http://IP-DEL-PC:5173`). Si no defines un backend, **la billetera funciona igual** con datos mock en `localStorage`.
 
+En desarrollo, Vite detecta la IP local de tu PC y la usa en el QR del carnet, para que el enlace funcione al escanearlo desde el celular. Si necesitas forzar otra URL (por ejemplo un dominio de producción), define `VITE_PUBLIC_APP_URL`.
+
+> La cámara del navegador solo está disponible en HTTPS o en `localhost`. Si abres UniTrade desde el celular por la IP local (`http://192.168.x.x:5173`), usa **Tomar o subir foto del QR** en la página de verificación, o pega el enlace del carnet.
+
 ---
 
 ## 🛠️ Stack
@@ -61,12 +65,12 @@ contexto/ hooks/ servicios/ utils/  → lógica de apoyo (estado, datos, utilida
 
 | Carpeta | Responsabilidad |
 |---|---|
-| `rutas/` | **Navegación.** `EnrutadorAplicacion.jsx` define las rutas (`/login`, `/dashboard`, `/billetera`, `/pago`, `/perfil`, `/mis-articulos`) y `ProtectedRoute`, que manda al login si no hay sesión. |
-| `paginas/` | **Pantallas completas** (una por ruta): Dashboard, Billetera, InicioSesion, Registro, MisArticulos, PagoReserva, Perfil. |
+| `rutas/` | **Navegación.** `EnrutadorAplicacion.jsx` define las rutas (`/login`, `/verificar/:token`, `/escanear-carnet`, `/dashboard`, `/billetera`, `/pago`, `/perfil`, `/mis-articulos`) y `ProtectedRoute`, que manda al login si no hay sesión. |
+| `paginas/` | **Pantallas completas** (una por ruta): Dashboard, Billetera, InicioSesion, Registro, MisArticulos, PagoReserva, Perfil, VerificarCarnet, EscanearCarnet. |
 | `componentes/` | **UI reutilizable**, dividida por dominio (ver abajo). |
 | `contexto/` | **Estado global con React Context.** `ContextoAutenticacion` (usuario, login/logout, `useAuth`) y `ContextoBilletera` (saldo, historial). |
 | `hooks/` | **Lógica reutilizable.** `useApi.js` = hook genérico para peticiones HTTP (loading/error/data). |
-| `servicios/` | **Capa de datos (español).** `servicioBilletera` (mock en localStorage), `servicioArticulos` (artículos del backend), `servicioClienteApi` (Axios + interceptores JWT), `servicioPasarelaPago` (pagos). |
+| `servicios/` | **Capa de datos (español).** `servicioBilletera` (mock en localStorage), `servicioArticulos` (artículos del backend), `servicioCarnet` (carnet digital y verificación por QR), `servicioClienteApi` (Axios + interceptores JWT), `servicioPasarelaPago` (pagos). |
 | `services/` | **Capa de datos (inglés, más vieja).** Solo `api.js`: instancia de Axios con manejo de token y refresh en 401. |
 | `utils/` | **Funciones de apoyo puras:** `constants.js`, `formatters.js` (fechas/moneda), `validators.js`. |
 | `types/` | **Tipos / documentación** (`index.d.ts`). |

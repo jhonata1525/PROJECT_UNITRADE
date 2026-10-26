@@ -79,6 +79,9 @@ model Usuario {
   telefonoVerificado        Boolean   @default(false)
   fechaVerificacionTelefono DateTime?
   correoVerificado          Boolean   @default(false)
+  tokenCarnet               String?   @unique
+  codigoEstudiantil         String?   @unique
+  carnetVigenteHasta        DateTime?
   rol                       Rol       @default(ESTUDIANTE)
   sede                      String?
   puntoEntrega              String?

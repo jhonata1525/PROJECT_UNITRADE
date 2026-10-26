@@ -14,6 +14,7 @@ import {
   CreditCard,
   Package,
   KeyRound,
+  QrCode,
   Compass,
   ChevronLeft,
   ChevronRight,
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { path: "/pago", label: "Pagos", icon: CreditCard },
   { path: "/mis-articulos", label: "Artículos", icon: Package },
   { path: "/mis-alquileres", label: "Alquileres", icon: KeyRound },
+  { path: "/escanear-carnet", label: "Verificar", icon: QrCode },
   { path: "/perfil", label: "Perfil", icon: User },
 ];
 
@@ -238,7 +240,7 @@ export const NavegacionLateral = () => {
          MOBILE BOTTOM NAVIGATION BAR (lg:hidden) - Fixed bottom
          ======================================== */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-surface border-t border-[var(--color-border)]" aria-label="Navegación principal móvil" style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-8">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -252,7 +254,7 @@ export const NavegacionLateral = () => {
                 aria-label={item.label}
               >
                 <Icon className="w-5 h-5" aria-hidden="true" />
-                <span className="text-[10px] font-medium leading-tight text-center">{item.label}</span>
+                <span className="text-[9px] font-medium leading-tight text-center">{item.label}</span>
                 {isActive && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-neon)] animate-pulse" aria-hidden="true" />}
               </NavLink>
             );

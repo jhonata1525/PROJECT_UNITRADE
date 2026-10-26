@@ -34,6 +34,8 @@ import PaginaCatalogo from "../paginas/PaginaCatalogo";
 import PaginaPerfil from "../paginas/PaginaPerfil";
 import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
 import PaginaRegistro from "../paginas/PaginaRegistro";
+import PaginaVerificarCarnet from "../paginas/PaginaVerificarCarnet";
+import PaginaEscanearCarnet from "../paginas/PaginaEscanearCarnet";
 
 /**
  * ProtectedRoute - Wrapper que protege rutas requiriendo autenticación
@@ -78,6 +80,7 @@ const EnrutadorAplicacion = () => {
           {/* Rutas públicas */}
           <Route path="/login" element={<PaginaInicioSesion />} />
           <Route path="/registro" element={<PaginaRegistro />} />
+          <Route path="/verificar/:token" element={<PaginaVerificarCarnet />} />
 
           {/* Ruta raíz redirige a login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -136,6 +139,14 @@ const EnrutadorAplicacion = () => {
             element={
               <ProtectedRoute>
                 <PaginaPerfil />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/escanear-carnet"
+            element={
+              <ProtectedRoute>
+                <PaginaEscanearCarnet />
               </ProtectedRoute>
             }
           />
