@@ -24,9 +24,6 @@ Abre `http://localhost:5173`.
 | `npm run preview` | Previsualiza el build de producción |
 | `npm run lint` | Revisa el código con ESLint |
 | `npm run format` | Formatea con Prettier |
-| `npm test` | Ejecuta tests (Vitest) |
-| `npm run test:ui` | Tests con interfaz visual |
-| `npm run e2e` | Tests end-to-end (Playwright) |
 
 ### Variables de entorno
 
@@ -44,7 +41,6 @@ En desarrollo, Vite detecta la IP local de tu PC y la usa en el QR del carnet, p
 - **Tailwind CSS v4** (configuración "CSS-first" en `src/index.css` con `@theme`)
 - **React Router** (navegación)
 - **Axios** (peticiones HTTP)
-- **Vitest** + **React Testing Library** (tests) y **Playwright** (E2E)
 
 ---
 
@@ -74,7 +70,6 @@ contexto/ hooks/ servicios/ utils/  → lógica de apoyo (estado, datos, utilida
 | `services/` | **Capa de datos (inglés, más vieja).** Solo `api.js`: instancia de Axios con manejo de token y refresh en 401. |
 | `utils/` | **Funciones de apoyo puras:** `constants.js`, `formatters.js` (fechas/moneda), `validators.js`. |
 | `types/` | **Tipos / documentación** (`index.d.ts`). |
-| `test/` | **Pruebas.** `setup.js` (configura `jest-dom`) y `setup.test.jsx` (test de ejemplo). |
 
 ### Subcarpetas de `componentes/`
 

@@ -217,8 +217,6 @@ Cada integrante tiene dos opciones:
 | `npm run build` | Genera el cliente Prisma y compila a `dist/` |
 | `npm run start:prod` | Ejecuta la versión compilada |
 | `npm run lint` | Revisa el código |
-| `npm test` | Pruebas unitarias (Vitest) |
-| `npm run test:e2e` | Pruebas end-to-end |
 | `npm run prisma:generate` | Genera el cliente de Prisma |
 | `npm run prisma:migrate -- --name nombre` | Crea una migración en desarrollo |
 | `npm run prisma:deploy` | Aplica migraciones existentes |
@@ -244,7 +242,6 @@ backend/
 │   ├── app.controlador.ts   # Rutas de salud
 │   ├── app.servicio.ts
 │   └── main.ts              # Arranque, CORS, Swagger y validación
-├── test/
 ├── prisma.config.ts
 └── .env.example
 ```

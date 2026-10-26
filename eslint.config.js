@@ -26,7 +26,6 @@ export default [
         clearTimeout: 'readonly',
         process: 'readonly',
         URL: 'readonly',
-        vi: 'readonly',
         React: 'readonly',
       },
     },
@@ -50,19 +49,6 @@ export default [
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'no-undef': 'warn',
-    },
-  },
-  {
-    files: ['src/test/**/*.{js,jsx}'],
-    languageOptions: {
-      globals: {
-        vi: 'readonly',
-        describe: 'readonly',
-        it: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-      },
     },
   },
 ];
