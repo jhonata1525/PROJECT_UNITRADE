@@ -12,7 +12,7 @@
  * - / → redirige a /login
  * - /dashboard → PaginaDashboard (panel principal)
  * - /billetera → PaginaBilletera (vista de wallet virtual - HU-10)
- * - /pago → PaginaPagoReserva (modal de confirmación de pago - HU-06)
+ * - /pago → PaginaPagoReserva (historial de pagos)
  * - /catalogo → PaginaCatalogo (explorar y reservar artículos disponibles)
  * - /mis-articulos → PaginaMisArticulos (gestión de artículos en alquiler)
  *

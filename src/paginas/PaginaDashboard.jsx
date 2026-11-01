@@ -93,8 +93,8 @@ const QUICK_ACTIONS = [
   },
   {
     path: "/pago",
-    label: "Pasarela de Pago",
-    description: "Procesa pagos de reservas activas",
+    label: "Historial de Pagos",
+    description: "Consulta tus pagos y reservas realizados",
     icon: CreditCard,
     color: "from-blue-500 to-indigo-500",
     hoverColor: "hover:border-blue-500/50",

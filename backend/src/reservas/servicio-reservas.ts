@@ -249,7 +249,18 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
           usuarioCalificado:
             rol === 'ARRENDATARIO' ? reserva.propietario : reserva.arrendatario,
           calificacionPropia: reserva.calificaciones?.[0] ?? null,
-          ...(puedeVerCodigo ? codigos : {}),
+          ...(puedeVerCodigo
+            ? {
+                codigoEntrega: codigos.codigoEntrega,
+                codigoQrEntrega: codigos.codigoQrEntrega,
+                ...(reserva.estado !== EstadoAlquiler.PENDIENTE_ENTREGA
+                  ? {
+                      codigoDevolucion: codigos.codigoDevolucion,
+                      codigoQrDevolucion: codigos.codigoQrDevolucion,
+                    }
+                  : {}),
+              }
+            : {}),
           inicio: reserva.inicio.toISOString(),
           fin: reserva.fin.toISOString(),
           horas: reserva.horas,
@@ -795,6 +806,7 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
       estado: reserva.estado,
       ...(reserva.arrendatarioId === usuarioId &&
       reserva.pago?.estado === EstadoPago.COMPLETADO &&
+      reserva.estado !== EstadoAlquiler.PENDIENTE_ENTREGA &&
       reserva.codigoVerificacion
         ? { codigoDevolucion: reserva.codigoVerificacion }
         : {}),
@@ -810,6 +822,7 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
         : {}),
       ...(reserva.arrendatarioId === usuarioId &&
       reserva.pago?.estado === EstadoPago.COMPLETADO &&
+      reserva.estado !== EstadoAlquiler.PENDIENTE_ENTREGA &&
       reserva.codigoQr
         ? { codigoQrDevolucion: reserva.codigoQr }
         : {}),

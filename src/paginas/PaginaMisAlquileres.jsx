@@ -55,6 +55,11 @@ export const PaginaMisAlquileres = () => {
   const [reservaSinSaldoId, setReservaSinSaldoId] = React.useState(null);
   const [aviso, setAviso] = React.useState("");
   const [rol, setRol] = React.useState("ARRENDATARIO");
+  const entregaPendiente = reservas.some(
+    (reserva) =>
+      reserva.estado === "PENDIENTE_ENTREGA" &&
+      reserva.pago?.estado === "COMPLETADO",
+  );
 
   const handlePagarMora = async (alquilerId) => {
     if (!usuarioId || pagandoMoraId) return;
@@ -150,6 +155,37 @@ export const PaginaMisAlquileres = () => {
       cancelado = true;
     };
   }, [usuarioId, revision, rol]);
+
+  React.useEffect(() => {
+    if (!usuarioId || rol !== "ARRENDATARIO" || !entregaPendiente) {
+      return undefined;
+    }
+
+    let activo = true;
+    const actualizarEstado = async () => {
+      try {
+        const datos = await listarMisAlquileres(usuarioId, rol);
+        if (activo && Array.isArray(datos)) setReservas(datos);
+      } catch (err) {
+        if (activo) {
+          setError(
+            mensajeErrorReservas(
+              err,
+              "No se pudo actualizar el estado de la entrega.",
+            ),
+          );
+        }
+      }
+    };
+
+    const intervalo = window.setInterval(actualizarEstado, 10000);
+    window.addEventListener("focus", actualizarEstado);
+    return () => {
+      activo = false;
+      window.clearInterval(intervalo);
+      window.removeEventListener("focus", actualizarEstado);
+    };
+  }, [usuarioId, rol, entregaPendiente]);
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
@@ -293,12 +329,16 @@ export const PaginaMisAlquileres = () => {
                           qr: reserva.codigoQrEntrega,
                           confirmado: reserva.estado !== "PENDIENTE_ENTREGA",
                         },
-                        {
-                          label: "Devolución",
-                          pin: reserva.codigoDevolucion,
-                          qr: reserva.codigoQrDevolucion,
-                          confirmado: reserva.estado === "COMPLETADO",
-                        },
+                        ...(reserva.estado !== "PENDIENTE_ENTREGA"
+                          ? [
+                              {
+                                label: "Devolución",
+                                pin: reserva.codigoDevolucion,
+                                qr: reserva.codigoQrDevolucion,
+                                confirmado: reserva.estado === "COMPLETADO",
+                              },
+                            ]
+                          : []),
                       ].map((codigo) => (
                         <div
                           key={codigo.label}
@@ -328,6 +368,12 @@ export const PaginaMisAlquileres = () => {
                           </p>
                         </div>
                       ))}
+                      {reserva.estado === "PENDIENTE_ENTREGA" && (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200 sm:col-span-2">
+                          El código QR de devolución aparecerá aquí cuando el
+                          propietario confirme la entrega del artículo.
+                        </div>
+                      )}
                     </div>
                   )}
                   {reserva.estado !== "CANCELADO" &&

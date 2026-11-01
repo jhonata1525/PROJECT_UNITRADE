@@ -107,8 +107,13 @@ export class ServicioPagos {
           return this.respuestaExitosa(pagoPrevio, undefined, {
             codigoEntrega: pagoPrevio.alquiler.codigoEntrega,
             codigoQrEntrega: pagoPrevio.alquiler.codigoQrEntrega,
-            codigoDevolucion: pagoPrevio.alquiler.codigoVerificacion,
-            codigoQrDevolucion: pagoPrevio.alquiler.codigoQr,
+            ...(pagoPrevio.alquiler.estado !==
+            EstadoAlquiler.PENDIENTE_ENTREGA
+              ? {
+                  codigoDevolucion: pagoPrevio.alquiler.codigoVerificacion,
+                  codigoQrDevolucion: pagoPrevio.alquiler.codigoQr,
+                }
+              : {}),
           });
         }
         throw new ConflictException(
@@ -172,8 +177,12 @@ export class ServicioPagos {
         {
           codigoEntrega: alquiler.codigoEntrega,
           codigoQrEntrega: alquiler.codigoQrEntrega,
-          codigoDevolucion: alquiler.codigoVerificacion,
-          codigoQrDevolucion: alquiler.codigoQr,
+          ...(alquiler.estado !== EstadoAlquiler.PENDIENTE_ENTREGA
+            ? {
+                codigoDevolucion: alquiler.codigoVerificacion,
+                codigoQrDevolucion: alquiler.codigoQr,
+              }
+            : {}),
         },
       );
     }
@@ -391,8 +400,12 @@ export class ServicioPagos {
       fecha: (pagado.pagadoEn ?? pagado.creadoEn).toISOString(),
       codigoEntrega: alquiler.codigoEntrega,
       codigoQrEntrega: alquiler.codigoQrEntrega,
-      codigoDevolucion: alquiler.codigoVerificacion,
-      codigoQrDevolucion: alquiler.codigoQr,
+      ...(alquiler.estado !== EstadoAlquiler.PENDIENTE_ENTREGA
+        ? {
+            codigoDevolucion: alquiler.codigoVerificacion,
+            codigoQrDevolucion: alquiler.codigoQr,
+          }
+        : {}),
       mensaje:
         'Pago descontado de tu billetera. Reserva confirmada y saldo abonado al propietario.',
     };
@@ -631,8 +644,8 @@ export class ServicioPagos {
     codigos?: {
       codigoEntrega: string | null;
       codigoQrEntrega: string | null;
-      codigoDevolucion: string | null;
-      codigoQrDevolucion: string | null;
+      codigoDevolucion?: string | null;
+      codigoQrDevolucion?: string | null;
     },
   ) {
     const desglose: DesglosePago = {
