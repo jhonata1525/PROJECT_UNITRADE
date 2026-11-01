@@ -103,6 +103,7 @@ const ProveedorAutenticacion = ({ children }) => {
       const { data } = await servicioClienteApi.post("/auth/register", {
         nombre: datosRegistro.nombre.trim(),
         correo: datosRegistro.correo.trim(),
+        codigoEstudiantil: datosRegistro.codigoEstudiantil.trim(),
         telefono: datosRegistro.telefono,
         contrasena: datosRegistro.contrasena,
       });

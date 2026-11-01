@@ -7,6 +7,7 @@ export default function FormularioRegistro() {
   const navigate = useNavigate();
   const { registrar } = useAuth();
   const [nombre, setNombre] = React.useState("");
+  const [codigoEstudiantil, setCodigoEstudiantil] = React.useState("");
   const [correo, setCorreo] = React.useState("");
   const [telefono, setTelefono] = React.useState("");
   const [contrasena, setContrasena] = React.useState("");
@@ -20,6 +21,12 @@ export default function FormularioRegistro() {
 
     if (!correo.trim().toLowerCase().endsWith("@unisimon.edu.co")) {
       setError("El registro solo está permitido con correo @unisimon.edu.co.");
+      return;
+    }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{2,49}$/.test(codigoEstudiantil.trim())) {
+      setError(
+        "Ingresa un código estudiantil válido (3 a 50 letras, números o guiones).",
+      );
       return;
     }
     if (contrasena.length < 8) {
@@ -39,6 +46,7 @@ export default function FormularioRegistro() {
     try {
       const resultado = await registrar({
         nombre,
+        codigoEstudiantil,
         correo,
         telefono,
         contrasena,
@@ -78,6 +86,24 @@ export default function FormularioRegistro() {
           onChange={(event) => setNombre(event.target.value)}
           className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+      </label>
+
+      <label className="block text-sm font-medium text-gray-300">
+        Código estudiantil
+        <input
+          type="text"
+          required
+          minLength={3}
+          maxLength={50}
+          autoComplete="off"
+          placeholder="Ej. 2026-USB-10293"
+          value={codigoEstudiantil}
+          onChange={(event) => setCodigoEstudiantil(event.target.value)}
+          className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <span className="mt-1 block text-xs text-gray-400">
+          Se guardará en tu cuenta y aparecerá en tu carnet digital.
+        </span>
       </label>
 
       <label className="block text-sm font-medium text-gray-300">

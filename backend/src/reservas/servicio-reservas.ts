@@ -593,6 +593,82 @@ export class ServicioReservas implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    let pagoConBilletera: {
+      saldoDisponible: number;
+    } | null;
+    try {
+      pagoConBilletera = await this.prisma.$transaction(async (tx) => {
+        const billetera = await tx.billetera.findUnique({
+          where: { usuarioId: arrendatarioId },
+          select: { id: true },
+        });
+        if (!billetera) return null;
+
+        const debito = await tx.billetera.updateMany({
+          where: {
+            id: billetera.id,
+            saldoDisponible: { gte: montoPendiente },
+          },
+          data: { saldoDisponible: { decrement: montoPendiente } },
+        });
+        if (debito.count !== 1) return null;
+
+        const billeteraActualizada = await tx.billetera.findUniqueOrThrow({
+          where: { id: billetera.id },
+          select: { saldoDisponible: true },
+        });
+        await tx.transaccionBilletera.create({
+          data: {
+            billeteraId: billetera.id,
+            tipo: TipoTransaccion.PENALIZACION,
+            monto: montoPendiente,
+            saldoDespues: billeteraActualizada.saldoDisponible,
+            descripcion: `Pago de penalización por mora del alquiler ${alquilerId}`,
+            estado: EstadoTransaccion.COMPLETADO,
+            metadata: { alquilerId, moraMonto: reserva.moraMonto },
+          },
+        });
+
+        const actualizacion = await tx.alquiler.updateMany({
+          where: {
+            id: alquilerId,
+            arrendatarioId,
+            estado: EstadoAlquiler.COMPLETADO,
+            moraPagoEstado: EstadoPago.PROCESANDO,
+          },
+          data: {
+            moraPagada: reserva.moraMonto,
+            moraPagoEstado: EstadoPago.COMPLETADO,
+          },
+        });
+        if (actualizacion.count !== 1) {
+          throw new ConflictException(
+            'No se pudo registrar el pago de la mora. Actualiza e inténtalo nuevamente.',
+          );
+        }
+
+        return { saldoDisponible: billeteraActualizada.saldoDisponible };
+      });
+    } catch (error) {
+      await this.prisma.alquiler.updateMany({
+        where: { id: alquilerId, moraPagoEstado: EstadoPago.PROCESANDO },
+        data: { moraPagoEstado: EstadoPago.PENDIENTE },
+      });
+      throw error;
+    }
+
+    if (pagoConBilletera) {
+      await this.actualizarBloqueoPorMora(arrendatarioId);
+      return {
+        alquilerId,
+        moraPagada: reserva.moraMonto,
+        moraPendiente: 0,
+        metodoPago: 'BILLETERA',
+        saldoDisponible: pagoConBilletera.saldoDisponible,
+        mensaje: 'Recargo por mora descontado de tu billetera correctamente.',
+      };
+    }
+
     let cobro;
     try {
       cobro = await this.pasarela.cobrar({

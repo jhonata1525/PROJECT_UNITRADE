@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { compare, hash } from 'bcryptjs';
+import { Prisma } from '../generated/prisma/client.js';
 import { RegistroDto } from './dto/registro.dto.js';
 import { ServicioPrisma } from '../prisma/servicio-prisma.js';
 import { ActualizarPerfilDto } from './dto/actualizar-perfil.dto.js';
@@ -17,6 +18,7 @@ export class ServicioAuth {
 
   async registrar(dto: RegistroDto) {
     const correo = dto.correo.trim().toLowerCase();
+    const codigoEstudiantil = dto.codigoEstudiantil.trim().toUpperCase();
     if (!/^[^@\s]+@unisimon\.edu\.co$/.test(correo)) {
       throw new BadRequestException(
         'El registro solo está permitido con correo @unisimon.edu.co.',
@@ -24,12 +26,22 @@ export class ServicioAuth {
     }
 
     const existente = await this.prisma.usuario.findFirst({
-      where: { correo: { equals: correo, mode: 'insensitive' } },
+      where: {
+        OR: [
+          { correo: { equals: correo, mode: 'insensitive' } },
+          {
+            codigoEstudiantil: {
+              equals: codigoEstudiantil,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
       select: { id: true },
     });
     if (existente) {
       throw new ConflictException(
-        'Ya existe una cuenta con ese correo institucional.',
+        'El correo institucional o el código estudiantil ya están registrados.',
       );
     }
 
@@ -37,27 +49,42 @@ export class ServicioAuth {
     const telefono = digitosTelefono.startsWith('57')
       ? `+${digitosTelefono}`
       : `+57${digitosTelefono}`;
-    const usuario = await this.prisma.usuario.create({
-      data: {
-        nombre: dto.nombre.trim(),
-        correo,
-        telefono,
-        hashContrasena: await hash(dto.contrasena, 10),
-        correoVerificado: false,
-        telefonoVerificado: false,
-      },
-      select: {
-        id: true,
-        nombre: true,
-        correo: true,
-        telefono: true,
-        correoVerificado: true,
-        telefonoVerificado: true,
-        rol: true,
-        calificacion: true,
-        totalResenas: true,
-      },
-    });
+    let usuario;
+    try {
+      usuario = await this.prisma.usuario.create({
+        data: {
+          nombre: dto.nombre.trim(),
+          correo,
+          codigoEstudiantil,
+          telefono,
+          hashContrasena: await hash(dto.contrasena, 10),
+          correoVerificado: false,
+          telefonoVerificado: false,
+        },
+        select: {
+          id: true,
+          nombre: true,
+          correo: true,
+          codigoEstudiantil: true,
+          telefono: true,
+          correoVerificado: true,
+          telefonoVerificado: true,
+          rol: true,
+          calificacion: true,
+          totalResenas: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'El correo institucional o el código estudiantil ya están registrados.',
+        );
+      }
+      throw error;
+    }
 
     return {
       usuario,

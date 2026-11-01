@@ -14,6 +14,18 @@ export class RegistroDto {
   @MaxLength(100)
   nombre!: string;
 
+  @ApiProperty({
+    example: '2026-USB-10293',
+    description: 'Código estudiantil de la Universidad Simón Bolívar',
+  })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(50)
+  @Matches(/^[a-zA-Z0-9][a-zA-Z0-9-]*$/, {
+    message: 'El código estudiantil solo puede contener letras, números y guiones.',
+  })
+  codigoEstudiantil!: string;
+
   @ApiProperty({ example: 'ana@unisimon.edu.co' })
   @IsEmail()
   @Matches(/^[^@\s]+@unisimon\.edu\.co$/i, {
