@@ -118,8 +118,7 @@ export default function FormularioRegistro() {
           className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <span className="mt-1 block text-xs text-gray-400">
-          Solo se aceptan direcciones @unisimon.edu.co. Quedará como Sin
-          verificar.
+          Solo se aceptan direcciones @unisimon.edu.co.
         </span>
       </label>
 
@@ -143,10 +142,6 @@ export default function FormularioRegistro() {
             className="block w-full min-w-0 px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-r-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <span className="mt-1 block text-xs text-gray-400">
-          WhatsApp aparecerá como Sin verificar mientras no configuremos el
-          envío de códigos.
-        </span>
       </label>
 
       <label className="block text-sm font-medium text-gray-300">
@@ -176,12 +171,6 @@ export default function FormularioRegistro() {
           className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </label>
-
-      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-        Podrás crear la cuenta y usar las funciones de UniTrade sin verificar el
-        correo ni WhatsApp por el momento. Los estados aparecerán como Sin
-        verificar hasta que configuremos la confirmación.
-      </div>
 
       <button
         type="submit"

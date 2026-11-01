@@ -50,23 +50,41 @@ export class ServicioBilletera {
 
   async obtenerBalance(usuarioId: string) {
     const billetera = await this.obtenerOCrearBilletera(usuarioId);
-    const retirosEnProceso = await this.prisma.retiro.count({
-      where: {
-        billeteraId: billetera.id,
-        estado: { in: [EstadoTransaccion.PENDIENTE, EstadoTransaccion.PROCESANDO] },
-      },
-    });
+    const [retirosPendientes, retirosCompletados, totalTransacciones] =
+      await Promise.all([
+        this.prisma.retiro.aggregate({
+          where: {
+            billeteraId: billetera.id,
+            estado: {
+              in: [EstadoTransaccion.PENDIENTE, EstadoTransaccion.PROCESANDO],
+            },
+          },
+          _count: true,
+          _sum: { monto: true },
+        }),
+        this.prisma.retiro.aggregate({
+          where: {
+            billeteraId: billetera.id,
+            estado: EstadoTransaccion.COMPLETADO,
+          },
+          _sum: { monto: true },
+        }),
+        this.prisma.transaccionBilletera.count({
+          where: { billeteraId: billetera.id },
+        }),
+      ]);
 
     return {
       usuarioId,
       moneda: billetera.moneda,
       saldoDisponible: billetera.saldoDisponible,
-      saldoPendiente: billetera.saldoPendiente,
+      totalTransacciones,
+      saldoPendiente: retirosPendientes._sum.monto ?? 0,
       totalGanado: billetera.totalGanado,
-      totalRetirado: billetera.totalRetirado,
-      retirosEnProceso,
+      totalRetirado: retirosCompletados._sum.monto ?? 0,
+      retirosEnProceso: retirosPendientes._count,
       // Alias que ya consume el frontend.
-      retirosProceso: retirosEnProceso,
+      retirosProceso: retirosPendientes._count,
       actualizadoEn: billetera.actualizadoEn.toISOString(),
     };
   }

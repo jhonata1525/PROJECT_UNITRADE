@@ -57,12 +57,11 @@ const STAT_CARDS = [
   },
   {
     title: "Transacciones",
-    value: "0",
     icon: TrendingUp,
     color: "from-purple-500 to-pink-500",
     bg: "from-purple-500/10 to-pink-500/10",
     border: "border-purple-500/20",
-    trend: "+8% vs mes anterior",
+    trend: "Movimientos registrados en tu billetera",
     trendColor: "text-purple-400",
   },
   {
@@ -155,13 +154,18 @@ export const PaginaDashboard = () => {
 
     obtenerBalance(usuarioId)
       .then((balance) => {
-        if (!Number.isFinite(balance?.saldoDisponible)) {
-          throw new Error("El servidor devolvió un saldo inválido.");
+        if (
+          !Number.isFinite(balance?.saldoDisponible) ||
+          !Number.isInteger(balance?.totalTransacciones) ||
+          balance.totalTransacciones < 0
+        ) {
+          throw new Error("El servidor devolvió un resumen de billetera inválido.");
         }
         if (!cancelado) {
           setResultadoSaldo({
             usuarioId,
             valor: balance.saldoDisponible,
+            transacciones: balance.totalTransacciones,
             error: "",
           });
         }
@@ -171,6 +175,7 @@ export const PaginaDashboard = () => {
           setResultadoSaldo({
             usuarioId,
             valor: null,
+            transacciones: null,
             error: mensajeErrorBilletera(error, "No se pudo cargar el saldo."),
           });
         }
@@ -263,6 +268,11 @@ export const PaginaDashboard = () => {
       : articulosActuales === null
         ? "Cargando..."
         : String(articulosActuales.valor),
+    saldoActual?.error || !usuarioId
+      ? "No disponible"
+      : saldoActual === null
+        ? "Cargando..."
+        : String(saldoActual.transacciones),
   ];
   const erroresDinamicos = [
     !usuarioId
@@ -271,6 +281,9 @@ export const PaginaDashboard = () => {
     !usuarioId
       ? "No se pudo identificar al usuario."
       : articulosActuales?.error || "",
+    !usuarioId
+      ? "No se pudo identificar al usuario."
+      : saldoActual?.error || "",
   ];
 
   return (
@@ -293,34 +306,33 @@ export const PaginaDashboard = () => {
             {STAT_CARDS.map((stat, index) => {
               const Icon = stat.icon;
               const valor =
-                index < valoresDinamicos.length
-                  ? valoresDinamicos[index]
-                  : index === 3
-                    ? calificacionActual?.error || !usuarioId
-                      ? "No disponible"
-                      : calificacionActual === null
-                        ? "Cargando..."
-                        : calificacionActual.valor.toFixed(1)
-                    : stat.value;
-              const error =
-                index < erroresDinamicos.length
-                  ? erroresDinamicos[index]
-                  : index === 3
-                    ? calificacionActual?.error ||
-                      (!usuarioId ? "No se pudo identificar al usuario." : "")
-                    : "";
-              const tendencia =
                 index === 3
-                  ? calificacionActual
-                    ? calificacionActual.resenas === 0
-                      ? "Aún no tienes reseñas"
-                      : `Basado en ${calificacionActual.resenas} ${
-                          calificacionActual.resenas === 1
-                            ? "reseña"
-                            : "reseñas"
-                        }`
-                    : stat.trend || "Calificaciones de tus alquileres completados"
-                  : stat.trend;
+                  ? calificacionActual?.error || !usuarioId
+                    ? "No disponible"
+                    : calificacionActual === null
+                      ? "Cargando..."
+                      : calificacionActual.valor.toFixed(1)
+                  : valoresDinamicos[index] ?? stat.value;
+              const error =
+                index === 3
+                  ? calificacionActual?.error ||
+                    (!usuarioId ? "No se pudo identificar al usuario." : "")
+                  : erroresDinamicos[index] || "";
+              const tendencia =
+                index === 2
+                  ? stat.trend
+                  : index === 3
+                    ? calificacionActual
+                      ? calificacionActual.resenas === 0
+                        ? "Aún no tienes reseñas"
+                        : `Basado en ${calificacionActual.resenas} ${
+                            calificacionActual.resenas === 1
+                              ? "reseña"
+                              : "reseñas"
+                          }`
+                      : stat.trend ||
+                        "Calificaciones de tus alquileres completados"
+                    : stat.trend;
               return (
                 <Link
                   key={stat.title}
@@ -329,7 +341,9 @@ export const PaginaDashboard = () => {
                       ? "/billetera"
                       : index === 1
                         ? "/mis-articulos"
-                        : index === 3
+                        : index === 2
+                          ? "/billetera"
+                          : index === 3
                           ? "/perfil"
                           : "/pago"
                   }

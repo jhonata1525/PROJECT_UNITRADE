@@ -278,9 +278,6 @@ export const ModalEdicionPerfil = ({ isOpen, onClose, usuario, onSave }) => {
 
   if (!isOpen) return null;
 
-  const telefonoCambio =
-    String(formData.telefono).replace(/\D/g, "") !==
-    String(usuario?.telefono || "").replace(/\D/g, "");
   const resumen = resumenDisponibilidad(formData.disponibilidad, { corto: true });
 
   return (
@@ -473,12 +470,6 @@ export const ModalEdicionPerfil = ({ isOpen, onClose, usuario, onSave }) => {
                   </div>
                   {errors.telefono && (
                     <p className="text-xs text-red-400 mt-1" role="alert">{errors.telefono}</p>
-                  )}
-                  {telefonoCambio && usuario?.telefonoVerificado && (
-                    <p className="text-xs text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      Al cambiar el número deberás verificarlo nuevamente por WhatsApp
-                    </p>
                   )}
                 </div>
               </div>

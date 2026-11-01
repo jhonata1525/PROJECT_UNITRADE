@@ -1,8 +1,8 @@
 /**
  * @file PaginaPerfil.jsx
- * Página de Perfil de Usuario con Carnet Digital USB y Verificación WhatsApp OTP (HU-02).
+ * Página de perfil de usuario con carnet digital USB y datos de contacto.
  * - Sección 1: Carnet Digital Estudiantil USB (Glassmorphism)
- * - Sección 2: Verificación WhatsApp OTP (HU-02)
+ * - Sección 2: Datos de contacto y disponibilidad
  */
 
 import React from "react";
@@ -16,9 +16,6 @@ import {
   GraduationCap,
   BadgeCheck,
   Shield,
-  MessageSquare,
-  CheckCircle2,
-  AlertCircle,
   Pencil,
   MapPin,
   Clock,
@@ -113,9 +110,7 @@ export const PaginaPerfil = () => {
 
   const nombreCompleto = usuario?.nombre || "Estudiante UniTrade";
   const email = usuario?.email || "";
-  const correoVerificado = Boolean(usuario?.correoVerificado);
   const telefono = usuario?.telefono;
-  const telefonoVerificado = usuario?.telefonoVerificado;
   const calificacion = Number(usuario?.calificacion) || 0;
   const totalResenas = Number(usuario?.totalResenas) || 0;
   const franjasDisponibles = obtenerFranjasDisponibles(usuario?.disponibilidad);
@@ -438,22 +433,6 @@ export const PaginaPerfil = () => {
                       <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       {email || "Sin registrar"}
                     </dd>
-                    <dd className="mt-1">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          correoVerificado
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                        }`}
-                      >
-                        {correoVerificado ? (
-                          <BadgeCheck className="w-3 h-3" />
-                        ) : (
-                          <AlertCircle className="w-3 h-3" />
-                        )}
-                        {correoVerificado ? "Verificado" : "Sin verificar"}
-                      </span>
-                    </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">
@@ -463,17 +442,6 @@ export const PaginaPerfil = () => {
                       <span className="font-mono">
                         {telefono ? formatPhone(telefono) : "Sin registrar"}
                       </span>
-                      {telefonoVerificado ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          <BadgeCheck className="w-3 h-3" />
-                          Verificado
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                          <AlertCircle className="w-3 h-3" />
-                          Sin verificar
-                        </span>
-                      )}
                     </dd>
                   </div>
                 </dl>
@@ -545,58 +513,6 @@ export const PaginaPerfil = () => {
                     </button>
                   </div>
                 )}
-              </div>
-            </div>
-          </section>
-
-          {/* ========================================
-             SECCIÓN 3: VERIFICACIÓN WHATSAPP OTP (HU-02)
-             ======================================== */}
-          <section
-            className="animate-slide-up"
-            style={{ animationDelay: "200ms" }}
-          >
-            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-green-500" />
-              Verificación WhatsApp OTP
-            </h2>
-
-            <div
-              className={`glass-card p-6 border-l-4 ${
-                telefonoVerificado
-                  ? "border-emerald-500 bg-emerald-500/10"
-                  : "border-amber-500 bg-amber-500/10"
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    telefonoVerificado ? "bg-emerald-500/20" : "bg-amber-500/20"
-                  }`}
-                >
-                  {telefonoVerificado ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                  ) : (
-                    <AlertCircle className="w-6 h-6 text-amber-400" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-1">
-                    WhatsApp:{" "}
-                    {telefonoVerificado ? "Verificado" : "Sin verificar"}
-                  </h3>
-                  <p className="text-gray-300">
-                    {telefonoVerificado
-                      ? `El número ${formatPhone(telefono)} está verificado.`
-                      : "La verificación por WhatsApp aún no está configurada. Por ahora puedes usar las funciones de UniTrade aunque aparezca Sin verificar."}
-                  </p>
-                  {!correoVerificado && (
-                    <p className="text-sm text-amber-200 mt-2">
-                      El correo institucional también aparece como Sin
-                      verificar.
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
           </section>
