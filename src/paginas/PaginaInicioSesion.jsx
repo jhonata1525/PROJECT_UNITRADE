@@ -19,7 +19,7 @@ export default function PaginaInicioSesion() {
 
     try {
       await login({ email, password });
-      navigate("/dashboard", { replace: true });
+      navigate("/catalogo", { replace: true });
     } catch (err) {
       setError(err.message || "Error al iniciar sesión");
     } finally {
