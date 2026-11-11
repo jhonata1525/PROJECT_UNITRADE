@@ -320,7 +320,8 @@ export const PaginaMisAlquileres = () => {
                     </div>
                   </div>
 
-                  {reserva.pago?.estado === "COMPLETADO" && (
+                  {rol === "ARRENDATARIO" &&
+                    reserva.pago?.estado === "COMPLETADO" && (
                     <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         {
@@ -376,6 +377,22 @@ export const PaginaMisAlquileres = () => {
                       )}
                     </div>
                   )}
+                  {rol === "PROPIETARIO" &&
+                    reserva.pago?.estado === "COMPLETADO" && (
+                      <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4">
+                        <p className="text-sm text-blue-200">
+                          {reserva.estado === "PENDIENTE_ENTREGA"
+                            ? "Para confirmar la entrega, el arrendatario debe mostrarte su PIN o QR en persona. Ingrésalo desde Artículos → Confirmar entrega."
+                            : "Para validar la devolución, ingresa el PIN o QR del arrendatario desde Artículos."}
+                        </p>
+                        <Link
+                          to="/mis-articulos"
+                          className="btn-secondary mt-3 inline-flex items-center gap-2"
+                        >
+                          Ir a Mis Artículos
+                        </Link>
+                      </div>
+                    )}
                   {reserva.estado !== "CANCELADO" &&
                     reserva.pago?.estado !== "COMPLETADO" && (
                       <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">

@@ -17,7 +17,6 @@
  * - /mis-articulos → PaginaMisArticulos (gestión de artículos en alquiler)
  *
  * Componentes utilizados:
- * - Encabezado: Barra superior con nombre del plantilla, datos estudiante y logout
  * - NavegacionLateral: Menú lateral en vistas de dashboard
  * - ProtectedRoute: Componente que valida autenticación antes de renderizar hijos
  */
@@ -36,6 +35,7 @@ import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
 import PaginaRegistro from "../paginas/PaginaRegistro";
 import PaginaVerificarCarnet from "../paginas/PaginaVerificarCarnet";
 import PaginaEscanearCarnet from "../paginas/PaginaEscanearCarnet";
+import { OnboardingEstudiante } from "../componentes/onboarding/OnboardingEstudiante";
 
 /**
  * ProtectedRoute - Wrapper que protege rutas requiriendo autenticación
@@ -154,6 +154,7 @@ const EnrutadorAplicacion = () => {
           {/* Fallback para rutas no encontradas */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        <OnboardingEstudiante />
       </ProveedorAutenticacion>
     </Router>
   );

@@ -44,6 +44,20 @@ En desarrollo, Vite detecta la IP local de tu PC y la usa en el QR del carnet, p
 
 ---
 
+## ✨ Experiencia para estudiantes nuevos
+
+Al iniciar sesión por primera vez, UniTrade muestra una **bienvenida de 4 pasos** y
+un **tour guiado** por el menú (Explorar, Dashboard, Artículos, Alquileres,
+Billetera, Pagos, Verificar y Perfil).
+
+- Botón flotante **“¿Cómo funciona?”** para repetir la guía cuando quieras.
+- En el Dashboard: **Próximos Pasos → Ver guía interactiva**.
+- Solo se muestra una vez por usuario; se guarda en `localStorage`.
+
+Archivo principal: `src/componentes/onboarding/OnboardingEstudiante.jsx`.
+
+---
+
 ## 🔄 Flujo de la aplicación
 
 ```
@@ -52,7 +66,7 @@ src/main.jsx          → arranca React y carga el enrutador + index.css
 src/rutas/            → define las rutas y quién puede entrar (pública / protegida)
 src/paginas/          → cada pantalla
 src/componentes/      → piezas reutilizables que usan las páginas
-contexto/ hooks/ servicios/ utils/  → lógica de apoyo (estado, datos, utilidades)
+contexto/ servicios/ utils/  → lógica de apoyo (estado, datos, utilidades)
 ```
 
 ---
@@ -64,45 +78,29 @@ contexto/ hooks/ servicios/ utils/  → lógica de apoyo (estado, datos, utilida
 | `rutas/` | **Navegación.** `EnrutadorAplicacion.jsx` define las rutas (`/login`, `/verificar/:token`, `/escanear-carnet`, `/dashboard`, `/billetera`, `/pago`, `/perfil`, `/mis-articulos`) y `ProtectedRoute`, que manda al login si no hay sesión. |
 | `paginas/` | **Pantallas completas** (una por ruta): Dashboard, Billetera, InicioSesion, Registro, MisArticulos, PagoReserva, Perfil, VerificarCarnet, EscanearCarnet. |
 | `componentes/` | **UI reutilizable**, dividida por dominio (ver abajo). |
-| `contexto/` | **Estado global con React Context.** `ContextoAutenticacion` (usuario, login/logout, `useAuth`) y `ContextoBilletera` (saldo, historial). |
-| `hooks/` | **Lógica reutilizable.** `useApi.js` = hook genérico para peticiones HTTP (loading/error/data). |
-| `servicios/` | **Capa de datos (español).** `servicioBilletera` (mock en localStorage), `servicioArticulos` (artículos del backend), `servicioCarnet` (carnet digital y verificación por QR), `servicioClienteApi` (Axios + interceptores JWT), `servicioPasarelaPago` (pagos). |
-| `services/` | **Capa de datos (inglés, más vieja).** Solo `api.js`: instancia de Axios con manejo de token y refresh en 401. |
-| `utils/` | **Funciones de apoyo puras:** `constants.js`, `formatters.js` (fechas/moneda), `validators.js`. |
-| `types/` | **Tipos / documentación** (`index.d.ts`). |
+| `contexto/` | **Estado global con React Context.** `ContextoAutenticacion` (usuario, login/logout, `useAuth`). |
+| `servicios/` | **Capa de datos.** `servicioClienteApi` (Axios + interceptores), `servicioArticulos`, `servicioBilletera`, `servicioPagos`, `servicioReservas`, `servicioCarnet`. |
+| `utils/` | **Funciones de apoyo puras:** `constants.js`, `formatters.js` (fechas/moneda), `imagenes.js`, `perfil.js`, `urlPublica.js`. |
 
 ### Subcarpetas de `componentes/`
 
 | Subcarpeta | Qué contiene |
 |---|---|
-| `auth/` | Login, registro y verificación por WhatsApp (OTP con PIN). |
+| `auth/` | `FormularioRegistro` y flujo de verificación. |
 | `articulos/` | `ModalReservaHoras` — reservar un artículo por horas, con QR y PIN. |
 | `billetera/` | UI de la billetera: balance, historial de transacciones, modal de retiro y de recarga. |
-| `pasarela/` | Pago: `ModalConfirmacionPago` y `ResumenDesgloseComision`. |
-| `comunes/` | Piezas genéricas: `Encabezado`, `NavegacionLateral`, `ModalGenerico`, `AlertaToast`, `IndicadorCarga`, `EfectoOnda`, `PinInput`, `QRScanner`, `TarjetaIndicador`, `FormularioArticuloModal`. |
+| `carnet/` | `ResultadoVerificacionCarnet`. |
+| `perfil/` | `ModalEdicionPerfil`. |
+| `reservas/` | `FormularioCalificacion`. |
+| `comunes/` | Piezas genéricas: `NavegacionLateral`, `IndicadorCarga`, `PinInput`, `QRScanner`, `FormularioArticuloModal`. |
 
 ### Archivos sueltos en `src/`
 
 - `main.jsx` → arranca la app.
-- `App.jsx` → componente raíz (fondo animado + efecto ripple).
 - `index.css` → estilos globales y **tema** de Tailwind (`@theme`: colores, fuente Inter).
 
----
-
-## ⚠️ Archivos que hoy no se usan
-
-Candidatos a limpiar o completar (no están importados en ningún lado):
-
-| Archivo | Situación |
-|---|---|
-| `componentes/auth/LoginForm.jsx`, `RegisterForm.jsx` | Nadie los importa; las páginas tienen su propio formulario. |
-| `hooks/useAuth.js` | Duplicado; el real viene de `contexto/ContextoAutenticacion`. |
-| `servicios/servicioPasarelaPago.js` | No lo importa nadie todavía. |
-| `utils/` (constants, formatters, validators) | Aún no se importan. |
-| `types/index.d.ts` | No referenciado (no hay tsconfig). |
-| `App.jsx` | `main.jsx` hoy renderiza directamente el enrutador, no `App`. |
-
-**Nota:** la billetera funciona con **datos mock en `localStorage`**, por lo que se puede probar sin backend.
+> La billetera usa la API real y conserva respaldo local para poder probarse sin backend.
+> El mapa completo de carpetas, rutas y endpoints está en [`MAPA_PROYECTO.md`](MAPA_PROYECTO.md).
 
 ---
 

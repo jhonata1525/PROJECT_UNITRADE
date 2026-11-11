@@ -96,6 +96,7 @@ export const NavegacionLateral = () => {
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
+                    data-tour={item.path.slice(1)}
                     className={({ isActive: active }) => `
                       sidebar-nav-item ${active ? "sidebar-nav-item-active" : ""}
                       ${collapsed ? "justify-center px-3" : ""}
@@ -205,6 +206,7 @@ export const NavegacionLateral = () => {
                   <NavLink
                     key={item.path}
                     to={item.path}
+                    data-tour={item.path.slice(1)}
                     onClick={handleNavClick}
                     className={`flex items-center gap-3 px-4 py-4 rounded-xl text-base font-medium transition-all ${
                       isActive
@@ -248,6 +250,7 @@ export const NavegacionLateral = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                data-tour={item.path.slice(1)}
                 onClick={handleNavClick}
                 className={`flex flex-col items-center gap-1 px-1 py-3 transition-all ${isActive ? "text-[var(--color-neon)]" : "text-gray-400 active:text-white"}`}
                 aria-current={isActive ? "page" : undefined}

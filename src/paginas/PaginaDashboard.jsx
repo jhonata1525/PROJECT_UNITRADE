@@ -34,6 +34,7 @@ import {
   Star,
   Zap,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
 
 const STAT_CARDS = [
@@ -458,10 +459,22 @@ export const PaginaDashboard = () => {
             className="glass-card-hover p-6 animate-slide-up"
             style={{ animationDelay: "300ms" }}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <h2 className="text-xl font-semibold text-white">
                 Próximos Pasos
               </h2>
+              <button
+                type="button"
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("unitrade:abrir-onboarding"),
+                  )
+                }
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-neon)] transition hover:text-white"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Ver guía interactiva
+              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
@@ -482,7 +495,7 @@ export const PaginaDashboard = () => {
                   href: "/mis-articulos",
                 },
                 {
-                  step: "step",
+                  step: "03",
                   title: "Retira tus ganancias",
                   description:
                     "Transfiere a Nequi, Daviplata o cuenta bancaria al instante",
