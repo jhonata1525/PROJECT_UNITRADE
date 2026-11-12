@@ -1,13 +1,13 @@
 /**
  * @file PaginaMisArticulos.jsx
- * Página completa "Mis Artículos en Alquiler" con glassmorphism.
- * - Header con título, resumen y botón publicar
- * - Buscador y filtro por categorías
- * - Grid de tarjetas responsive con foto, título, categoría, precio, estado
+ * PÃ¡gina completa "Mis ArtÃ­culos en Alquiler" con glassmorphism.
+ * - Header con tÃ­tulo, resumen y botÃ³n publicar
+ * - Buscador y filtro por categorÃ­as
+ * - Grid de tarjetas responsive con foto, tÃ­tulo, categorÃ­a, precio, estado
  * - Acciones: Cambiar estado (Pausar/Activar) y Eliminar
  * - Modal FormularioArticuloModal para crear/editar
  * - Persistencia en la tabla `articulo` del backend (PostgreSQL)
- * - Migración automática de los artículos que estaban en localStorage
+ * - MigraciÃ³n automÃ¡tica de los artÃ­culos que estaban en localStorage
  */
 
 import React from "react";
@@ -42,6 +42,8 @@ import {
   CheckCircle2,
   KeyRound,
   Camera,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import PinInput from "../componentes/comunes/PinInput";
 import {
@@ -59,7 +61,7 @@ const QRScanner = React.lazy(() =>
   import("../componentes/comunes/QRScanner")
 );
 
-const CATEGORIAS = ["Todas", "Libros", "Laboratorio", "Calculadoras", "Tecnología", "Deportes", "Otros"];
+const CATEGORIAS = ["Todas", "Libros", "Laboratorio", "Calculadoras", "TecnologÃ­a", "Deportes", "Otros"];
 const STORAGE_KEY = "unitrade_mis_articulos";
 
 const ESTADOS_CONFIG = {
@@ -68,7 +70,7 @@ const ESTADOS_CONFIG = {
   pausado: { label: "Pausado", color: "bg-amber-500", text: "text-amber-400", icon: Play },
 };
 
-/** Lee los artículos que quedaron guardados en el navegador (formato antiguo). */
+/** Lee los artÃ­culos que quedaron guardados en el navegador (formato antiguo). */
 const leerArticulosLocales = () => {
   try {
     const guardados = localStorage.getItem(STORAGE_KEY);
@@ -76,7 +78,7 @@ const leerArticulosLocales = () => {
     const datos = JSON.parse(guardados);
     return Array.isArray(datos) ? datos : [];
   } catch (error) {
-    console.error("No se pudieron leer los artículos locales:", error);
+    console.error("No se pudieron leer los artÃ­culos locales:", error);
     return [];
   }
 };
@@ -102,6 +104,18 @@ export const PaginaMisArticulos = () => {
   const [escanerAbierto, setEscanerAbierto] = React.useState(false);
   const [guardando, setGuardando] = React.useState(false);
   const [aviso, setAviso] = React.useState(null);
+  const carrilRef = React.useRef(null);
+
+  // Desplaza el carrusel de tarjetas una tarjeta a la izquierda o derecha.
+  const desplazarCarril = (direccion) => {
+    const carril = carrilRef.current;
+    if (!carril) return;
+    const tarjeta = carril.querySelector("article");
+    const paso = tarjeta
+      ? tarjeta.offsetWidth + 16
+      : Math.round(carril.clientWidth * 0.8);
+    carril.scrollBy({ left: paso * direccion, behavior: "smooth" });
+  };
 
   // Cargar desde la tabla `articulo` y migrar una sola vez los datos locales.
   React.useEffect(() => {
@@ -112,7 +126,7 @@ export const PaginaMisArticulos = () => {
         if (!cancelado) {
           setAviso({
             tipo: "error",
-            mensaje: "Inicia sesión para ver y administrar tus artículos.",
+            mensaje: "Inicia sesiÃ³n para ver y administrar tus artÃ­culos.",
           });
           setLoading(false);
         }
@@ -142,8 +156,8 @@ export const PaginaMisArticulos = () => {
 
         if (migrados > 0) {
           setAviso({
-            tipo: "éxito",
-            mensaje: `Se sincronizaron ${migrados} artículo(s) con la base de datos.`,
+            tipo: "Ã©xito",
+            mensaje: `Se sincronizaron ${migrados} artÃ­culo(s) con la base de datos.`,
           });
         }
 
@@ -151,11 +165,11 @@ export const PaginaMisArticulos = () => {
           setAviso({
             tipo: "error",
             mensaje:
-              `${pendientes} artículo(s) guardados en este navegador no se pudieron migrar. ` +
-              "Revisa que tengan descripción y una tarifa de al menos $1.000.",
+              `${pendientes} artÃ­culo(s) guardados en este navegador no se pudieron migrar. ` +
+              "Revisa que tengan descripciÃ³n y una tarifa de al menos $1.000.",
           });
         } else if (articulosLocales.length > 0) {
-          // Todo quedó en PostgreSQL: ya no hace falta duplicarlo en el navegador.
+          // Todo quedÃ³ en PostgreSQL: ya no hace falta duplicarlo en el navegador.
           localStorage.removeItem(STORAGE_KEY);
         }
       } catch (error) {
@@ -166,7 +180,7 @@ export const PaginaMisArticulos = () => {
           tipo: "error",
           mensaje: mensajeErrorArticulos(
             error,
-            "No se pudieron cargar los artículos desde la base de datos. " +
+            "No se pudieron cargar los artÃ­culos desde la base de datos. " +
               "Se muestran los guardados en este navegador."
           ),
         });
@@ -229,15 +243,15 @@ export const PaginaMisArticulos = () => {
       setEditandoArticulo(null);
       setModalAbierto(false);
       setAviso({
-        tipo: "éxito",
+        tipo: "Ã©xito",
         mensaje: editando
-          ? "Artículo actualizado en la base de datos."
-          : "Artículo publicado en la base de datos.",
+          ? "ArtÃ­culo actualizado en la base de datos."
+          : "ArtÃ­culo publicado en la base de datos.",
       });
     } catch (error) {
       setAviso({
         tipo: "error",
-        mensaje: mensajeErrorArticulos(error, "No se pudo guardar el artículo."),
+        mensaje: mensajeErrorArticulos(error, "No se pudo guardar el artÃ­culo."),
       });
     } finally {
       setGuardando(false);
@@ -264,13 +278,13 @@ export const PaginaMisArticulos = () => {
       setArticulos((prev) => prev.filter((a) => a.id !== id));
       setEliminandoId(null);
       setAviso({
-        tipo: "éxito",
-        mensaje: resultado.mensaje || "Artículo eliminado de la base de datos.",
+        tipo: "Ã©xito",
+        mensaje: resultado.mensaje || "ArtÃ­culo eliminado de la base de datos.",
       });
     } catch (error) {
       setAviso({
         tipo: "error",
-        mensaje: mensajeErrorArticulos(error, "No se pudo eliminar el artículo."),
+        mensaje: mensajeErrorArticulos(error, "No se pudo eliminar el artÃ­culo."),
       });
     } finally {
       setGuardando(false);
@@ -303,18 +317,18 @@ export const PaginaMisArticulos = () => {
         prev.map((a) => (a.id === art.id ? actualizado : a))
       );
       setAviso({
-        tipo: "éxito",
+        tipo: "Ã©xito",
         mensaje:
           nuevoEstado === "pausado"
-            ? "El artículo se pausó en la base de datos."
-            : "El artículo se activó en la base de datos.",
+            ? "El artÃ­culo se pausÃ³ en la base de datos."
+            : "El artÃ­culo se activÃ³ en la base de datos.",
       });
     } catch (error) {
       setAviso({
         tipo: "error",
         mensaje: mensajeErrorArticulos(
           error,
-          "No se pudo cambiar el estado del artículo."
+          "No se pudo cambiar el estado del artÃ­culo."
         ),
       });
     } finally {
@@ -345,12 +359,12 @@ export const PaginaMisArticulos = () => {
       setCodigoDevolucion("");
       setEscanerAbierto(false);
       setAviso({
-        tipo: "éxito",
-        mensaje: resultado.mensaje || "Devolución confirmada. El artículo está disponible.",
+        tipo: "Ã©xito",
+        mensaje: resultado.mensaje || "DevoluciÃ³n confirmada. El artÃ­culo estÃ¡ disponible.",
       });
     } catch (error) {
       setErrorDevolucion(
-        mensajeErrorReservas(error, "No se pudo confirmar la devolución.")
+        mensajeErrorReservas(error, "No se pudo confirmar la devoluciÃ³n.")
       );
     } finally {
       setConfirmandoDevolucion(false);
@@ -367,7 +381,7 @@ export const PaginaMisArticulos = () => {
       <div className="min-h-screen flex items-center justify-center pt-16 pb-20">
         <div className="text-center">
           <Loader2 className="animate-spin h-12 w-12 text-[var(--color-neon)] mx-auto mb-4" />
-          <p className="text-gray-400">Cargando tus artículos...</p>
+          <p className="text-gray-400">Cargando tus artÃ­culos...</p>
         </div>
       </div>
     );
@@ -383,9 +397,9 @@ export const PaginaMisArticulos = () => {
           <div className="mb-6 animate-slide-up">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-white">Mis Artículos en Alquiler</h1>
+                <h1 className="text-3xl font-bold text-white">Mis ArtÃ­culos en Alquiler</h1>
                 <p className="text-gray-400 mt-1">
-                  Gestiona tus publicaciones y controla el estado de cada artículo
+                  Gestiona tus publicaciones y controla el estado de cada artÃ­culo
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -394,7 +408,7 @@ export const PaginaMisArticulos = () => {
                   className="btn-secondary w-full sm:w-auto flex items-center justify-center gap-2"
                 >
                   <Compass className="w-5 h-5" />
-                  Explorar catálogo
+                  Explorar catÃ¡logo
                 </Link>
                 <button onClick={abrirModalNuevo} className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2">
                   <Plus className="w-5 h-5" />
@@ -457,11 +471,11 @@ export const PaginaMisArticulos = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o descripción..."
+                  placeholder="Buscar por nombre o descripciÃ³n..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="glass-input pl-10"
-                  aria-label="Buscar artículos"
+                  aria-label="Buscar artÃ­culos"
                 />
               </div>
               <div className="relative">
@@ -470,7 +484,7 @@ export const PaginaMisArticulos = () => {
                   value={categoriaFiltro}
                   onChange={(e) => setCategoriaFiltro(e.target.value)}
                   className="glass-input pl-10 pr-10 bg-[var(--color-surface)] cursor-pointer appearance-none"
-                  aria-label="Filtrar por categoría"
+                  aria-label="Filtrar por categorÃ­a"
                 >
                   {CATEGORIAS.map((cat) => (
                     <option key={cat} value={cat}>
@@ -482,178 +496,217 @@ export const PaginaMisArticulos = () => {
             </div>
           </div>
 
-          {/* Grid de Artículos */}
+          {/* Carrusel de ArtÃ­culos */}
           {articulosFiltrados.length === 0 ? (
             <div className="glass-panel p-12 text-center animate-fade-in">
               <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
-                {articulos.length === 0 ? "No tienes artículos publicados" : "No hay resultados"}
+                {articulos.length === 0 ? "No tienes artÃ­culos publicados" : "No hay resultados"}
               </h3>
               <p className="text-gray-400 mb-6">
                 {articulos.length === 0
-                  ? "Comienza publicando tu primer artículo para alquilar"
-                  : "Intenta cambiar los filtros o la búsqueda"}
+                  ? "Comienza publicando tu primer artÃ­culo para alquilar"
+                  : "Intenta cambiar los filtros o la bÃºsqueda"}
               </p>
               {articulos.length === 0 && (
                 <button onClick={abrirModalNuevo} className="btn-primary inline-flex items-center gap-2">
                   <Plus className="w-5 h-5" />
-                  Publicar mi primer artículo
+                  Publicar mi primer artÃ­culo
                 </button>
               )}
             </div>
           ) : (
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in"
-              role="list"
-              aria-label="Lista de artículos"
-            >
-              {articulosFiltrados.map((art) => {
-                const estadoConfig = ESTADOS_CONFIG[art.estado];
-                const EstadoIcon = estadoConfig.icon;
-                return (
-                  <article
-                    key={art.id}
-                    className="glass-card-hover p-0 overflow-hidden flex flex-col relative"
-                    role="listitem"
+            <div className="animate-fade-in">
+              {/* Encabezado del carrusel */}
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="text-sm text-gray-400">
+                  {articulosFiltrados.length}{" "}
+                  {articulosFiltrados.length === 1 ? "publicaciÃ³n" : "publicaciones"}
+                  <span className="hidden sm:inline"> Â· desliza o usa las flechas</span>
+                </p>
+                <div className="hidden sm:flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => desplazarCarril(-1)}
+                    className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/60 text-gray-300 hover:text-white hover:border-[var(--color-border-hover)] transition-colors"
+                    aria-label="Ver artÃ­culos anteriores"
                   >
-                    {/* Foto */}
-                    <div className="relative h-40 bg-[var(--color-canvas)] overflow-hidden">
-                      {art.fotoUrl ? (
-                        <img
-                          src={art.fotoUrl}
-                          alt={art.nombre}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon className="w-12 h-12 text-gray-600" />
-                        </div>
-                      )}
-                      {/* Badge Estado */}
-                      <div className="absolute top-3 right-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${estadoConfig.color} text-white shadow-lg`}
-                        >
-                          <EstadoIcon className="w-3 h-3" />
-                          {estadoConfig.label}
-                        </span>
-                      </div>
-                      {/* Loading overlay al cambiar estado */}
-                      {cambiandoEstadoId === art.id && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <Loader2 className="w-6 h-6 text-white animate-spin" />
-                        </div>
-                      )}
-                    </div>
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => desplazarCarril(1)}
+                    className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/60 text-gray-300 hover:text-white hover:border-[var(--color-border-hover)] transition-colors"
+                    aria-label="Ver mÃ¡s artÃ­culos"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
 
-                    {/* Contenido */}
-                    <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-semibold text-white truncate mb-1">{art.nombre}</h3>
-                      <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-                        <span className="px-2 py-0.5 rounded bg-[var(--color-canvas)] border border-[var(--color-border)]">
-                          {art.categoria}
-                        </span>
-                        <span>•</span>
-                        <span>{formatCOP(Number(art.precioPorDia))}/día</span>
-                      </div>
-                      <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-3">
-                        {art.descripcion}
-                      </p>
-
-                      {/* Contacto y disponibilidad del dueño (HU-03) */}
-                      {(tieneDisponibilidad || sedeEntrega) && (
-                        <div className="space-y-1 text-xs text-gray-400 mb-3">
-                          {tieneDisponibilidad && (
-                            <p className="flex items-start gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-[var(--color-neon)] flex-shrink-0 mt-0.5" />
-                              <span>{resumenHorario}</span>
-                            </p>
-                          )}
-                          {sedeEntrega && (
-                            <p className="flex items-start gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                              <span>{sedeEntrega}</span>
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Acciones */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-[var(--color-border)]">
-                        <button
-                          onClick={() => handleEditar(art)}
-                          className="flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1"
-                          disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
-                        >
-                          <Edit className="w-4 h-4" />
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleCambiarEstado(art)}
-                          className={`flex-1 btn-secondary text-xs py-2 flex items-center justify-center gap-1 transition-colors ${
-                            art.estado === "disponible"
-                              ? "hover:bg-amber-500/20 hover:border-amber-500/50 text-amber-400"
-                              : "hover:bg-emerald-500/20 hover:border-emerald-500/50 text-emerald-400"
-                          }`}
-                          disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
-                        >
-                          {art.estado === "disponible" ? (
-                            <Pause className="w-4 h-4" />
-                          ) : (
-                            <Play className="w-4 h-4" />
-                          )}
-                          <span className="hidden sm:inline">
-                            {art.estado === "disponible"
-                              ? "Pausar"
-                              : art.estado === "en_alquiler" &&
-                                art.estadoAlquiler === "PENDIENTE_ENTREGA"
-                                ? "Confirmar entrega"
-                                : art.estado === "en_alquiler"
-                                  ? "Confirmar devolución"
-                                  : "Activar"}
+              <div
+                ref={carrilRef}
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-thin pb-4 -mx-1 px-1"
+                role="list"
+                aria-label="Lista de artÃ­culos"
+              >
+                {articulosFiltrados.map((art) => {
+                  const estadoConfig = ESTADOS_CONFIG[art.estado];
+                  const EstadoIcon = estadoConfig.icon;
+                  const etiquetaEstado =
+                    art.estado === "disponible"
+                      ? "Pausar"
+                      : art.estado === "en_alquiler" &&
+                          art.estadoAlquiler === "PENDIENTE_ENTREGA"
+                        ? "Entregar"
+                        : art.estado === "en_alquiler"
+                          ? "Devolver"
+                          : "Activar";
+                  const tituloEstado =
+                    art.estado === "en_alquiler" &&
+                    art.estadoAlquiler === "PENDIENTE_ENTREGA"
+                      ? "Confirmar entrega con QR/PIN"
+                      : art.estado === "en_alquiler"
+                        ? "Confirmar devoluciÃ³n con QR/PIN"
+                        : etiquetaEstado;
+                  return (
+                    <article
+                      key={art.id}
+                      className="glass-card-hover p-0 overflow-hidden flex flex-col relative snap-start shrink-0 w-[85vw] max-w-[320px]"
+                      role="listitem"
+                    >
+                      {/* Foto */}
+                      <div className="relative h-40 bg-[var(--color-canvas)] overflow-hidden">
+                        {art.fotoUrl ? (
+                          <img
+                            src={art.fotoUrl}
+                            alt={art.nombre}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="w-12 h-12 text-gray-600" />
+                          </div>
+                        )}
+                        {/* Badge Estado */}
+                        <div className="absolute top-3 right-3">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${estadoConfig.color} text-white shadow-lg`}
+                          >
+                            <EstadoIcon className="w-3 h-3" />
+                            {estadoConfig.label}
                           </span>
-                        </button>
-                        <button
-                          onClick={() => handleEliminar(art.id)}
-                          className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors disabled:opacity-50"
-                          disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
-                          aria-label="Eliminar artículo"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        </div>
+                        {/* Loading overlay al cambiar estado */}
+                        {cambiandoEstadoId === art.id && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          </div>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Confirmar eliminar overlay */}
-                    {eliminandoId === art.id && (
-                      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-10 animate-fade-in">
-                        <div className="glass-panel p-6 rounded-xl max-w-sm w-full text-center">
-                          <p className="text-white mb-4">
-                            &#191;Eliminar &ldquo;<span className="font-medium">{art.nombre}</span>&rdquo;?
-                          </p>
-                          <p className="text-gray-400 text-sm mb-6">Esta acci&#243;n no se puede deshacer.</p>
-                          <div className="flex gap-3">
-                            <button
-                              onClick={() => setEliminandoId(null)}
-                              className="flex-1 btn-secondary"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              onClick={() => confirmarEliminar(art.id)}
-                              disabled={guardando}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-                            >
-                              {guardando ? "Eliminando..." : "Eliminar"}
-                            </button>
+  
+                      {/* Contenido */}
+                      <div className="p-4 flex-1 flex flex-col">
+                        <h3 className="font-semibold text-white truncate mb-1">{art.nombre}</h3>
+                        <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                          <span className="px-2 py-0.5 rounded bg-[var(--color-canvas)] border border-[var(--color-border)]">
+                            {art.categoria}
+                          </span>
+                          <span>â€¢</span>
+                          <span>{formatCOP(Number(art.precioPorDia))}/dÃ­a</span>
+                        </div>
+                        <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-3">
+                          {art.descripcion}
+                        </p>
+  
+                        {/* Contacto y disponibilidad del dueÃ±o (HU-03) */}
+                        {(tieneDisponibilidad || sedeEntrega) && (
+                          <div className="space-y-1 text-xs text-gray-400 mb-3">
+                            {tieneDisponibilidad && (
+                              <p className="flex items-start gap-1.5">
+                                <Clock className="w-3.5 h-3.5 text-[var(--color-neon)] flex-shrink-0 mt-0.5" />
+                                <span>{resumenHorario}</span>
+                              </p>
+                            )}
+                            {sedeEntrega && (
+                              <p className="flex items-start gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                <span>{sedeEntrega}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+  
+                        {/* Acciones */}
+                        <div className="flex items-center gap-1.5 pt-3 border-t border-[var(--color-border)]">
+                          <button
+                            onClick={() => handleEditar(art)}
+                            className="flex-1 min-w-0 btn-secondary px-2 text-xs py-2 flex items-center justify-center gap-1"
+                            disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
+                          >
+                            <Edit className="w-4 h-4 shrink-0" />
+                            <span className="truncate">Editar</span>
+                          </button>
+                          <button
+                            onClick={() => handleCambiarEstado(art)}
+                            title={tituloEstado}
+                            className={`flex-1 min-w-0 btn-secondary px-2 text-xs py-2 flex items-center justify-center gap-1 transition-colors ${
+                              art.estado === "disponible"
+                                ? "hover:bg-amber-500/20 hover:border-amber-500/50 text-amber-400"
+                                : "hover:bg-emerald-500/20 hover:border-emerald-500/50 text-emerald-400"
+                            }`}
+                            disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
+                          >
+                            {art.estado === "disponible" ? (
+                              <Pause className="w-4 h-4 shrink-0" />
+                            ) : (
+                              <Play className="w-4 h-4 shrink-0" />
+                            )}
+                            <span className="truncate">{etiquetaEstado}</span>
+                          </button>
+                          <button
+                            onClick={() => handleEliminar(art.id)}
+                            className="shrink-0 p-2 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors disabled:opacity-50"
+                            disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
+                            aria-label="Eliminar artÃ­culo"
+                            title="Eliminar artÃ­culo"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+  
+                      {/* Confirmar eliminar overlay */}
+                      {eliminandoId === art.id && (
+                        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-10 animate-fade-in">
+                          <div className="glass-panel p-6 rounded-xl max-w-sm w-full text-center">
+                            <p className="text-white mb-4">
+                              &#191;Eliminar &ldquo;<span className="font-medium">{art.nombre}</span>&rdquo;?
+                            </p>
+                            <p className="text-gray-400 text-sm mb-6">Esta acci&#243;n no se puede deshacer.</p>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => setEliminandoId(null)}
+                                className="flex-1 btn-secondary"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={() => confirmarEliminar(art.id)}
+                                disabled={guardando}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {guardando ? "Eliminando..." : "Eliminar"}
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -685,10 +738,10 @@ export const PaginaMisArticulos = () => {
                     <h2 id="validacion-reserva-titulo" className="text-xl font-bold text-white">
                       {tipoConfirmacion === "entrega"
                         ? "Confirmar entrega presencial"
-                        : "Confirmar devolución presencial"}
+                        : "Confirmar devoluciÃ³n presencial"}
                     </h2>
                     <p className="text-sm text-gray-400 mt-1">
-                      El arrendatario debe presentar su QR o PIN de 4 dígitos
+                      El arrendatario debe presentar su QR o PIN de 4 dÃ­gitos
                       en persona para{" "}
                       <span className="text-white">{articuloDevolucion.nombre}</span>.
                       {tipoConfirmacion === "devolucion" &&
@@ -698,13 +751,13 @@ export const PaginaMisArticulos = () => {
                 </div>
                 {escanerAbierto ? (
                   <React.Suspense
-                    fallback={<p className="text-sm text-gray-400">Cargando escáner...</p>}
+                    fallback={<p className="text-sm text-gray-400">Cargando escÃ¡ner...</p>}
                   >
                     <QRScanner
                       onScan={(codigo) => handleConfirmarDevolucion(undefined, codigo)}
                       onClose={() => setEscanerAbierto(false)}
                       onError={(error) => setErrorDevolucion(
-                        mensajeErrorReservas(error, "No se pudo abrir la cámara.")
+                        mensajeErrorReservas(error, "No se pudo abrir la cÃ¡mara.")
                       )}
                       className="mb-4"
                     />
@@ -728,7 +781,7 @@ export const PaginaMisArticulos = () => {
                       className="btn-secondary inline-flex items-center gap-2"
                     >
                       <Camera className="w-4 h-4" />
-                      Escanear QR con cámara
+                      Escanear QR con cÃ¡mara
                     </button>
                   </div>
                 )}
@@ -759,7 +812,7 @@ export const PaginaMisArticulos = () => {
                       ? "Validando..."
                       : tipoConfirmacion === "entrega"
                         ? "Validar entrega"
-                        : "Validar devolución"}
+                        : "Validar devoluciÃ³n"}
                   </button>
                 </div>
               </form>
