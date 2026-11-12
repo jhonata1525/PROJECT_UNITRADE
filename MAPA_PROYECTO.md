@@ -197,6 +197,7 @@ Prefijo global: **`/api`**. Documentación interactiva: **`/api/docs`**.
 | GET | `/api/articulos/mios` | Artículos del usuario |
 | POST | `/api/articulos/importar` | Importa artículos desde `localStorage` |
 | POST | `/api/articulos` | Publica un artículo |
+| GET | `/api/articulos/:id/agenda` | Franjas del dueño y horarios ya ocupados |
 | GET | `/api/articulos/:id` | Detalle |
 | PATCH | `/api/articulos/:id` | Actualiza artículo propio |
 | DELETE | `/api/articulos/:id` | Elimina o pausa |
