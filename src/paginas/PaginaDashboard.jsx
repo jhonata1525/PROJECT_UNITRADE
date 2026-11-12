@@ -35,6 +35,7 @@ import {
   Zap,
   Sparkles,
   HelpCircle,
+  Plus,
 } from "lucide-react";
 
 const STAT_CARDS = [
@@ -287,21 +288,74 @@ export const PaginaDashboard = () => {
       : saldoActual?.error || "",
   ];
 
+  const nombreUsuario =
+    usuario?.nombre?.trim().split(/\s+/)[0] ||
+    usuario?.email?.split("@")[0] ||
+    "estudiante";
+  const fechaHoy = React.useMemo(() => {
+    const texto = new Intl.DateTimeFormat("es-CO", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(new Date());
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }, []);
+
   return (
     <div className="min-h-screen text-gray-100">
       <NavegacionLateral />
 
       <main className="transition-all duration-300 content-sidebar min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container">
-          <div className="mb-8 animate-slide-up">
-            <h1 className="text-3xl font-bold text-white">Panel de Control</h1>
-            <p className="text-gray-400 mt-1">
-              Bienvenido,{" "}
-              <span className="font-medium text-gradient">
-                {usuario?.email?.split("@")[0] || "Usuario"}
-              </span>
-            </p>
-          </div>
+          <section
+            className="relative mb-8 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[linear-gradient(135deg,rgba(99,102,241,0.18),rgba(16,185,129,0.08))] p-6 animate-slide-up sm:p-8"
+            aria-labelledby="dashboard-hero-title"
+          >
+            <div
+              className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl"
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl"
+              aria-hidden="true"
+            />
+
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--color-neon)]">
+                  {fechaHoy}
+                </p>
+                <h1
+                  id="dashboard-hero-title"
+                  className="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl"
+                >
+                  Hola,{" "}
+                  <span className="text-gradient">{nombreUsuario}</span> 👋
+                </h1>
+                <p className="mt-2 max-w-xl text-sm text-gray-300 sm:text-base">
+                  Alquila lo que necesitas y rentabiliza lo que no usas, dentro
+                  de tu campus.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/catalogo"
+                  className="btn-primary inline-flex items-center gap-2 text-sm"
+                >
+                  <Compass className="h-4 w-4" />
+                  Explorar catálogo
+                </Link>
+                <Link
+                  to="/mis-articulos"
+                  className="btn-secondary inline-flex items-center gap-2 text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Publicar artículo
+                </Link>
+              </div>
+            </div>
+          </section>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {STAT_CARDS.map((stat, index) => {

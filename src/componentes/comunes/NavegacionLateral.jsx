@@ -23,6 +23,7 @@ import {
   User,
   Menu,
   X,
+  MoreHorizontal,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -34,6 +35,21 @@ const NAV_ITEMS = [
   { path: "/mis-alquileres", label: "Alquileres", icon: KeyRound },
   { path: "/escanear-carnet", label: "Verificar", icon: QrCode },
   { path: "/perfil", label: "Perfil", icon: User },
+];
+
+// En móvil solo mostramos los accesos más usados; el resto vive en "Más".
+const MOBILE_NAV_ITEMS = [
+  { path: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { path: "/catalogo", label: "Explorar", icon: Compass },
+  { path: "/mis-alquileres", label: "Alquileres", icon: KeyRound },
+  { path: "/billetera", label: "Billetera", icon: Wallet },
+];
+
+const MOBILE_SECONDARY_PATHS = [
+  "/pago",
+  "/mis-articulos",
+  "/escanear-carnet",
+  "/perfil",
 ];
 
 const STORAGE_COLAPSADO = "unitrade_sidebar_collapsed";
@@ -71,6 +87,8 @@ export const NavegacionLateral = () => {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const masActivo = MOBILE_SECONDARY_PATHS.includes(location.pathname);
 
   const handleNavClick = () => {
     // En escritorio el menú conserva el estado elegido por el usuario.
@@ -268,14 +286,14 @@ export const NavegacionLateral = () => {
       {mobileMenuOpen && (
         <div
           id="mobile-drawer"
-          className="lg:hidden fixed inset-0 z-50 bg-[var(--color-canvas)]/95 backdrop-blur-xl animate-fade-in"
+          className="lg:hidden fixed inset-0 z-[60] bg-[var(--color-canvas)]/95 backdrop-blur-xl animate-fade-in"
           role="dialog"
           aria-modal="true"
           aria-labelledby="mobile-drawer-title"
         >
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="absolute top-4 right-4 z-60 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+            className="absolute top-4 right-4 z-[60] p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors"
             aria-label="Cerrar menú"
           >
             <X className="w-6 h-6" />
@@ -330,10 +348,19 @@ export const NavegacionLateral = () => {
 
       {/* ========================================
          MOBILE BOTTOM NAVIGATION BAR (lg:hidden) - Fixed bottom
+         4 accesos principales + "Más" para el resto del menú.
          ======================================== */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-surface border-t border-[var(--color-border)]" aria-label="Navegación principal móvil" style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
-        <div className="grid grid-cols-8">
-          {NAV_ITEMS.map((item) => {
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-surface border-t border-[var(--color-border)]"
+        aria-label="Navegación principal móvil"
+        style={{
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        <div className="grid grid-cols-5">
+          {MOBILE_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
@@ -342,16 +369,51 @@ export const NavegacionLateral = () => {
                 to={item.path}
                 data-tour={item.path.slice(1)}
                 onClick={handleNavClick}
-                className={`flex flex-col items-center gap-1 px-1 py-3 transition-all ${isActive ? "text-[var(--color-neon)]" : "text-gray-400 active:text-white"}`}
+                className={`relative flex flex-col items-center justify-center gap-1 px-1 py-2.5 transition-colors ${
+                  isActive
+                    ? "text-[var(--color-neon)]"
+                    : "text-gray-400 active:text-white"
+                }`}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
               >
-                <Icon className="w-5 h-5" aria-hidden="true" />
-                <span className="text-[9px] font-medium leading-tight text-center">{item.label}</span>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-neon)] animate-pulse" aria-hidden="true" />}
+                <span
+                  className={`flex h-8 w-12 items-center justify-center rounded-full transition-all ${
+                    isActive ? "bg-[var(--color-neon)]/10" : ""
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="text-[10px] font-medium leading-tight">
+                  {item.label}
+                </span>
               </NavLink>
             );
           })}
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className={`relative flex flex-col items-center justify-center gap-1 px-1 py-2.5 transition-colors ${
+              masActivo || mobileMenuOpen
+                ? "text-[var(--color-neon)]"
+                : "text-gray-400 active:text-white"
+            }`}
+            aria-label="Más opciones"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-drawer"
+          >
+            <span
+              className={`flex h-8 w-12 items-center justify-center rounded-full transition-all ${
+                masActivo || mobileMenuOpen
+                  ? "bg-[var(--color-neon)]/10"
+                  : ""
+              }`}
+            >
+              <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="text-[10px] font-medium leading-tight">Más</span>
+          </button>
         </div>
       </nav>
     </>
