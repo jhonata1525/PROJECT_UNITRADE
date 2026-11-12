@@ -41,14 +41,14 @@
   animation: meshShift 25s ease-in-out infinite;
 }
 
-/* Cuadrícula sutil que se desvanece hacia los bordes. */
+/* Cuadrícula animada que se desvanece hacia los bordes. */
 .app-background::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -56px;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
   background-size: 56px 56px;
   -webkit-mask-image: radial-gradient(
     ellipse 95% 75% at 50% 30%,
@@ -60,6 +60,31 @@
     #000 25%,
     transparent 85%
   );
+  animation:
+    gridDrift 22s linear infinite,
+    gridBreathe 12s ease-in-out infinite;
+  will-change: background-position, opacity;
+}
+
+/* Desplazamiento diagonal continuo; 56px = tamaño de celda, así el loop es perfecto. */
+@keyframes gridDrift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 56px 56px, 56px 56px;
+  }
+}
+
+/* Pulso lento de intensidad para que la cuadrícula "respire". */
+@keyframes gridBreathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Textura de ruido muy leve para dar profundidad. */
@@ -87,18 +112,49 @@
   }
 }
 
-/* Íconos flotantes decorativos del fondo. */
+/* Íconos flotantes decorativos del fondo.
+   La capa externa recorre grandes distancias (--dx / --dy) y el ícono interno
+   hace un vaivén suave, así el movimiento se siente vivo sin marear. */
+.animate-drift {
+  animation: iconDrift var(--dur, 26s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform;
+}
+
+@keyframes iconDrift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(calc(var(--dx) * 0.25), calc(var(--dy) * 0.15), 0);
+  }
+  40% {
+    transform: translate3d(calc(var(--dx) * 0.75), calc(var(--dy) * 0.55), 0);
+  }
+  60% {
+    transform: translate3d(var(--dx), var(--dy), 0);
+  }
+  80% {
+    transform: translate3d(calc(var(--dx) * 0.45), calc(var(--dy) * 0.8), 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .animate-float-slow {
-  animation: floatSlow 14s ease-in-out infinite;
+  animation: floatSlow var(--float-dur, 9s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
   will-change: transform;
 }
 
 @keyframes floatSlow {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
   }
   50% {
-    transform: translateY(-14px) rotate(2deg);
+    transform: translateY(-10px) rotate(2.5deg) scale(1.06);
   }
 }
 
