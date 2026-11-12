@@ -106,10 +106,20 @@ export const obtenerAgendaArticulo = async (id) => {
   return data;
 };
 
+/**
+ * Promedio de tarifa por hora por categoría, calculado sobre el catálogo
+ * activo. Alimenta la sugerencia de precio del formulario (RN-05).
+ */
+export const obtenerTarifasSugeridas = async () => {
+  const { data } = await servicioClienteApi.get("/articulos/tarifas-sugeridas");
+  return data;
+};
+
 export default {
   listarMisArticulos,
   listarCatalogoArticulos,
   obtenerAgendaArticulo,
+  obtenerTarifasSugeridas,
   crearArticulo,
   actualizarArticulo,
   eliminarArticulo,

@@ -40,6 +40,14 @@ export class ControladorArticulos {
     return this.servicioArticulos.listarMios(usuarioId);
   }
 
+  @Get('tarifas-sugeridas')
+  @ApiOperation({
+    summary: 'Promedio de tarifa por hora por categoría (RN-05)',
+  })
+  obtenerTarifasSugeridas() {
+    return this.servicioArticulos.obtenerTarifasSugeridas();
+  }
+
   @Post('importar')
   @ApiOperation({
     summary: 'Importa artículos desde localStorage a la tabla articulo',

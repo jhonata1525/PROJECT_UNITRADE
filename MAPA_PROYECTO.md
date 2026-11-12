@@ -195,6 +195,7 @@ Prefijo global: **`/api`**. Documentación interactiva: **`/api/docs`**.
 |---|---|---|
 | GET | `/api/articulos` | Catálogo de artículos activos |
 | GET | `/api/articulos/mios` | Artículos del usuario |
+| GET | `/api/articulos/tarifas-sugeridas` | Promedio de tarifa por hora por categoría |
 | POST | `/api/articulos/importar` | Importa artículos desde `localStorage` |
 | POST | `/api/articulos` | Publica un artículo |
 | GET | `/api/articulos/:id/agenda` | Franjas del dueño y horarios ya ocupados |

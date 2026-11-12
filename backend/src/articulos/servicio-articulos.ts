@@ -108,6 +108,34 @@ export class ServicioArticulos {
     }));
   }
 
+  /**
+   * Promedio de tarifa por hora por categoría (RN-05).
+   *
+   * Se calcula sobre los artículos activos del catálogo y se redondea a la
+   * centena más cercana (con el piso mínimo de $1.000/hora de RN-04) para
+   * que la sugerencia sea legible. El cliente usa su tabla base cuando una
+   * categoría todavía no tiene publicaciones.
+   */
+  async obtenerTarifasSugeridas() {
+    const grupos = await this.prisma.articulo.groupBy({
+      by: ['categoria'],
+      where: { activo: true },
+      _avg: { tarifaHora: true },
+      _count: { _all: true },
+    });
+
+    return grupos.reduce<
+      Record<string, { promedio: number; muestras: number }>
+    >((acumulado, grupo) => {
+      const promedioCrudo = grupo._avg.tarifaHora ?? 0;
+      acumulado[grupo.categoria] = {
+        promedio: Math.max(1000, Math.round(promedioCrudo / 100) * 100),
+        muestras: grupo._count._all,
+      };
+      return acumulado;
+    }, {});
+  }
+
   async obtenerDetalle(id: string) {
     const articulo = await this.prisma.articulo.findUnique({
       where: { id },

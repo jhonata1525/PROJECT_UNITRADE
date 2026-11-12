@@ -22,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import { MAX_FOTO_MB, procesarArchivoImagen } from "../../utils/imagenes";
+import { obtenerTarifasSugeridas } from "../../servicios/servicioArticulos";
 
 const TAMANO_MAXIMO_FOTO = 900;
 
@@ -34,8 +35,9 @@ const CATEGORIAS = [
   "Otros",
 ];
 
-// Tarifas sugeridas por categoría (COP por hora)
-const TARIFAS_SUGERIDAS = {
+// Tarifas base por categoría (COP por hora). Se usan cuando la categoría aún
+// no tiene publicaciones y el backend no puede calcular un promedio real.
+const TARIFAS_BASE = {
   Libros: 2000,
   Laboratorio: 3000,
   Calculadoras: 1500,
@@ -73,8 +75,32 @@ export const FormularioArticuloModal = ({
   const [fotoError, setFotoError] = React.useState("");
   const inputFotoRef = React.useRef(null);
 
-  // Tarifa sugerida basada en la categoría seleccionada
-  const tarifaSugerida = TARIFAS_SUGERIDAS[formData.categoria] || 0;
+  // Tarifa sugerida: promedio real del catálogo o tabla base por categoría.
+  const [tarifasPromedio, setTarifasPromedio] = React.useState({});
+
+  React.useEffect(() => {
+    if (!isOpen) return undefined;
+    let vigente = true;
+
+    obtenerTarifasSugeridas()
+      .then((datos) => {
+        if (vigente && datos && typeof datos === "object") {
+          setTarifasPromedio(datos);
+        }
+      })
+      .catch(() => {
+        // Si el backend no responde, se conserva la tabla base.
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [isOpen]);
+
+  const promedioCategoria = tarifasPromedio[formData.categoria];
+  const tarifaSugerida =
+    promedioCategoria?.promedio || TARIFAS_BASE[formData.categoria] || 0;
+  const sugerenciaEsPromedio = Boolean(promedioCategoria?.muestras);
   const precioNumerico = Number(formData.precioPorDia);
   const precioValido = formData.precioPorDia && !isNaN(precioNumerico) && precioNumerico >= TARIFA_MINIMA;
   const usaTarifaSugerida = precioNumerico === tarifaSugerida && tarifaSugerida > 0;
@@ -282,7 +308,14 @@ export const FormularioArticuloModal = ({
               <label htmlFor="precioPorDia" className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
                 Precio por Hora (COP) <span className="text-red-400">*</span>
                 {tarifaSugerida > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                    title={
+                      sugerenciaEsPromedio
+                        ? `Promedio de ${promedioCategoria.muestras} publicación(es) de ${formData.categoria}`
+                        : "Tarifa base de referencia para esta categoría"
+                    }
+                  >
                     <Zap className="w-3 h-3" />
                     Tarifa sugerida: ${tarifaSugerida.toLocaleString()}/h
                   </span>
@@ -316,6 +349,13 @@ export const FormularioArticuloModal = ({
                   <Zap className="w-4 h-4" />
                   Usar tarifa sugerida (${tarifaSugerida.toLocaleString()}/h)
                 </button>
+              )}
+
+              {sugerenciaEsPromedio && (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Promedio calculado con {promedioCategoria.muestras} publicación(es)
+                  de {formData.categoria}.
+                </p>
               )}
 
               {/* Indicador de tarifa válida/sugerida */}
