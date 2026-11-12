@@ -42,6 +42,16 @@ coverage/
 .opencode/
 build_errors.txt
 
+# Frontend subproject
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Backend subproject
+backend/node_modules/
+backend/dist/
+backend/.env
+
 # Temporary test files
 test-temp.jsx
 test-minimal.jsx
