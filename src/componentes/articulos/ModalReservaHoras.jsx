@@ -762,20 +762,6 @@ export const ModalReservaHoras = ({
                         {horasSeleccionadas} h
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Subtotal</span>
-                      <span className="font-medium text-white">
-                        {formatCOP(subtotal)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400 text-xs">
-                        Comisión UniTrade (12%)
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        -{formatCOP(comision)}
-                      </span>
-                    </div>
                     <div className="flex justify-between border-t border-[var(--color-border)] pt-2">
                       <span className="text-white font-medium">
                         Total a pagar
@@ -784,12 +770,23 @@ export const ModalReservaHoras = ({
                         {formatCOP(total)}
                       </span>
                     </div>
+                    <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                      Distribución del pago
+                    </p>
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>Comisión UniTrade (12%)</span>
+                      <span className="font-mono">{formatCOP(comision)}</span>
+                    </div>
                     <div className="flex justify-between text-xs text-gray-400">
                       <span>Recibe el propietario</span>
                       <span className="font-mono">
                         {formatCOP(montoPropietario)}
                       </span>
                     </div>
+                    <p className="pt-1 text-[11px] leading-relaxed text-gray-500">
+                      La comisión se descuenta de las ganancias del propietario.
+                      Tú pagas exactamente el total mostrado.
+                    </p>
                   </div>
                 </div>
 
