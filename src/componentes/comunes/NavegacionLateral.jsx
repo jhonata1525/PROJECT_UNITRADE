@@ -36,15 +36,44 @@ const NAV_ITEMS = [
   { path: "/perfil", label: "Perfil", icon: User },
 ];
 
+const STORAGE_COLAPSADO = "unitrade_sidebar_collapsed";
+
 export const NavegacionLateral = () => {
-  const [collapsed, setCollapsed] = React.useState(false);
+  // Se recuerda en el equipo si el usuario dejó el menú colapsado.
+  const [collapsed, setCollapsed] = React.useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_COLAPSADO) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { usuario, logout } = useAuth();
+
+  React.useLayoutEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_COLAPSADO, collapsed ? "1" : "0");
+    } catch {
+      /* almacenamiento no disponible */
+    }
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      collapsed ? "5rem" : "16rem",
+    );
+  }, [collapsed]);
+
+  const iniciales = (usuario?.nombre || usuario?.email || "U")
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .map((parte) => parte[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   const handleNavClick = () => {
-    if (collapsed) setCollapsed(false);
+    // En escritorio el menú conserva el estado elegido por el usuario.
     setMobileMenuOpen(false);
   };
 
@@ -59,10 +88,29 @@ export const NavegacionLateral = () => {
          DESKTOP SIDEBAR - OCULTO EN MÓVIL (hidden lg:block)
          ======================================== */}
       <aside
-        className="max-lg:!hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40 lg:h-screen lg:w-64 lg:flex lg:flex-col sidebar transition-all duration-300 ease-in-out"
+        className={`max-lg:!hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40 lg:h-screen lg:flex lg:flex-col sidebar transition-[width] duration-300 ease-in-out ${
+          collapsed ? "lg:w-20" : "lg:w-64"
+        }`}
         aria-label="Navegación principal"
       >
-        <div className="sidebar-logo flex items-center justify-between flex-shrink-0 p-4 border-b border-[var(--color-border)]">
+        {/* Botón flotante para volver a expandir el menú colapsado. */}
+        {collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="absolute -right-3 top-20 z-50 hidden h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-gray-400 shadow-lg shadow-black/40 transition-colors hover:border-[var(--color-neon)] hover:text-white lg:flex"
+            aria-label="Expandir menú"
+            title="Expandir menú"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        <div
+          className={`sidebar-logo flex flex-shrink-0 items-center border-b border-[var(--color-border)] ${
+            collapsed ? "justify-center p-3" : "justify-between p-4"
+          }`}
+        >
           <NavLink
             to="/dashboard"
             className="flex items-center gap-3 group"
@@ -77,14 +125,17 @@ export const NavegacionLateral = () => {
               </span>
             )}
           </NavLink>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors flex-shrink-0"
-            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-            aria-expanded={!collapsed}
-          >
-            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
+          {!collapsed && (
+            <button
+              onClick={() => setCollapsed(true)}
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors flex-shrink-0"
+              aria-label="Colapsar menú"
+              aria-expanded={!collapsed}
+              title="Colapsar menú"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin" role="navigation">
@@ -102,6 +153,7 @@ export const NavegacionLateral = () => {
                       ${collapsed ? "justify-center px-3" : ""}
                     `}
                     title={collapsed ? item.label : undefined}
+                    aria-label={item.label}
                     aria-current={isActive ? "page" : undefined}
                     onClick={handleNavClick}
                   >
@@ -119,9 +171,48 @@ export const NavegacionLateral = () => {
           </ul>
         </nav>
 
-        <div className="sidebar-footer flex-shrink-0 p-4 border-t border-[var(--color-border)]">
-          {!collapsed && (
+        <div
+          className={`sidebar-footer flex-shrink-0 border-t border-[var(--color-border)] ${
+            collapsed ? "flex flex-col items-center gap-2 p-2" : "p-4"
+          }`}
+        >
+          {collapsed ? (
+            <>
+              <NavLink
+                to="/perfil"
+                className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-white/5"
+                title={usuario?.nombre || "Mi perfil"}
+                aria-label="Mi perfil"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] text-xs font-semibold text-white">
+                  {iniciales}
+                </span>
+              </NavLink>
+              <button
+                onClick={handleLogout}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                type="button"
+                title="Cerrar sesión"
+                aria-label="Cerrar sesión"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </>
+          ) : (
             <div className="glass-panel p-3 space-y-2">
+              <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] text-xs font-semibold text-white">
+                  {iniciales}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white">
+                    {usuario?.nombre || "Estudiante UniTrade"}
+                  </p>
+                  <p className="truncate text-xs text-gray-500">
+                    {usuario?.email || usuario?.correo || "Cuenta activa"}
+                  </p>
+                </div>
+              </div>
               <NavLink
                 to="/perfil"
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors text-sm"
@@ -137,7 +228,6 @@ export const NavegacionLateral = () => {
                 <LogOut className="w-4 h-4" />
                 <span>Cerrar Sesión</span>
               </button>
-              <p className="text-xs text-gray-500 text-center pt-2">Modo oscuro forzado</p>
             </div>
           )}
         </div>

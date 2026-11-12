@@ -113,10 +113,10 @@ export default function PaginaPagoReserva() {
   const mostrandoCarga = Boolean(usuarioId && cargando);
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
+    <div className="min-h-screen text-gray-100">
       <NavegacionLateral />
 
-      <main className="max-w-7xl mx-auto transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto transition-all duration-300 content-sidebar min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 py-8">
         <Link
           to="/dashboard"
           className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-400 transition-colors hover:text-white"

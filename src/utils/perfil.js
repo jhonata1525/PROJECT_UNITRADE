@@ -96,6 +96,73 @@ export const resumenDisponibilidad = (disponibilidad, opciones = {}) => {
     : "Sin disponibilidad configurada";
 };
 
+const DIAS_POR_INDICE = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miercoles",
+  "jueves",
+  "viernes",
+  "sabado",
+];
+
+/**
+ * Calcula la próxima franja reservable del propietario dentro de los
+ * próximos días, saltando días inactivos y horas que ya pasaron hoy.
+ * Devuelve null si no hay ninguna franja disponible.
+ */
+export const obtenerProximoHorario = (disponibilidad, { dias = 14 } = {}) => {
+  const normalizada = normalizarDisponibilidad(disponibilidad);
+  const ahora = new Date();
+
+  for (let desplazamiento = 0; desplazamiento < dias; desplazamiento += 1) {
+    const fecha = new Date(
+      ahora.getFullYear(),
+      ahora.getMonth(),
+      ahora.getDate() + desplazamiento
+    );
+    const diaId = DIAS_POR_INDICE[fecha.getDay()];
+    const config = normalizada[diaId];
+    if (!config.activo) continue;
+
+    const inicioMin = minutos(config.inicio);
+    const finMin = minutos(config.fin);
+    if (inicioMin >= finMin) continue;
+
+    let inicioHora = Math.ceil(inicioMin / 60);
+    const finHora = Math.floor(finMin / 60);
+
+    // Hoy solo se muestran horas que todavía no han empezado.
+    if (desplazamiento === 0) {
+      const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+      while (inicioHora < finHora && inicioHora * 60 <= minutosActuales) {
+        inicioHora += 1;
+      }
+    }
+
+    if (inicioHora >= finHora) continue;
+
+    const fechaTexto = new Intl.DateTimeFormat("es-CO", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+    }).format(fecha);
+    const horaTexto = `${String(inicioHora).padStart(2, "0")}:00–${String(
+      finHora
+    ).padStart(2, "0")}:00`;
+
+    return {
+      fecha,
+      esHoy: desplazamiento === 0,
+      horaInicio: inicioHora,
+      horaFin: finHora,
+      texto: `${desplazamiento === 0 ? "Hoy" : fechaTexto} · ${horaTexto}`,
+    };
+  }
+
+  return null;
+};
+
 export const hayDisponibilidad = (disponibilidad) =>
   obtenerFranjasDisponibles(disponibilidad).length > 0;
 

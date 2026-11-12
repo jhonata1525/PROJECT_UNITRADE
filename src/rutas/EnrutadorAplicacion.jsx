@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (cargando) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-canvas)]">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <svg
             className="animate-spin h-12 w-12 text-[var(--color-neon)] mx-auto mb-4"

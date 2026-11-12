@@ -341,10 +341,10 @@ export default function PaginaEscanearCarnet() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
+    <div className="min-h-screen text-gray-100">
       <NavegacionLateral onLogout={() => {}} onProfileClick={() => {}} />
 
-      <main className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
+      <main className="transition-all duration-300 content-sidebar min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container max-w-2xl">
           <header className="mb-6 animate-slide-up">
             <h1 className="text-3xl font-bold text-white flex items-center gap-2">

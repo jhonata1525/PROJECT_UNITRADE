@@ -95,9 +95,21 @@ export const importarArticulos = async (usuarioId, articulos) => {
   return data;
 };
 
+/**
+ * Disponibilidad semanal del dueño y rangos ocupados por reservas activas.
+ * Se usa en el modal de reserva para no ofrecer horas ya ocupadas.
+ */
+export const obtenerAgendaArticulo = async (id) => {
+  const { data } = await servicioClienteApi.get(
+    `/articulos/${encodeURIComponent(id)}/agenda`
+  );
+  return data;
+};
+
 export default {
   listarMisArticulos,
   listarCatalogoArticulos,
+  obtenerAgendaArticulo,
   crearArticulo,
   actualizarArticulo,
   eliminarArticulo,

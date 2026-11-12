@@ -112,7 +112,7 @@ export const PaginaBilletera = () => {
 
   if (cargandoInicial) {
     return (
-      <div className="min-h-screen bg-[var(--color-canvas)] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <IndicadorCarga texto="Cargando billetera..." tamaño="lg" />
         </div>
@@ -123,10 +123,10 @@ export const PaginaBilletera = () => {
   const puedeRetirar = saldoDisponible >= MIN_RETIRO;
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas)] text-white">
+    <div className="min-h-screen text-white">
       <NavegacionLateral />
 
-      <main className="max-w-7xl mx-auto transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto transition-all duration-300 content-sidebar min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 py-8">
         <button
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors font-medium text-sm"

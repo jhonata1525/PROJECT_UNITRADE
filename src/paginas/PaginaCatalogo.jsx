@@ -12,6 +12,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
+  CalendarClock,
   CalendarDays,
   CheckCircle2,
   Clock,
@@ -36,7 +37,10 @@ import {
   listarCatalogoArticulos,
   mensajeErrorArticulos,
 } from "../servicios/servicioArticulos";
-import { resumenDisponibilidad } from "../utils/perfil";
+import {
+  obtenerProximoHorario,
+  resumenDisponibilidad,
+} from "../utils/perfil";
 
 const CATEGORIAS = [
   "Todas",
@@ -134,10 +138,10 @@ export const PaginaCatalogo = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas)] text-gray-100">
+    <div className="min-h-screen text-gray-100">
       <NavegacionLateral />
 
-      <main className="transition-all duration-300 ml-0 lg:ml-64 min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
+      <main className="transition-all duration-300 content-sidebar min-h-screen pt-16 pb-20 lg:pt-6 lg:pb-6">
         <div className="page-container">
           {/* Header */}
           <div className="mb-6 animate-slide-up">
@@ -285,12 +289,17 @@ export const PaginaCatalogo = () => {
               role="list"
               aria-label="Artículos disponibles y en alquiler"
             >
-              {articulosFiltrados.map((art) => (
-                <article
-                  key={art.id}
-                  className="glass-card-hover p-0 overflow-hidden flex flex-col"
-                  role="listitem"
-                >
+              {articulosFiltrados.map((art) => {
+                const proximo = obtenerProximoHorario(
+                  art.propietario?.disponibilidad
+                );
+
+                return (
+                  <article
+                    key={art.id}
+                    className="glass-card-hover p-0 overflow-hidden flex flex-col"
+                    role="listitem"
+                  >
                   {/* Foto */}
                   <div className="relative h-40 bg-[var(--color-canvas)] overflow-hidden">
                     {art.fotoUrl ? (
@@ -342,6 +351,33 @@ export const PaginaCatalogo = () => {
                     <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-3">
                       {art.descripcion}
                     </p>
+
+                    {art.estado === "disponible" && (
+                      <div
+                        className={`mb-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+                          proximo
+                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                            : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+                        }`}
+                      >
+                        {proximo ? (
+                          <>
+                            <CalendarClock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                            <span>
+                              Próximo horario:{" "}
+                              <span className="font-semibold">
+                                {proximo.texto}
+                              </span>
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                            <span>Sin horarios configurados</span>
+                          </>
+                        )}
+                      </div>
+                    )}
 
                     {/* Propietario y ubicación */}
                     <div className="space-y-1 text-xs text-gray-400 mb-3">
@@ -403,8 +439,9 @@ export const PaginaCatalogo = () => {
                       </button>
                     )}
                   </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

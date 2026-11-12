@@ -22,28 +22,108 @@ import {
   Package,
   ShieldCheck,
   Receipt,
+  Ban,
 } from "lucide-react";
 import PinInput from "../comunes/PinInput";
 import { useAuth } from "../../contexto/ContextoAutenticacion";
+import { obtenerAgendaArticulo } from "../../servicios/servicioArticulos";
 import {
   generarClaveIdempotencia,
   mensajeErrorPagos,
   procesarCheckout,
 } from "../../servicios/servicioPagos";
 
-const HORA_INICIO = 8;
-const HORA_FIN = 21;
-const HORAS_INICIO = Array.from(
-  { length: HORA_FIN - HORA_INICIO },
-  (_, i) => HORA_INICIO + i,
-);
-const HORAS_FIN = Array.from(
-  { length: HORA_FIN - HORA_INICIO },
-  (_, i) => HORA_INICIO + i + 1,
-);
 const COMISION = 0.12;
+const DIAS_A_MOSTRAR = 14;
+const DIAS_POR_INDICE = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miercoles",
+  "jueves",
+  "viernes",
+  "sabado",
+];
 
 const formatHora = (hora) => `${hora.toString().padStart(2, "0")}:00`;
+
+/** Convierte "08:30" a minutos desde medianoche. */
+const aMinutos = (hora) => {
+  const [h, m] = String(hora ?? "").split(":").map(Number);
+  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+};
+
+/** Devuelve la franja activa del dueño para una fecha concreta. */
+const obtenerFranjaDelDia = (disponibilidad, fecha) => {
+  if (!disponibilidad || typeof disponibilidad !== "object") return null;
+  const diaId = DIAS_POR_INDICE[fecha.getDay()];
+  const franja = disponibilidad[diaId];
+  if (!franja?.activo) return null;
+
+  const inicioMin = aMinutos(franja.inicio);
+  const finMin = aMinutos(franja.fin);
+  if (inicioMin === null || finMin === null || inicioMin >= finMin) return null;
+
+  return { diaId, inicioMin, finMin };
+};
+
+const claveFecha = (fecha) =>
+  `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(
+    fecha.getDate(),
+  ).padStart(2, "0")}`;
+
+/**
+ * Construye las fechas reservables a partir de la disponibilidad del dueño.
+ * Solo incluye días con franja activa y horas enteras que aún no han pasado.
+ */
+const construirOpcionesFecha = (disponibilidad) => {
+  const ahora = new Date();
+  const opciones = [];
+
+  for (let desplazamiento = 0; desplazamiento < DIAS_A_MOSTRAR; desplazamiento += 1) {
+    const fecha = new Date(
+      ahora.getFullYear(),
+      ahora.getMonth(),
+      ahora.getDate() + desplazamiento,
+    );
+    const franja = obtenerFranjaDelDia(disponibilidad, fecha);
+    if (!franja) continue;
+
+    const inicioHora = Math.ceil(franja.inicioMin / 60);
+    const finHora = Math.floor(franja.finMin / 60);
+    let primerInicio = inicioHora;
+
+    // Si es hoy, descarta las horas que ya empezaron.
+    if (desplazamiento === 0) {
+      const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+      while (primerInicio < finHora && primerInicio * 60 <= minutosActuales) {
+        primerInicio += 1;
+      }
+    }
+
+    if (primerInicio >= finHora) continue;
+
+    opciones.push({
+      clave: claveFecha(fecha),
+      fecha,
+      inicioHora: primerInicio,
+      finHora,
+    });
+  }
+
+  return opciones;
+};
+
+const formatFechaOpcion = (fecha) => {
+  const hoy = new Date();
+  const esHoy = fecha.toDateString() === hoy.toDateString();
+  const texto = new Intl.DateTimeFormat("es-CO", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(fecha);
+  return `${esHoy ? "Hoy · " : ""}${texto}`;
+};
 
 const formatCOP = (valor) =>
   new Intl.NumberFormat("es-CO", {
@@ -60,24 +140,67 @@ const formatFecha = (fecha) =>
   }).format(fecha);
 
 /**
- * Construye las fechas de la reserva para hoy o mañana.
- * Si el horario elegido ya pasó, se agenda para mañana.
+ * Convierte los rangos ocupados que devuelve la agenda en minutos desde
+ * la medianoche de la fecha indicada (recortando los que cruzan de día).
  */
-const calcularFechas = (horaInicio, horaFin) => {
-  const ahora = new Date();
-  const inicio = new Date(ahora);
-  inicio.setHours(horaInicio, 0, 0, 0);
+const rangosOcupadosDelDia = (ocupados, fecha) => {
+  if (!Array.isArray(ocupados) || ocupados.length === 0) return [];
 
-  const fin = new Date(ahora);
-  fin.setHours(horaFin, 0, 0, 0);
+  const inicioDia = new Date(fecha);
+  inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(inicioDia);
+  finDia.setDate(finDia.getDate() + 1);
 
-  const esManana = inicio <= ahora;
-  if (esManana) {
-    inicio.setDate(inicio.getDate() + 1);
-    fin.setDate(fin.getDate() + 1);
+  return ocupados
+    .map((rango) => {
+      const inicio = new Date(rango?.inicio);
+      const fin = new Date(rango?.fin);
+      if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+        return null;
+      }
+
+      const desde = Math.max(inicio.getTime(), inicioDia.getTime());
+      const hasta = Math.min(fin.getTime(), finDia.getTime());
+      if (hasta <= desde) return null;
+
+      return {
+        inicioMin: Math.floor((desde - inicioDia.getTime()) / 60000),
+        finMin: Math.ceil((hasta - inicioDia.getTime()) / 60000),
+      };
+    })
+    .filter(Boolean);
+};
+
+/** Horas enteras [h, h+1] que chocan con algún rango ocupado. */
+const horasOcupadasDelDia = (rangos, desdeHora, hastaHora) => {
+  const ocupadas = new Set();
+
+  for (let hora = desdeHora; hora < hastaHora; hora += 1) {
+    const inicio = hora * 60;
+    const fin = inicio + 60;
+    if (rangos.some((rango) => inicio < rango.finMin && fin > rango.inicioMin)) {
+      ocupadas.add(hora);
+    }
   }
 
-  return { inicio, fin, esManana };
+  return ocupadas;
+};
+
+/** Agrupa horas consecutivas para mostrarlas como bloques 08:00–10:00. */
+const agruparHoras = (horas) => {
+  const ordenadas = [...horas].sort((a, b) => a - b);
+  const bloques = [];
+
+  ordenadas.forEach((hora) => {
+    const ultimo = bloques[bloques.length - 1];
+    if (ultimo && ultimo.fin === hora) {
+      ultimo.fin = hora + 1;
+    } else {
+      bloques.push({ inicio: hora, fin: hora + 1 });
+    }
+  });
+
+  return bloques;
 };
 
 export const ModalReservaHoras = ({
@@ -87,34 +210,188 @@ export const ModalReservaHoras = ({
   onReservaExitosa,
 }) => {
   const { usuario } = useAuth();
-  const [horaInicio, setHoraInicio] = useState(HORA_INICIO);
-  const [horaFin, setHoraFin] = useState(HORA_INICIO + 1);
+
+  const [agenda, setAgenda] = useState(null);
+  const [cargandoAgenda, setCargandoAgenda] = useState(false);
+  const [errorAgenda, setErrorAgenda] = useState("");
+
+  // La agenda del backend manda; el catálogo es el respaldo inmediato.
+  const disponibilidad = useMemo(
+    () => agenda?.disponibilidad ?? articulo?.propietario?.disponibilidad ?? null,
+    [agenda, articulo],
+  );
+
+  // Solo se ofrecen días y horas dentro de la disponibilidad del dueño.
+  const opcionesFecha = useMemo(
+    () => construirOpcionesFecha(disponibilidad),
+    [disponibilidad, isOpen],
+  );
+
+  const [claveFechaSeleccionada, setClaveFechaSeleccionada] = useState(null);
+  const [horaInicio, setHoraInicio] = useState(8);
+  const [horaFin, setHoraFin] = useState(9);
   const [confirmando, setConfirmando] = useState(false);
   const [reservaConfirmada, setReservaConfirmada] = useState(null);
   const [error, setError] = useState("");
   const [saldoInsuficiente, setSaldoInsuficiente] = useState(false);
   const idempotenciaRef = useRef(null);
 
-  const { inicio, fin, esManana } = useMemo(
-    () => calcularFechas(horaInicio, horaFin),
-    [horaInicio, horaFin],
+  const opcionSeleccionada = useMemo(
+    () =>
+      opcionesFecha.find((opcion) => opcion.clave === claveFechaSeleccionada) ??
+      opcionesFecha[0] ??
+      null,
+    [opcionesFecha, claveFechaSeleccionada],
   );
 
-  const horasSeleccionadas = horaFin - horaInicio;
+  // Horas ocupadas por fecha, según la agenda de reservas activas.
+  const ocupadosPorFecha = useMemo(() => {
+    const mapa = new Map();
+    if (!Array.isArray(agenda?.ocupados) || agenda.ocupados.length === 0) {
+      return mapa;
+    }
+
+    opcionesFecha.forEach((opcion) => {
+      const rangos = rangosOcupadosDelDia(agenda.ocupados, opcion.fecha);
+      mapa.set(
+        opcion.clave,
+        horasOcupadasDelDia(rangos, opcion.inicioHora, opcion.finHora),
+      );
+    });
+
+    return mapa;
+  }, [agenda, opcionesFecha]);
+
+  const horasOcupadas = useMemo(
+    () =>
+      opcionSeleccionada
+        ? ocupadosPorFecha.get(opcionSeleccionada.clave) ?? new Set()
+        : new Set(),
+    [opcionSeleccionada, ocupadosPorFecha],
+  );
+
+  // Solo se pueden iniciar reservas en horas que no estén ocupadas.
+  const horasInicioDisponibles = useMemo(() => {
+    if (!opcionSeleccionada) return [];
+    const libres = [];
+    for (
+      let hora = opcionSeleccionada.inicioHora;
+      hora < opcionSeleccionada.finHora;
+      hora += 1
+    ) {
+      if (!horasOcupadas.has(hora)) libres.push(hora);
+    }
+    return libres;
+  }, [opcionSeleccionada, horasOcupadas]);
+
+  // Se calculan horas efectivas para que un cambio de agenda no deje
+  // seleccionado un horario inválido mientras el usuario interactúa.
+  const horaInicioEfectiva = useMemo(() => {
+    if (horasInicioDisponibles.length === 0) return null;
+    return horasInicioDisponibles.includes(horaInicio)
+      ? horaInicio
+      : horasInicioDisponibles[0];
+  }, [horaInicio, horasInicioDisponibles]);
+
+  // El fin solo puede avanzar mientras las horas anteriores estén libres.
+  const horasFinDisponibles = useMemo(() => {
+    if (!opcionSeleccionada || horaInicioEfectiva === null) return [];
+    const fines = [];
+    for (
+      let hora = horaInicioEfectiva + 1;
+      hora <= opcionSeleccionada.finHora;
+      hora += 1
+    ) {
+      if (horasOcupadas.has(hora - 1)) break;
+      fines.push(hora);
+    }
+    return fines;
+  }, [opcionSeleccionada, horaInicioEfectiva, horasOcupadas]);
+
+  const horaFinEfectiva = useMemo(() => {
+    if (horasFinDisponibles.length === 0) return null;
+    return horasFinDisponibles.includes(horaFin)
+      ? horaFin
+      : horasFinDisponibles[0];
+  }, [horaFin, horasFinDisponibles]);
+
+  const inicio = useMemo(() => {
+    if (!opcionSeleccionada || horaInicioEfectiva === null) return null;
+    const fecha = new Date(opcionSeleccionada.fecha);
+    fecha.setHours(horaInicioEfectiva, 0, 0, 0);
+    return fecha;
+  }, [opcionSeleccionada, horaInicioEfectiva]);
+
+  const fin = useMemo(() => {
+    if (!opcionSeleccionada || horaFinEfectiva === null) return null;
+    const fecha = new Date(opcionSeleccionada.fecha);
+    fecha.setHours(horaFinEfectiva, 0, 0, 0);
+    return fecha;
+  }, [opcionSeleccionada, horaFinEfectiva]);
+
+  const esHoy = opcionSeleccionada
+    ? opcionSeleccionada.fecha.toDateString() === new Date().toDateString()
+    : false;
+  const sinDisponibilidad = opcionesFecha.length === 0;
+  const sinHorasLibres =
+    Boolean(opcionSeleccionada) && horasInicioDisponibles.length === 0;
+
+  const horasSeleccionadas =
+    horaInicioEfectiva !== null && horaFinEfectiva !== null
+      ? Math.max(0, horaFinEfectiva - horaInicioEfectiva)
+      : 0;
   const tarifaHora = Number(articulo?.precioPorDia) || 0;
   const subtotal = horasSeleccionadas * tarifaHora;
   const comision = Math.round(subtotal * COMISION);
   const total = subtotal;
   const montoPropietario = subtotal - comision;
 
+  // Consulta la agenda real: franjas del dueño + reservas que ya ocupan horas.
+  useEffect(() => {
+    if (!isOpen || !articulo?.id) {
+      setAgenda(null);
+      setCargandoAgenda(false);
+      setErrorAgenda("");
+      return undefined;
+    }
+
+    let cancelado = false;
+    setAgenda(null);
+    setErrorAgenda("");
+    setCargandoAgenda(true);
+
+    obtenerAgendaArticulo(articulo.id)
+      .then((data) => {
+        if (!cancelado) setAgenda(data);
+      })
+      .catch(() => {
+        if (!cancelado) {
+          setErrorAgenda(
+            "No pudimos verificar los horarios ocupados. El backend validará el horario al pagar.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoAgenda(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [isOpen, articulo?.id]);
+
   useEffect(() => {
     if (!isOpen) return;
+    const primera = opcionesFecha[0] ?? null;
     setReservaConfirmada(null);
     setError("");
     setSaldoInsuficiente(false);
-    setHoraInicio(HORA_INICIO);
-    setHoraFin(HORA_INICIO + 1);
+    setClaveFechaSeleccionada(primera?.clave ?? null);
+    setHoraInicio(primera?.inicioHora ?? 8);
+    setHoraFin(primera ? Math.min(primera.inicioHora + 1, primera.finHora) : 9);
     idempotenciaRef.current = null;
+    // Solo se reinicia al abrir el modal o cambiar de artículo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, articulo?.id]);
 
   useEffect(() => {
@@ -127,13 +404,48 @@ export const ModalReservaHoras = ({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, reservaConfirmada, confirmando, onClose]);
 
+  const manejarCambioFecha = (clave) => {
+    const opcion = opcionesFecha.find((item) => item.clave === clave);
+    if (!opcion) return;
+
+    const ocupadas = ocupadosPorFecha.get(clave) ?? new Set();
+    let primerLibre = opcion.inicioHora;
+    while (primerLibre < opcion.finHora && ocupadas.has(primerLibre)) {
+      primerLibre += 1;
+    }
+
+    setClaveFechaSeleccionada(clave);
+    setHoraInicio(primerLibre);
+    setHoraFin(Math.min(primerLibre + 1, opcion.finHora));
+    setError("");
+  };
+
   const manejarCambioInicio = (valor) => {
     const nuevaHora = Number(valor);
     setHoraInicio(nuevaHora);
-    if (nuevaHora >= horaFin) {
-      setHoraFin(nuevaHora + 1);
+    if (horaFinEfectiva === null || horaFinEfectiva <= nuevaHora) {
+      setHoraFin(
+        Math.min(
+          nuevaHora + 1,
+          opcionSeleccionada?.finHora ?? nuevaHora + 1,
+        ),
+      );
     }
   };
+
+  const diaSinCupo = (opcion) => {
+    const ocupadas = ocupadosPorFecha.get(opcion.clave);
+    if (!ocupadas || ocupadas.size === 0) return false;
+    for (let hora = opcion.inicioHora; hora < opcion.finHora; hora += 1) {
+      if (!ocupadas.has(hora)) return false;
+    }
+    return true;
+  };
+
+  const bloquesOcupados = useMemo(
+    () => agruparHoras(horasOcupadas),
+    [horasOcupadas],
+  );
 
   const handleConfirmar = async () => {
     if (!usuario?.id) {
@@ -142,6 +454,18 @@ export const ModalReservaHoras = ({
     }
     if (!articulo?.id) {
       setError("No se seleccionó ningún artículo.");
+      return;
+    }
+    if (
+      !opcionSeleccionada ||
+      !inicio ||
+      !fin ||
+      horaInicioEfectiva === null ||
+      horaFinEfectiva === null
+    ) {
+      setError(
+        "No hay horas libres para este día. Elige otra fecha disponible.",
+      );
       return;
     }
     if (tarifaHora <= 0) {
@@ -185,10 +509,10 @@ export const ModalReservaHoras = ({
         transaccionId: respuesta.transaccionId,
         articuloId: articulo.id,
         articuloNombre: articulo.nombre,
-        horaInicio: formatHora(horaInicio),
-        horaFin: formatHora(horaFin),
+        horaInicio: formatHora(horaInicioEfectiva),
+        horaFin: formatHora(horaFinEfectiva),
         fecha: inicio.toISOString(),
-        fechaTexto: `${esManana ? "Mañana" : "Hoy"}, ${formatFecha(inicio)}`,
+        fechaTexto: `${esHoy ? "Hoy · " : ""}${formatFecha(inicio)}`,
         horas: horasSeleccionadas,
         tarifaHora,
         total: respuesta.desglose?.total ?? total,
@@ -286,50 +610,142 @@ export const ModalReservaHoras = ({
                     <Clock className="w-5 h-5 text-[var(--color-neon)]" />
                     Fecha y horario
                   </h4>
-                  <p className="mb-3 text-xs text-gray-400">
-                    {esManana ? "Mañana" : "Hoy"}, {formatFecha(inicio)}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">
-                        Hora de inicio
-                      </label>
-                      <select
-                        value={horaInicio}
-                        onChange={(e) => manejarCambioInicio(e.target.value)}
-                        className="glass-input bg-[var(--color-surface)] cursor-pointer"
-                        disabled={confirmando}
-                      >
-                        {HORAS_INICIO.map((h) => (
-                          <option key={h} value={h}>
-                            {formatHora(h)}
-                          </option>
-                        ))}
-                      </select>
+
+                  {sinDisponibilidad ? (
+                    <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                      <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <span>
+                        Este propietario no tiene franjas de disponibilidad
+                        configuradas, así que no es posible reservar por ahora.
+                      </span>
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">
-                        Hora de fin
-                      </label>
-                      <select
-                        value={horaFin}
-                        onChange={(e) => setHoraFin(Number(e.target.value))}
-                        className="glass-input bg-[var(--color-surface)] cursor-pointer"
-                        disabled={confirmando}
-                      >
-                        {HORAS_FIN.filter((h) => h > horaInicio).map((h) => (
-                          <option key={h} value={h}>
-                            {formatHora(h)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {horasSeleccionadas} hora
-                    {horasSeleccionadas !== 1 ? "s" : ""} seleccionada
-                    {horasSeleccionadas !== 1 ? "s" : ""}
-                  </p>
+                  ) : (
+                    <>
+                      <div className="mb-3">
+                        <label className="block text-xs text-gray-400 mb-1">
+                          Fecha
+                        </label>
+                        <select
+                          value={opcionSeleccionada?.clave ?? ""}
+                          onChange={(e) => manejarCambioFecha(e.target.value)}
+                          className="glass-input bg-[var(--color-surface)] cursor-pointer"
+                          disabled={confirmando}
+                          aria-label="Fecha de la reserva"
+                        >
+                          {opcionesFecha.map((opcion) => (
+                            <option key={opcion.clave} value={opcion.clave}>
+                              {formatFechaOpcion(opcion.fecha)}
+                              {diaSinCupo(opcion) ? " · Sin cupo" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="mb-3 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-2 text-xs text-gray-400">
+                        {cargandoAgenda ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-[var(--color-neon)]" />
+                            <span>Verificando horarios ocupados…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-neon)]" />
+                            <span>
+                              El propietario está disponible de{" "}
+                              <span className="font-medium text-gray-200">
+                                {formatHora(opcionSeleccionada.inicioHora)} a{" "}
+                                {formatHora(opcionSeleccionada.finHora)}
+                              </span>
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {errorAgenda && !cargandoAgenda && (
+                        <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                          <span>{errorAgenda}</span>
+                        </div>
+                      )}
+
+                      {!cargandoAgenda && bloquesOcupados.length > 0 && (
+                        <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                          <p className="mb-2 flex items-center gap-2 text-xs font-medium text-red-300">
+                            <Ban className="h-3.5 w-3.5" />
+                            Horarios ya ocupados
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {bloquesOcupados.map((bloque) => (
+                              <span
+                                key={`${bloque.inicio}-${bloque.fin}`}
+                                className="inline-flex items-center rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 font-mono text-[11px] text-red-200"
+                              >
+                                {formatHora(bloque.inicio)}–{formatHora(bloque.fin)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {sinHorasLibres ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                          <span>
+                            No quedan horas libres para este día. Elige otra
+                            fecha disponible.
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">
+                                Hora de inicio
+                              </label>
+                              <select
+                                value={horaInicioEfectiva ?? ""}
+                                onChange={(e) =>
+                                  manejarCambioInicio(e.target.value)
+                                }
+                                className="glass-input bg-[var(--color-surface)] cursor-pointer"
+                                disabled={confirmando}
+                              >
+                                {horasInicioDisponibles.map((h) => (
+                                  <option key={h} value={h}>
+                                    {formatHora(h)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">
+                                Hora de fin
+                              </label>
+                              <select
+                                value={horaFinEfectiva ?? ""}
+                                onChange={(e) =>
+                                  setHoraFin(Number(e.target.value))
+                                }
+                                className="glass-input bg-[var(--color-surface)] cursor-pointer"
+                                disabled={confirmando}
+                              >
+                                {horasFinDisponibles.map((h) => (
+                                  <option key={h} value={h}>
+                                    {formatHora(h)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2 text-center">
+                            {horasSeleccionadas} hora
+                            {horasSeleccionadas !== 1 ? "s" : ""} seleccionada
+                            {horasSeleccionadas !== 1 ? "s" : ""}
+                          </p>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div className="glass-panel p-4 bg-gradient-to-r from-[var(--color-neon)]/5 to-[var(--color-accent-500)]/5 border-[var(--color-neon)]/20">
@@ -419,7 +835,13 @@ export const ModalReservaHoras = ({
                   </button>
                   <button
                     onClick={handleConfirmar}
-                    disabled={confirmando || tarifaHora <= 0}
+                    disabled={
+                      confirmando ||
+                      tarifaHora <= 0 ||
+                      sinDisponibilidad ||
+                      sinHorasLibres ||
+                      cargandoAgenda
+                    }
                     className="flex-1 btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {confirmando ? (

@@ -59,6 +59,14 @@ export class ControladorArticulos {
     return this.servicioArticulos.crear(dto, usuarioId);
   }
 
+  @Get(':id/agenda')
+  @ApiOperation({
+    summary: 'Disponibilidad del dueño y horarios ya ocupados del artículo',
+  })
+  obtenerAgenda(@Param('id') id: string) {
+    return this.servicioArticulos.obtenerAgenda(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de un artículo' })
   obtener(@Param('id') id: string) {

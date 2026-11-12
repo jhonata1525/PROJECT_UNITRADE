@@ -138,6 +138,38 @@ export class ServicioArticulos {
     };
   }
 
+  /**
+   * Devuelve la disponibilidad semanal del dueño y los rangos ya ocupados
+   * por alquileres activos, para que el cliente no ofrezca horas bloqueadas.
+   */
+  async obtenerAgenda(id: string) {
+    const articulo = await this.prisma.articulo.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        propietario: { select: { disponibilidad: true } },
+        alquileres: {
+          where: { estado: { in: ESTADOS_CON_ALQUILER_ACTIVO } },
+          select: { inicio: true, fin: true },
+          orderBy: { inicio: 'asc' },
+        },
+      },
+    });
+
+    if (!articulo) {
+      throw new NotFoundException('El artículo no existe.');
+    }
+
+    return {
+      articuloId: articulo.id,
+      disponibilidad: articulo.propietario.disponibilidad,
+      ocupados: articulo.alquileres.map((alquiler) => ({
+        inicio: alquiler.inicio.toISOString(),
+        fin: alquiler.fin.toISOString(),
+      })),
+    };
+  }
+
   async crear(dto: CrearArticuloDto, usuarioId: string) {
     const usuario = await this.obtenerUsuario(usuarioId);
     this.validarDisponibilidadPublicacion(usuario);

@@ -29,6 +29,7 @@
   position: fixed;
   inset: 0;
   z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(79, 70, 229, 0.25), transparent),
     radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59, 130, 246, 0.2), transparent),
@@ -82,14 +83,14 @@
    GLASSMORPHISM BASE CLASSES
    ======================================== */
 .glass-surface {
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
 }
 
 .glass-surface-hover {
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
@@ -105,7 +106,7 @@
 }
 
 .glass-card {
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
@@ -113,7 +114,7 @@
 }
 
 .glass-card-hover {
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
@@ -130,7 +131,7 @@
 }
 
 .glass-panel {
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
@@ -138,7 +139,7 @@
 }
 
 .glass-panel-hover {
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
@@ -170,12 +171,9 @@
   background: linear-gradient(to right, var(--color-accent-600), var(--color-primary-600));
 }
 
-.glass-btn-primary:focus {
+.glass-btn-primary:focus-visible {
   outline: none;
-  ring: 2px;
-  ring-color: var(--color-neon);
-  ring-offset: 2px;
-  ring-offset-color: var(--color-canvas);
+  box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
 }
 
 .glass-btn-primary:disabled {
@@ -189,7 +187,7 @@
   justify-content: center;
   padding: 0.75rem 1.25rem;
   border-radius: 0.5rem;
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
@@ -203,12 +201,9 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
-.glass-btn-secondary:focus {
+.glass-btn-secondary:focus-visible {
   outline: none;
-  ring: 2px;
-  ring-color: var(--color-neon);
-  ring-offset: 2px;
-  ring-offset-color: var(--color-canvas);
+  box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
 }
 
 .glass-btn-ghost {
@@ -227,12 +222,9 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
-.glass-btn-ghost:focus {
+.glass-btn-ghost:focus-visible {
   outline: none;
-  ring: 2px;
-  ring-color: var(--color-neon);
-  ring-offset: 2px;
-  ring-offset-color: var(--color-canvas);
+  box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
 }
 
 /* ========================================
@@ -244,7 +236,7 @@
   top: 0;
   z-index: 40;
   height: 100vh;
-  background-color: var(--color-surface);
+  background-color: rgba(24, 25, 32, 0.72);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid var(--color-border);
@@ -272,11 +264,9 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
-.sidebar-nav-item:focus {
+.sidebar-nav-item:focus-visible {
   outline: none;
-  ring: 2px;
-  ring-color: var(--color-neon);
-  ring-inset: true;
+  box-shadow: inset 0 0 0 2px var(--color-neon);
 }
 
 .sidebar-nav-item-active {
@@ -313,8 +303,12 @@
    ESTILOS BASE
    ======================================== */
 @layer base {
+  :root {
+    --sidebar-width: 16rem;
+  }
   html {
     scroll-behavior: smooth;
+    color-scheme: dark;
   }
   body {
     font-family: var(--font-sans);
@@ -322,6 +316,12 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--color-canvas);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background-color: rgba(59, 130, 246, 0.35);
+    color: #ffffff;
   }
   #root {
     background-color: transparent;
@@ -346,12 +346,9 @@
   .btn-primary:hover {
     background: linear-gradient(to right, var(--color-accent-600), var(--color-primary-600));
   }
-  .btn-primary:focus {
+  .btn-primary:focus-visible {
     outline: none;
-    ring: 2px;
-    ring-color: var(--color-neon);
-    ring-offset: 2px;
-    ring-offset-color: var(--color-canvas);
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
   }
   .btn-primary:disabled {
     opacity: 0.5;
@@ -364,7 +361,7 @@
     justify-content: center;
     padding: 0.75rem 1.25rem;
     border-radius: 0.5rem;
-    background-color: var(--color-surface);
+    background-color: rgba(24, 25, 32, 0.72);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--color-border);
@@ -376,12 +373,9 @@
     border-color: var(--color-border-hover);
     background-color: rgba(255, 255, 255, 0.03);
   }
-  .btn-secondary:focus {
+  .btn-secondary:focus-visible {
     outline: none;
-    ring: 2px;
-    ring-color: var(--color-neon);
-    ring-offset: 2px;
-    ring-offset-color: var(--color-canvas);
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
   }
 
   .btn-ghost {
@@ -398,12 +392,9 @@
     color: white;
     background-color: rgba(255, 255, 255, 0.03);
   }
-  .btn-ghost:focus {
+  .btn-ghost:focus-visible {
     outline: none;
-    ring: 2px;
-    ring-color: var(--color-neon);
-    ring-offset: 2px;
-    ring-offset-color: var(--color-canvas);
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
   }
 
   .glass-input {
@@ -420,9 +411,8 @@
   }
   .glass-input:focus {
     outline: none;
-    ring: 2px;
-    ring-color: var(--color-neon);
-    border-color: transparent;
+    border-color: rgba(59, 130, 246, 0.65);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
   }
 
   .input-field {
@@ -439,13 +429,12 @@
   }
   .input-field:focus {
     outline: none;
-    ring: 2px;
-    ring-color: var(--color-neon);
-    border-color: transparent;
+    border-color: rgba(59, 130, 246, 0.65);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
   }
 
   .card {
-    background-color: var(--color-surface);
+    background-color: rgba(24, 25, 32, 0.72);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--color-border);
@@ -453,7 +442,7 @@
   }
 
   .card-hover {
-    background-color: var(--color-surface);
+    background-color: rgba(24, 25, 32, 0.72);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--color-border);
@@ -517,7 +506,7 @@
     border-image: linear-gradient(to right, var(--color-neon), var(--color-accent-500)) 1;
   }
   .bg-glass {
-    background-color: var(--color-surface);
+    background-color: rgba(24, 25, 32, 0.72);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--color-border);
@@ -525,8 +514,7 @@
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar {
+  }  .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
@@ -558,5 +546,29 @@
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-border-hover);
+  }
+}
+
+/* Contenido que se adapta al ancho del menú lateral colapsable.
+   Sin @layer para que gane sobre las utilidades mx-auto de Tailwind. */
+.content-sidebar {
+  margin-left: 0;
+}
+
+@media (min-width: 1024px) {
+  .content-sidebar {
+    margin-left: var(--sidebar-width);
+  }
+}
+
+/* Respeta la preferencia de menos movimiento del sistema. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

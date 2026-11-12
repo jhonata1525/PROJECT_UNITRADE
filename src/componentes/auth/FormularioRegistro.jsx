@@ -63,11 +63,11 @@ export default function FormularioRegistro() {
   };
 
   return (
-    <form onSubmit={enviar} className="mt-8 space-y-5">
+    <form onSubmit={enviar} className="space-y-5">
       {error && (
         <div
           role="alert"
-          className="flex items-start gap-2 p-3 text-sm text-red-200 bg-red-900/50 border border-red-500/50 rounded-lg"
+          className="flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
         >
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           {error}
@@ -84,7 +84,7 @@ export default function FormularioRegistro() {
           autoComplete="name"
           value={nombre}
           onChange={(event) => setNombre(event.target.value)}
-          className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="glass-input mt-1"
         />
       </label>
 
@@ -99,7 +99,7 @@ export default function FormularioRegistro() {
           placeholder="Ej. 2026-USB-10293"
           value={codigoEstudiantil}
           onChange={(event) => setCodigoEstudiantil(event.target.value)}
-          className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="glass-input mt-1"
         />
         <span className="mt-1 block text-xs text-gray-400">
           Se guardará en tu cuenta y aparecerá en tu carnet digital.
@@ -115,7 +115,7 @@ export default function FormularioRegistro() {
           placeholder="usuario@unisimon.edu.co"
           value={correo}
           onChange={(event) => setCorreo(event.target.value)}
-          className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="glass-input mt-1"
         />
         <span className="mt-1 block text-xs text-gray-400">
           Solo se aceptan direcciones @unisimon.edu.co.
@@ -125,7 +125,7 @@ export default function FormularioRegistro() {
       <label className="block text-sm font-medium text-gray-300">
         Celular / WhatsApp
         <div className="mt-1 flex">
-          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-600/50 bg-slate-700/70 text-gray-300">
+          <span className="inline-flex items-center rounded-l-lg border border-r-0 border-[var(--color-border)] bg-[var(--color-canvas)] px-3 text-sm text-gray-300">
             +57
           </span>
           <input
@@ -139,7 +139,7 @@ export default function FormularioRegistro() {
             onChange={(event) =>
               setTelefono(event.target.value.replace(/\D/g, "").slice(0, 10))
             }
-            className="block w-full min-w-0 px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-r-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="glass-input rounded-l-none"
           />
         </div>
       </label>
@@ -154,7 +154,7 @@ export default function FormularioRegistro() {
           autoComplete="new-password"
           value={contrasena}
           onChange={(event) => setContrasena(event.target.value)}
-          className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="glass-input mt-1"
         />
       </label>
 
@@ -168,14 +168,14 @@ export default function FormularioRegistro() {
           autoComplete="new-password"
           value={confirmarContrasena}
           onChange={(event) => setConfirmarContrasena(event.target.value)}
-          className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="glass-input mt-1"
         />
       </label>
 
       <button
         type="submit"
         disabled={guardando}
-        className="w-full flex justify-center items-center gap-2 py-2 px-4 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+        className="btn-primary w-full gap-2"
       >
         {guardando ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -189,7 +189,7 @@ export default function FormularioRegistro() {
         ¿Ya tienes una cuenta?{" "}
         <Link
           to="/login"
-          className="font-medium text-blue-400 hover:text-blue-300 underline underline-offset-4"
+          className="font-medium text-[var(--color-neon)] underline underline-offset-4 transition-colors hover:text-white"
         >
           Inicia sesión
         </Link>

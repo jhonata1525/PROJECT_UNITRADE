@@ -1,5 +1,14 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "../contexto/ContextoAutenticacion";
 
 export default function PaginaInicioSesion() {
@@ -11,6 +20,7 @@ export default function PaginaInicioSesion() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
@@ -28,83 +38,163 @@ export default function PaginaInicioSesion() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8 p-8 rounded-2xl shadow-2xl card-glass">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            Iniciar Sesión
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-400">
-            UniTrade - Universidad Simón Bolívar
+    <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Marca */}
+        <div className="mb-8 text-center animate-slide-up">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] shadow-lg shadow-blue-500/30">
+            <Sparkles className="h-7 w-7 text-white" aria-hidden="true" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Uni<span className="text-gradient">Trade</span>
+          </h1>
+          <p className="mt-2 text-sm text-gray-400">
+            Alquila y comparte dentro de tu universidad
           </p>
         </div>
 
-        {error && (
-          <div className="p-3 text-sm text-red-200 bg-red-900/50 border border-red-500/50 rounded-lg">
-            {error}
-          </div>
-        )}
-        {location.state?.mensaje && (
-          <div
-            role="status"
-            className="p-3 text-sm text-amber-100 bg-amber-900/40 border border-amber-500/40 rounded-lg"
-          >
-            {location.state.mensaje}
-          </div>
-        )}
-
-        <form className="mt-8 space-y-6" onSubmit={manejarSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Correo institucional
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="j_acevedo11@unisimon.edu.co"
-                className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                Usa tu correo institucional @unisimon.edu.co
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
-                className="mt-1 block w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
-              />
-            </div>
+        <div className="glass-card overflow-hidden shadow-2xl shadow-black/50 animate-scale-in">
+          <div className="border-b border-[var(--color-border)] bg-gradient-to-br from-[var(--color-accent-500)]/20 to-[var(--color-neon)]/10 px-6 py-5">
+            <h2 className="text-xl font-semibold text-white">
+              Bienvenido de vuelta
+            </h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Ingresa con tu correo institucional
+            </p>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-slate-900 disabled:opacity-50 relative overflow-hidden"
-            >
-              {loading ? "Cargando..." : "Iniciar Sesión"}
-            </button>
+          <div className="p-6 sm:p-8">
+            {error && (
+              <div
+                role="alert"
+                className="mb-5 flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            {location.state?.mensaje && (
+              <div
+                role="status"
+                className="mb-5 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>{location.state.mensaje}</span>
+              </div>
+            )}
+
+            <form className="space-y-5" onSubmit={manejarSubmit}>
+              <div>
+                <label
+                  htmlFor="correo"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  Correo institucional
+                </label>
+                <div className="relative mt-1.5">
+                  <Mail
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="correo"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="usuario@unisimon.edu.co"
+                    className="glass-input"
+                    style={{ paddingLeft: "2.75rem" }}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Solo correos @unisimon.edu.co
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="contrasena"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  Contraseña
+                </label>
+                <div className="relative mt-1.5">
+                  <Lock
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="contrasena"
+                    type={mostrarContrasena ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="glass-input"
+                    style={{
+                      paddingLeft: "2.75rem",
+                      paddingRight: "2.75rem",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarContrasena((valor) => !valor)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-gray-400 transition-colors hover:text-white"
+                    aria-label={
+                      mostrarContrasena
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
+                    aria-pressed={mostrarContrasena}
+                  >
+                    {mostrarContrasena ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full gap-2"
+              >
+                {loading ? (
+                  <>
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                      aria-hidden="true"
+                    />
+                    Ingresando...
+                  </>
+                ) : (
+                  <>
+                    Ingresar
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-gray-400">
+              ¿Todavía no tienes cuenta?{" "}
+              <Link
+                to="/registro"
+                className="font-medium text-[var(--color-neon)] underline underline-offset-4 transition-colors hover:text-white"
+              >
+                Regístrate
+              </Link>
+            </p>
           </div>
-        </form>
-        <p className="text-center text-sm text-gray-400">
-          ¿Todavía no tienes cuenta?{" "}
-          <Link
-            to="/registro"
-            className="font-medium text-blue-400 hover:text-blue-300 underline underline-offset-4"
-          >
-            Regístrate
-          </Link>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-gray-600">
+          Universidad Simón Bolívar · Comunidad UniTrade
         </p>
       </div>
     </div>
