@@ -19,7 +19,6 @@ import {
   Compass,
   Filter,
   Image as ImageIcon,
-  Loader2,
   MapPin,
   Package,
   Plus,
@@ -256,10 +255,32 @@ export const PaginaCatalogo = () => {
 
           {/* Listado */}
           {loading ? (
-            <div className="glass-panel p-12 text-center">
-              <Loader2 className="w-12 h-12 text-[var(--color-neon)] mx-auto mb-4 animate-spin" />
-              <p className="text-gray-400">Buscando artículos disponibles...</p>
-            </div>
+            <>
+              <p className="sr-only" role="status">
+                Cargando artículos disponibles…
+              </p>
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                aria-hidden="true"
+              >
+                {Array.from({ length: 8 }).map((_, indice) => (
+                  <div
+                    key={indice}
+                    className="glass-card p-0 overflow-hidden flex flex-col"
+                  >
+                    <div className="skeleton h-40 w-full" />
+                    <div className="p-4 flex-1 flex flex-col gap-3">
+                      <div className="skeleton h-4 w-3/4 rounded" />
+                      <div className="skeleton h-3 w-1/2 rounded" />
+                      <div className="skeleton h-3 w-full rounded" />
+                      <div className="skeleton h-3 w-5/6 rounded" />
+                      <div className="skeleton h-16 w-full rounded-lg" />
+                      <div className="skeleton h-8 w-full rounded-lg mt-auto" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : articulosFiltrados.length === 0 ? (
             <div className="glass-panel p-12 text-center animate-fade-in">
               <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />

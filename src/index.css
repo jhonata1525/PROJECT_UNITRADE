@@ -496,6 +496,24 @@
       transform: scale(1);
     }
   }
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.1) 37%,
+      rgba(255, 255, 255, 0.04) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeletonShimmer 1.4s ease infinite;
+  }
+  @keyframes skeletonShimmer {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
   .text-gradient {
     background: linear-gradient(to right, var(--color-neon), var(--color-accent-500));
     -webkit-background-clip: text;
