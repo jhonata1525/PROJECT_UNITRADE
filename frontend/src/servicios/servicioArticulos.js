@@ -4,15 +4,11 @@
  *
  * Reemplaza la persistencia en localStorage de "Mis Artículos": ahora todos
  * los artículos viven en la tabla `articulo` de PostgreSQL y se comparten
- * entre usuarios. Mientras no exista JWT, el usuario se identifica con el
- * header `x-usuario-id` (igual que los módulos de pagos y billetera).
+ * entre usuarios. La identidad del usuario viaja en el token JWT que el
+ * interceptor de Axios adjunta a cada petición.
  */
 
 import servicioClienteApi from "./servicioClienteApi";
-
-const cabecerasUsuario = (usuarioId) => ({
-  headers: { "x-usuario-id": usuarioId },
-});
 
 /**
  * Convierte un error de Axios en un mensaje legible en español.
@@ -36,11 +32,8 @@ export const mensajeErrorArticulos = (
 };
 
 /** Artículos publicados por el usuario autenticado. */
-export const listarMisArticulos = async (usuarioId) => {
-  const { data } = await servicioClienteApi.get(
-    "/articulos/mios",
-    cabecerasUsuario(usuarioId)
-  );
+export const listarMisArticulos = async (_usuarioId) => {
+  const { data } = await servicioClienteApi.get("/articulos/mios");
   return data;
 };
 
@@ -53,30 +46,24 @@ export const listarCatalogoArticulos = async (parametros = {}) => {
 };
 
 /** Publica un artículo nuevo en la tabla `articulo`. */
-export const crearArticulo = async (usuarioId, articulo) => {
-  const { data } = await servicioClienteApi.post(
-    "/articulos",
-    articulo,
-    cabecerasUsuario(usuarioId)
-  );
+export const crearArticulo = async (_usuarioId, articulo) => {
+  const { data } = await servicioClienteApi.post("/articulos", articulo);
   return data;
 };
 
 /** Actualiza un artículo propio. */
-export const actualizarArticulo = async (usuarioId, id, cambios) => {
+export const actualizarArticulo = async (_usuarioId, id, cambios) => {
   const { data } = await servicioClienteApi.patch(
     `/articulos/${encodeURIComponent(id)}`,
-    cambios,
-    cabecerasUsuario(usuarioId)
+    cambios
   );
   return data;
 };
 
 /** Elimina (o pausa, si tiene reservas) un artículo propio. */
-export const eliminarArticulo = async (usuarioId, id) => {
+export const eliminarArticulo = async (_usuarioId, id) => {
   const { data } = await servicioClienteApi.delete(
-    `/articulos/${encodeURIComponent(id)}`,
-    cabecerasUsuario(usuarioId)
+    `/articulos/${encodeURIComponent(id)}`
   );
   return data;
 };
@@ -86,12 +73,10 @@ export const eliminarArticulo = async (usuarioId, id) => {
  * Es idempotente: el backend usa el id local como `claveExterna` para no
  * duplicar registros si la sincronización se ejecuta varias veces.
  */
-export const importarArticulos = async (usuarioId, articulos) => {
-  const { data } = await servicioClienteApi.post(
-    "/articulos/importar",
-    { articulos },
-    cabecerasUsuario(usuarioId)
-  );
+export const importarArticulos = async (_usuarioId, articulos) => {
+  const { data } = await servicioClienteApi.post("/articulos/importar", {
+    articulos,
+  });
   return data;
 };
 

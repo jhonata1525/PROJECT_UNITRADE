@@ -8,7 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import {
   ActualizarArticuloDto,
@@ -19,11 +19,7 @@ import { ImportarArticulosDto } from './dto/importar-articulos.dto.js';
 import { ServicioArticulos } from './servicio-articulos.js';
 
 @ApiTags('Artículos')
-@ApiHeader({
-  name: 'x-usuario-id',
-  required: false,
-  description: 'Id del usuario (temporal, hasta implementar JWT)',
-})
+@ApiBearerAuth()
 @Controller('articulos')
 export class ControladorArticulos {
   constructor(private readonly servicioArticulos: ServicioArticulos) {}

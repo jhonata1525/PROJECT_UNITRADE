@@ -28,7 +28,7 @@ import {
 
 const NAV_ITEMS = [
   { path: "/catalogo", label: "Explorar", icon: Compass },
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/dashboard", label: "Panel de control", icon: LayoutDashboard },
   { path: "/billetera", label: "Billetera", icon: Wallet },
   { path: "/pago", label: "Pagos", icon: CreditCard },
   { path: "/mis-articulos", label: "Artículos", icon: Package },

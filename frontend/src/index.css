@@ -112,6 +112,38 @@
   }
 }
 
+.app-logo-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/logo-usb-transparent.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: min(72vh, 88vw) auto;
+  opacity: 0.2;
+  filter: saturate(1.25) brightness(1.15);
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 45%,
+    #000 0%,
+    #000 42%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    circle at 50% 45%,
+    #000 0%,
+    #000 42%,
+    transparent 78%
+  );
+}
+
+@media (max-width: 767px) {
+  .app-logo-background {
+    background-size: min(70vh, 130vw) auto;
+    opacity: 0.12;
+  }
+}
+
 /* Íconos flotantes decorativos del fondo.
    La capa externa recorre grandes distancias (--dx / --dy) y el ícono interno
    hace un vaivén suave, así el movimiento se siente vivo sin marear. */
@@ -185,71 +217,40 @@
 /* ========================================
    GLASSMORPHISM BASE CLASSES
    ======================================== */
-.glass-surface {
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-}
-
+.glass-surface,
 .glass-surface-hover {
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: rgba(24, 25, 32, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
-  transition: all 0.3s;
 }
 
-.glass-surface-hover:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: 
-    0 0 0 1px var(--color-border-hover),
-    0 20px 40px -10px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.glass-card {
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-}
-
+.glass-card,
 .glass-card-hover {
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: rgba(24, 25, 32, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: 1rem;
-  transition: all 0.3s;
 }
 
-.glass-card-hover:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: 
-    0 0 0 1px var(--color-border-hover),
-    0 20px 40px -10px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.glass-panel {
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-}
-
+.glass-panel,
 .glass-panel-hover {
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: rgba(24, 25, 32, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: 0.75rem;
+}
+
+.glass-surface-hover,
+.glass-card-hover,
+.glass-panel-hover {
   transition: all 0.3s;
 }
 
+.glass-surface-hover:hover,
+.glass-card-hover:hover,
 .glass-panel-hover:hover {
   border-color: var(--color-border-hover);
   box-shadow: 
@@ -290,9 +291,9 @@
   justify-content: center;
   padding: 0.75rem 1.25rem;
   border-radius: 0.5rem;
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: rgba(24, 25, 32, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   color: white;
   font-weight: 500;
@@ -339,9 +340,9 @@
   top: 0;
   z-index: 40;
   height: 100vh;
-  background-color: rgba(24, 25, 32, 0.72);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background-color: rgba(24, 25, 32, 0.5);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-right: 1px solid var(--color-border);
   transition: all 0.3s ease-in-out;
 }
@@ -464,9 +465,9 @@
     justify-content: center;
     padding: 0.75rem 1.25rem;
     border-radius: 0.5rem;
-    background-color: rgba(24, 25, 32, 0.72);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background-color: rgba(24, 25, 32, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--color-border);
     color: white;
     font-weight: 500;
@@ -500,24 +501,7 @@
     box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-neon);
   }
 
-  .glass-input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    background-color: var(--color-canvas);
-    border: 1px solid var(--color-border);
-    color: white;
-    transition: all 0.2s;
-  }
-  .glass-input::placeholder {
-    color: rgb(156 163 175);
-  }
-  .glass-input:focus {
-    outline: none;
-    border-color: rgba(59, 130, 246, 0.65);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
-  }
-
+  .glass-input,
   .input-field {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -527,29 +511,27 @@
     color: white;
     transition: all 0.2s;
   }
+  .glass-input::placeholder,
   .input-field::placeholder {
     color: rgb(156 163 175);
   }
+  .glass-input:focus,
   .input-field:focus {
     outline: none;
     border-color: rgba(59, 130, 246, 0.65);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
   }
 
-  .card {
-    background-color: rgba(24, 25, 32, 0.72);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+  .card,
+  .card-hover {
+    background-color: rgba(24, 25, 32, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--color-border);
     border-radius: 1rem;
   }
 
   .card-hover {
-    background-color: rgba(24, 25, 32, 0.72);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--color-border);
-    border-radius: 1rem;
     transition: all 0.3s;
   }
   .card-hover:hover {
@@ -627,44 +609,31 @@
     border-image: linear-gradient(to right, var(--color-neon), var(--color-accent-500)) 1;
   }
   .bg-glass {
-    background-color: rgba(24, 25, 32, 0.72);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background-color: rgba(24, 25, 32, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--color-border);
   }
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
-  }  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
-    border-radius: 3px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-border-hover);
-  }
-
+  .scrollbar-thin,
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
   }
+  .scrollbar-thin::-webkit-scrollbar,
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+  .scrollbar-thin::-webkit-scrollbar-track,
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
+  .scrollbar-thin::-webkit-scrollbar-thumb,
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
     border-radius: 3px;
   }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover,
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-border-hover);
   }

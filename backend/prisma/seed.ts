@@ -1,8 +1,8 @@
 /**
  * Seed de demostración de UniTrade.
  *
- * Crea usuarios, artículos, reservas, pagos y billeteras de ejemplo para
- * probar HU-06 (pago + comisión) y HU-10 (billetera + retiro).
+ * Crea usuarios, billeteras y movimientos de ejemplo para probar HU-10
+ * (billetera + retiro). Los artículos y reservas demo ya no se siembran.
  *
  * Es idempotente: usa ids fijos y `upsert`, así que se puede ejecutar varias
  * veces. No borra datos existentes ni reinicia billeteras ya creadas.
@@ -15,12 +15,8 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { hash } from 'bcryptjs';
-import { calcularDesglose } from '../src/comun/dinero.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import {
-  CondicionArticulo,
-  EstadoAlquiler,
-  EstadoPago,
   EstadoTransaccion,
   MetodoRetiro,
   Rol,
@@ -39,7 +35,6 @@ const prisma = new PrismaClient({
 const CLAVE_DEMO = 'UniTrade2026*';
 const ahora = Date.now();
 const dias = (cantidad: number) => new Date(ahora + cantidad * 24 * 60 * 60 * 1000);
-const horas = (cantidad: number) => new Date(ahora + cantidad * 60 * 60 * 1000);
 
 const IDS = {
   usuarios: {
@@ -48,21 +43,6 @@ const IDS = {
     carlos: 'seed-usuario-carlos',
     ana: 'seed-usuario-ana',
     diego: 'seed-usuario-diego',
-  },
-  articulos: {
-    mesa: 'seed-articulo-mesa',
-    calculadora: 'seed-articulo-calculadora',
-    silla: 'seed-articulo-silla',
-    graficadora: 'seed-articulo-graficadora',
-  },
-  alquileres: {
-    pagadoLaura: 'seed-alquiler-ana-mesa',
-    pendienteDiego: 'seed-alquiler-diego-silla',
-    activoAna: 'seed-alquiler-ana-graficadora',
-  },
-  pagos: {
-    mesa: 'seed-pago-mesa',
-    graficadora: 'seed-pago-graficadora',
   },
   billeteras: {
     laura: 'seed-billetera-laura',
@@ -147,79 +127,6 @@ async function sembrarUsuarios(hashContrasena: string) {
   }
 }
 
-async function sembrarArticulos() {
-  const articulos = [
-    {
-      id: IDS.articulos.mesa,
-      propietarioId: IDS.usuarios.laura,
-      titulo: 'Mesa de estudio plegable',
-      descripcion:
-        'Mesa portátil para estudiar en biblioteca o sala de estudio. Incluye superficie amplia y patas ajustables.',
-      categoria: 'Estudio',
-      condicion: CondicionArticulo.BUENO,
-      tarifaHora: 15_000,
-      tarifaSugerida: 12_000,
-      ubicacion: 'Biblioteca central - Campus Barranquilla',
-      imagenes: ['https://picsum.photos/seed/unitrade-mesa/800/600'],
-      disponibleDesde: dias(-30),
-      disponibleHasta: dias(120),
-    },
-    {
-      id: IDS.articulos.calculadora,
-      propietarioId: IDS.usuarios.laura,
-      titulo: 'Calculadora Casio fx-991',
-      descripcion:
-        'Calculadora científica permitida en exámenes. Funciona con batería y celda solar.',
-      categoria: 'Herramientas',
-      condicion: CondicionArticulo.COMO_NUEVO,
-      tarifaHora: 5_000,
-      tarifaSugerida: 4_000,
-      ubicacion: 'Bloque A - Campus Barranquilla',
-      imagenes: ['https://picsum.photos/seed/unitrade-calculadora/800/600'],
-      disponibleDesde: dias(-30),
-      disponibleHasta: dias(120),
-    },
-    {
-      id: IDS.articulos.silla,
-      propietarioId: IDS.usuarios.carlos,
-      titulo: 'Silla ergonómica',
-      descripcion:
-        'Silla con soporte lumbar y altura ajustable, ideal para jornadas largas de estudio.',
-      categoria: 'Mobiliario',
-      condicion: CondicionArticulo.BUENO,
-      tarifaHora: 8_000,
-      tarifaSugerida: 6_500,
-      ubicacion: 'Bloque B - Campus Barranquilla',
-      imagenes: ['https://picsum.photos/seed/unitrade-silla/800/600'],
-      disponibleDesde: dias(-30),
-      disponibleHasta: dias(120),
-    },
-    {
-      id: IDS.articulos.graficadora,
-      propietarioId: IDS.usuarios.carlos,
-      titulo: 'Calculadora graficadora HP Prime',
-      descripcion:
-        'Calculadora graficadora para cálculo, álgebra y estadística. Incluye funda y cable de carga.',
-      categoria: 'Herramientas',
-      condicion: CondicionArticulo.NUEVO,
-      tarifaHora: 12_000,
-      tarifaSugerida: 10_000,
-      ubicacion: 'Bloque C - Campus Barranquilla',
-      imagenes: ['https://picsum.photos/seed/unitrade-graficadora/800/600'],
-      disponibleDesde: dias(-30),
-      disponibleHasta: dias(120),
-    },
-  ];
-
-  for (const articulo of articulos) {
-    await prisma.articulo.upsert({
-      where: { id: articulo.id },
-      create: { ...articulo, activo: true },
-      update: { ...articulo, activo: true },
-    });
-  }
-}
-
 async function sembrarBilleteras() {
   const billeteras = [
     {
@@ -248,113 +155,6 @@ async function sembrarBilleteras() {
       update: {},
     });
   }
-}
-
-async function sembrarReservasYPagos() {
-  const desgloseMesa = calcularDesglose(4 * 15_000); // 60.000 → comisión 7.200
-  const desgloseSilla = calcularDesglose(3 * 8_000); // 24.000 → comisión 2.880
-  const desgloseGraficadora = calcularDesglose(2 * 12_000); // 24.000 → comisión 2.880
-
-  const alquileres = [
-    {
-      id: IDS.alquileres.pagadoLaura,
-      articuloId: IDS.articulos.mesa,
-      arrendatarioId: IDS.usuarios.ana,
-      propietarioId: IDS.usuarios.laura,
-      inicio: dias(-6),
-      fin: dias(-5),
-      horas: 4,
-      subtotal: desgloseMesa.subtotal,
-      comision: desgloseMesa.comision,
-      total: desgloseMesa.total,
-      estado: EstadoAlquiler.COMPLETADO,
-      codigoVerificacion: '4821',
-    },
-    {
-      id: IDS.alquileres.pendienteDiego,
-      articuloId: IDS.articulos.silla,
-      arrendatarioId: IDS.usuarios.diego,
-      propietarioId: IDS.usuarios.carlos,
-      inicio: horas(24),
-      fin: horas(27),
-      horas: 3,
-      subtotal: desgloseSilla.subtotal,
-      comision: desgloseSilla.comision,
-      total: desgloseSilla.total,
-      estado: EstadoAlquiler.PENDIENTE_ENTREGA,
-      codigoVerificacion: null,
-    },
-    {
-      id: IDS.alquileres.activoAna,
-      articuloId: IDS.articulos.graficadora,
-      arrendatarioId: IDS.usuarios.ana,
-      propietarioId: IDS.usuarios.carlos,
-      inicio: dias(-1),
-      fin: dias(1),
-      horas: 2,
-      subtotal: desgloseGraficadora.subtotal,
-      comision: desgloseGraficadora.comision,
-      total: desgloseGraficadora.total,
-      estado: EstadoAlquiler.ACTIVO,
-      codigoVerificacion: '7392',
-    },
-  ];
-
-  for (const alquiler of alquileres) {
-    await prisma.alquiler.upsert({
-      where: { id: alquiler.id },
-      create: alquiler,
-      update: alquiler,
-    });
-  }
-
-  await prisma.pago.upsert({
-    where: { alquilerId: IDS.alquileres.pagadoLaura },
-    create: {
-      id: IDS.pagos.mesa,
-      alquilerId: IDS.alquileres.pagadoLaura,
-      monto: desgloseMesa.total,
-      comision: desgloseMesa.comision,
-      montoPropietario: desgloseMesa.montoPropietario,
-      moneda: 'COP',
-      estado: EstadoPago.COMPLETADO,
-      metodo: 'sandbox',
-      idTransaccion: 'sbx_tx_seed_mesa',
-      pagadoEn: dias(-5),
-      metadata: { pasarela: 'sandbox', origen: 'seed' },
-    },
-    update: {
-      monto: desgloseMesa.total,
-      comision: desgloseMesa.comision,
-      montoPropietario: desgloseMesa.montoPropietario,
-      estado: EstadoPago.COMPLETADO,
-      pagadoEn: dias(-5),
-    },
-  });
-
-  await prisma.pago.upsert({
-    where: { alquilerId: IDS.alquileres.activoAna },
-    create: {
-      id: IDS.pagos.graficadora,
-      alquilerId: IDS.alquileres.activoAna,
-      monto: desgloseGraficadora.total,
-      comision: desgloseGraficadora.comision,
-      montoPropietario: desgloseGraficadora.montoPropietario,
-      moneda: 'COP',
-      estado: EstadoPago.COMPLETADO,
-      metodo: 'sandbox',
-      idTransaccion: 'sbx_tx_seed_graficadora',
-      pagadoEn: dias(-2),
-      metadata: { pasarela: 'sandbox', origen: 'seed' },
-    },
-    update: {
-      monto: desgloseGraficadora.total,
-      comision: desgloseGraficadora.comision,
-      montoPropietario: desgloseGraficadora.montoPropietario,
-      estado: EstadoPago.COMPLETADO,
-      pagadoEn: dias(-2),
-    },
-  });
 }
 
 async function sembrarRetirosYTransacciones() {
@@ -406,7 +206,7 @@ async function sembrarRetirosYTransacciones() {
       tipo: TipoTransaccion.INGRESO,
       monto: 30_000,
       saldoDespues: 30_000,
-      descripcion: 'Pago de alquiler: Calculadora Casio fx-991',
+      descripcion: 'Ingreso por alquiler',
       estado: EstadoTransaccion.COMPLETADO,
       metadata: { origen: 'seed', destino: 'Billetera UniTrade' },
       creadoEn: dias(-20),
@@ -433,12 +233,10 @@ async function sembrarRetirosYTransacciones() {
       tipo: TipoTransaccion.INGRESO,
       monto: 52_800,
       saldoDespues: 62_800,
-      descripcion: 'Pago de alquiler: Mesa de estudio plegable',
+      descripcion: 'Ingreso por alquiler',
       estado: EstadoTransaccion.COMPLETADO,
       metadata: {
         origen: 'seed',
-        alquilerId: IDS.alquileres.pagadoLaura,
-        pagoId: IDS.pagos.mesa,
         destino: 'Billetera UniTrade',
       },
       creadoEn: dias(-5),
@@ -449,12 +247,10 @@ async function sembrarRetirosYTransacciones() {
       tipo: TipoTransaccion.INGRESO,
       monto: 21_120,
       saldoDespues: 21_120,
-      descripcion: 'Pago de alquiler: Calculadora graficadora HP Prime',
+      descripcion: 'Ingreso por alquiler',
       estado: EstadoTransaccion.COMPLETADO,
       metadata: {
         origen: 'seed',
-        alquilerId: IDS.alquileres.activoAna,
-        pagoId: IDS.pagos.graficadora,
         destino: 'Billetera UniTrade',
       },
       creadoEn: dias(-2),
@@ -491,40 +287,32 @@ async function principal() {
   const hashContrasena = await hash(CLAVE_DEMO, 10);
 
   await sembrarUsuarios(hashContrasena);
-  await sembrarArticulos();
   await sembrarBilleteras();
-  await sembrarReservasYPagos();
   await sembrarRetirosYTransacciones();
 
-  const [usuarios, articulos, alquileres, pagos, billeteras] = await Promise.all([
+  const [usuarios, billeteras, transacciones, retiros] = await Promise.all([
     prisma.usuario.count(),
-    prisma.articulo.count(),
-    prisma.alquiler.count(),
-    prisma.pago.count(),
     prisma.billetera.count(),
+    prisma.transaccionBilletera.count(),
+    prisma.retiro.count(),
   ]);
 
   console.log('\nSeed completado:');
-  console.log(`  Usuarios: ${usuarios} | Artículos: ${articulos} | Reservas: ${alquileres} | Pagos: ${pagos} | Billeteras: ${billeteras}`);
+  console.log(`  Usuarios: ${usuarios} | Billeteras: ${billeteras} | Transacciones: ${transacciones} | Retiros: ${retiros}`);
   console.log('\nCuentas de prueba (contraseña: UniTrade2026*):');
   console.log('  admin@unisimon.edu.co          → ADMIN');
   console.log('  laura.gomez@unisimon.edu.co    → propietaria (billetera con saldo)');
   console.log('  carlos.ruiz@unisimon.edu.co    → propietario (retiro pendiente)');
-  console.log('  ana.martinez@unisimon.edu.co   → arrendataria con reserva pagada');
-  console.log('  diego.perez@unisimon.edu.co    → arrendatario con pago pendiente');
-  console.log('\nIds útiles para probar la API:');
-  console.log(`  usuario Ana (paga):        ${IDS.usuarios.ana}`);
-  console.log(`  usuario Laura (cobra):     ${IDS.usuarios.laura}`);
-  console.log(`  reserva pendiente Diego:   ${IDS.alquileres.pendienteDiego}`);
-  console.log(`  artículo silla:            ${IDS.articulos.silla}`);
+  console.log('  ana.martinez@unisimon.edu.co   → arrendataria');
+  console.log('  diego.perez@unisimon.edu.co    → arrendatario');
 }
 
 const habilitarDemo = process.env.SEED_DEMO === 'true';
 
 if (!habilitarDemo) {
   console.log(
-    'Seed de demostración omitido: no se crean usuarios ni artículos falsos.\n' +
-      'Si necesitas los datos de prueba para HU-06/HU-10, ejecuta con SEED_DEMO=true.',
+    'Seed de demostración omitido: no se crean usuarios ni billeteras falsas.\n' +
+      'Si necesitas los datos de prueba para la billetera y los retiros, ejecuta con SEED_DEMO=true.',
   );
   await prisma.$disconnect();
 } else {

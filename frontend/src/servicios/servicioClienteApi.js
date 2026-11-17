@@ -87,9 +87,15 @@ servicioClienteApi.interceptors.response.use(
 
     /** Manejo de error 401 - No autorizado */
     if (response && response.status === 401) {
-      /** En producción: limpiar token y redirigir a login */
-      // window.location.href = "/login";
-      console.error("Error 401: Token expirado o inválido");
+      localStorage.removeItem("uniTrade_token");
+      localStorage.removeItem("usuario_unitrade");
+
+      if (
+        typeof window !== "undefined" &&
+        window.location.pathname !== "/login"
+      ) {
+        window.location.href = "/login";
+      }
     }
 
     /** Manejo de error 500 - Error interno del servidor */

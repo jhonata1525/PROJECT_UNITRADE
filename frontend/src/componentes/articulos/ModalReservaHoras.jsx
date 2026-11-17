@@ -224,7 +224,7 @@ export const ModalReservaHoras = ({
   // Solo se ofrecen días y horas dentro de la disponibilidad del dueño.
   const opcionesFecha = useMemo(
     () => construirOpcionesFecha(disponibilidad),
-    [disponibilidad, isOpen],
+    [disponibilidad],
   );
 
   const [claveFechaSeleccionada, setClaveFechaSeleccionada] = useState(null);
@@ -235,6 +235,25 @@ export const ModalReservaHoras = ({
   const [error, setError] = useState("");
   const [saldoInsuficiente, setSaldoInsuficiente] = useState(false);
   const idempotenciaRef = useRef(null);
+
+  const claveSeleccion = isOpen && articulo?.id ? articulo.id : null;
+  const [claveSeleccionAnterior, setClaveSeleccionAnterior] = useState(null);
+  if (claveSeleccion !== claveSeleccionAnterior) {
+    setClaveSeleccionAnterior(claveSeleccion);
+    setAgenda(null);
+    setErrorAgenda("");
+    setCargandoAgenda(Boolean(claveSeleccion));
+    setReservaConfirmada(null);
+    setError("");
+    setSaldoInsuficiente(false);
+
+    const primera = opcionesFecha[0] ?? null;
+    setClaveFechaSeleccionada(primera?.clave ?? null);
+    setHoraInicio(primera?.inicioHora ?? 8);
+    setHoraFin(
+      primera ? Math.min(primera.inicioHora + 1, primera.finHora) : 9,
+    );
+  }
 
   const opcionSeleccionada = useMemo(
     () =>
@@ -348,17 +367,10 @@ export const ModalReservaHoras = ({
 
   // Consulta la agenda real: franjas del dueño + reservas que ya ocupan horas.
   useEffect(() => {
-    if (!isOpen || !articulo?.id) {
-      setAgenda(null);
-      setCargandoAgenda(false);
-      setErrorAgenda("");
-      return undefined;
-    }
+    if (!isOpen || !articulo?.id) return undefined;
 
     let cancelado = false;
-    setAgenda(null);
-    setErrorAgenda("");
-    setCargandoAgenda(true);
+    idempotenciaRef.current = null;
 
     obtenerAgendaArticulo(articulo.id)
       .then((data) => {
@@ -378,20 +390,6 @@ export const ModalReservaHoras = ({
     return () => {
       cancelado = true;
     };
-  }, [isOpen, articulo?.id]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const primera = opcionesFecha[0] ?? null;
-    setReservaConfirmada(null);
-    setError("");
-    setSaldoInsuficiente(false);
-    setClaveFechaSeleccionada(primera?.clave ?? null);
-    setHoraInicio(primera?.inicioHora ?? 8);
-    setHoraFin(primera ? Math.min(primera.inicioHora + 1, primera.finHora) : 9);
-    idempotenciaRef.current = null;
-    // Solo se reinicia al abrir el modal o cambiar de artículo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, articulo?.id]);
 
   useEffect(() => {

@@ -39,10 +39,15 @@ const ProveedorAutenticacion = ({ children }) => {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem("uniTrade_token");
     const usuarioGuardado = localStorage.getItem("usuario_unitrade");
-    if (usuarioGuardado) {
+
+    if (usuarioGuardado && token) {
       setUsuario(JSON.parse(usuarioGuardado));
+    } else if (usuarioGuardado) {
+      localStorage.removeItem("usuario_unitrade");
     }
+
     setCargando(false);
   }, []);
 
@@ -59,6 +64,10 @@ const ProveedorAutenticacion = ({ children }) => {
         email: data.usuario.correo,
         rol: data.usuario.rol.toLowerCase(),
       };
+
+      if (data.accessToken) {
+        localStorage.setItem("uniTrade_token", data.accessToken);
+      }
 
       localStorage.setItem(
         "usuario_unitrade",
@@ -155,18 +164,14 @@ const ProveedorAutenticacion = ({ children }) => {
           );
         }
 
-        const { data } = await servicioClienteApi.patch(
-          "/auth/perfil",
-          {
-            nombre: datosActualizados.nombre,
-            fotoPerfil: datosActualizados.fotoPerfil,
-            telefono: datosActualizados.telefono,
-            sede: datosActualizados.sede,
-            puntoEntrega: datosActualizados.puntoEntrega,
-            disponibilidad: datosActualizados.disponibilidad,
-          },
-          { headers: { "x-usuario-id": usuario.id } },
-        );
+        const { data } = await servicioClienteApi.patch("/auth/perfil", {
+          nombre: datosActualizados.nombre,
+          fotoPerfil: datosActualizados.fotoPerfil,
+          telefono: datosActualizados.telefono,
+          sede: datosActualizados.sede,
+          puntoEntrega: datosActualizados.puntoEntrega,
+          disponibilidad: datosActualizados.disponibilidad,
+        });
         datosPersistidos = data;
       }
 

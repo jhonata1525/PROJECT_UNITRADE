@@ -1,7 +1,7 @@
 /**
  * @file PaginaCatalogo.jsx
  * Catálogo público de artículos disponibles en UniTrade.
- * - Muestra artículos disponibles y en alquiler de otros usuarios.
+ * - Muestra artículos disponibles y en alquiler de la comunidad.
  * - Buscador y filtro por categoría.
  * - Cada tarjeta muestra foto, título, categoría, tarifa por hora, descripción
  *   y datos del propietario (nombre y sede).
@@ -90,18 +90,36 @@ export const PaginaCatalogo = () => {
   }, []);
 
   React.useEffect(() => {
-    cargarCatalogo();
-  }, [cargarCatalogo]);
+    let activo = true;
+
+    listarCatalogoArticulos({ limite: 100 })
+      .then((datos) => {
+        if (activo) setArticulos(Array.isArray(datos) ? datos : []);
+      })
+      .catch((err) => {
+        if (activo) {
+          setError(
+            mensajeErrorArticulos(
+              err,
+              "No se pudieron cargar los artículos disponibles. Intenta de nuevo."
+            )
+          );
+        }
+      })
+      .finally(() => {
+        if (activo) setLoading(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   // Los artículos alquilados se muestran, pero no pueden reservarse otra vez.
-  const disponibles = articulos.filter(
-    (art) => art.estado === "disponible" && art.propietario?.id !== usuario?.id
-  );
+  const disponibles = articulos.filter((art) => art.estado === "disponible");
 
-  const articulosVisibles = articulos.filter(
-    (art) =>
-      ["disponible", "en_alquiler"].includes(art.estado) &&
-      art.propietario?.id !== usuario?.id
+  const articulosVisibles = articulos.filter((art) =>
+    ["disponible", "en_alquiler"].includes(art.estado)
   );
 
   const articulosFiltrados = articulosVisibles.filter((art) => {
@@ -151,7 +169,7 @@ export const PaginaCatalogo = () => {
                   Explorar Artículos
                 </h1>
                 <p className="text-gray-400 mt-1">
-                  Encuentra artículos de otros estudiantes y resérvalos por horas.
+                  Encuentra artículos de la comunidad y resérvalos por horas.
                 </p>
               </div>
               <div className="glass-panel px-4 py-3 rounded-xl flex items-center gap-2 self-start sm:self-auto">
@@ -314,6 +332,7 @@ export const PaginaCatalogo = () => {
                 const proximo = obtenerProximoHorario(
                   art.propietario?.disponibilidad
                 );
+                const esMio = art.propietario?.id === usuario?.id;
 
                 return (
                   <article
@@ -331,8 +350,18 @@ export const PaginaCatalogo = () => {
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="w-12 h-12 text-gray-600" />
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-canvas)]">
+                        <ImageIcon className="w-10 h-10 text-gray-600" />
+                        <span className="text-[11px] uppercase tracking-wider text-gray-500">
+                          Sin foto
+                        </span>
+                      </div>
+                    )}
+                    {esMio && (
+                      <div className="absolute top-3 right-3">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-neon)] px-2.5 py-1 text-xs font-semibold text-black shadow-lg">
+                          Tu publicación
+                        </span>
                       </div>
                     )}
                     <div className="absolute top-3 left-3">
@@ -402,12 +431,27 @@ export const PaginaCatalogo = () => {
 
                     {/* Propietario y ubicación */}
                     <div className="space-y-1 text-xs text-gray-400 mb-3">
-                      <p className="flex items-start gap-1.5">
-                        <User className="w-3.5 h-3.5 text-[var(--color-neon)] flex-shrink-0 mt-0.5" />
-                        <span className="truncate">
+                      <div className="flex items-center gap-2 text-sm text-white">
+                        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-canvas)]">
+                          {art.propietario?.fotoPerfil ? (
+                            <img
+                              src={art.propietario.fotoPerfil}
+                              alt={`Foto de ${art.propietario?.nombre || "propietario"}`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-xs font-semibold text-[var(--color-neon)]">
+                              {(art.propietario?.nombre || "U")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </span>
+                          )}
+                        </span>
+                        <span className="truncate font-medium">
                           {art.propietario?.nombre || "Estudiante UniTrade"}
                         </span>
-                      </p>
+                      </div>
                       {(art.ubicacion || art.propietario?.sede) && (
                         <p className="flex items-start gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -440,7 +484,15 @@ export const PaginaCatalogo = () => {
                       Ver artículo y propietario
                     </button>
 
-                    {art.estado === "en_alquiler" ? (
+                    {esMio ? (
+                      <Link
+                        to="/mis-articulos"
+                        className="w-full btn-secondary text-sm py-2 flex items-center justify-center gap-2"
+                      >
+                        <Package className="w-4 h-4" />
+                        Gestionar publicación
+                      </Link>
+                    ) : art.estado === "en_alquiler" ? (
                       <button
                         type="button"
                         disabled

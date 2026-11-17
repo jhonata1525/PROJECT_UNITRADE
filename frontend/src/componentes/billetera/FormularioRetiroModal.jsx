@@ -41,14 +41,21 @@ export const FormularioRetiroModal = ({
   const [exito, setExito] = useState(null);
   const modalRef = useRef(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const [abiertoAnterior, setAbiertoAnterior] = useState(isOpen);
+  if (isOpen !== abiertoAnterior) {
+    setAbiertoAnterior(isOpen);
 
-    setError("");
-    setExito(null);
-    setNumeroCuenta("");
-    setMontoRetiro("");
-    setForzarFallo(false);
+    if (isOpen) {
+      setError("");
+      setExito(null);
+      setNumeroCuenta("");
+      setMontoRetiro("");
+      setForzarFallo(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
 
     let cancelado = false;
     listarEntidades()

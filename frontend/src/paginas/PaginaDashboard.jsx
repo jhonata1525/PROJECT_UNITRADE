@@ -212,9 +212,7 @@ export const PaginaDashboard = () => {
       });
 
     servicioClienteApi
-      .get("/auth/perfil", {
-        headers: { "x-usuario-id": usuarioId },
-      })
+      .get("/auth/perfil")
       .then(({ data }) => {
         if (
           !Number.isFinite(data?.calificacion) ||
@@ -521,7 +519,7 @@ export const PaginaDashboard = () => {
                 type="button"
                 onClick={() =>
                   window.dispatchEvent(
-                    new CustomEvent("unitrade:abrir-onboarding"),
+                    new window.CustomEvent("unitrade:abrir-onboarding"),
                   )
                 }
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-neon)] transition hover:text-white"
@@ -544,7 +542,7 @@ export const PaginaDashboard = () => {
                   step: "02",
                   title: "Recibe solicitudes de alquiler",
                   description:
-                    "Gestiona reservas desde tu dashboard en tiempo real",
+                    "Gestiona reservas desde tu panel de control en tiempo real",
                   action: "Ver solicitudes",
                   href: "/mis-articulos",
                 },

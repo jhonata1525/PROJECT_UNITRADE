@@ -1,16 +1,12 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import { ConfirmarDevolucionDto } from './dto/confirmar-devolucion.dto.js';
 import { ListarReservasDto } from './dto/listar-reservas.dto.js';
 import { ServicioReservas } from './servicio-reservas.js';
 
 @ApiTags('Reservas')
-@ApiHeader({
-  name: 'x-usuario-id',
-  required: false,
-  description: 'Id del usuario (temporal, hasta implementar JWT)',
-})
+@ApiBearerAuth()
 @Controller('reservas')
 export class ControladorReservas {
   constructor(private readonly servicioReservas: ServicioReservas) {}

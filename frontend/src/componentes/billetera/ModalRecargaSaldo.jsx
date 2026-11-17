@@ -21,17 +21,32 @@ export const ModalRecargaSaldo = ({ isOpen, onClose, onConfirm }) => {
   const [procesando, setProcesando] = useState(false);
   const modalRef = useRef(null);
 
-  useEffect(() => {
+  const [abiertoAnterior, setAbiertoAnterior] = useState(isOpen);
+  if (isOpen !== abiertoAnterior) {
+    setAbiertoAnterior(isOpen);
+
     if (isOpen) {
-      document.body.style.overflow = "hidden";
-      setTimeout(() => modalRef.current?.focus(), 100);
       setError("");
       setProcesando(false);
     } else {
-      document.body.style.overflow = "unset";
       setMonto("");
       setMedioPago("Nequi");
     }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      const temporizador = setTimeout(() => modalRef.current?.focus(), 100);
+
+      return () => {
+        clearTimeout(temporizador);
+        document.body.style.overflow = "unset";
+      };
+    }
+
+    document.body.style.overflow = "unset";
+
     return () => {
       document.body.style.overflow = "unset";
     };

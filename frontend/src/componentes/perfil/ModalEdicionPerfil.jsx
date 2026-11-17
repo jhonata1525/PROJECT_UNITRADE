@@ -113,7 +113,16 @@ export const ModalEdicionPerfil = ({ isOpen, onClose, usuario, onSave }) => {
   const inputFotoRef = React.useRef(null);
   const contenidoRef = React.useRef(null);
 
-  React.useEffect(() => {
+  const [aperturaAnterior, setAperturaAnterior] = React.useState({
+    isOpen: false,
+    usuario: null,
+  });
+  if (
+    isOpen !== aperturaAnterior.isOpen ||
+    usuario !== aperturaAnterior.usuario
+  ) {
+    setAperturaAnterior({ isOpen, usuario });
+
     if (isOpen) {
       setFormData(construirFormulario(usuario));
       setErrors({});
@@ -122,7 +131,7 @@ export const ModalEdicionPerfil = ({ isOpen, onClose, usuario, onSave }) => {
       setProcesandoFoto(false);
       setGuardando(false);
     }
-  }, [isOpen, usuario]);
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;

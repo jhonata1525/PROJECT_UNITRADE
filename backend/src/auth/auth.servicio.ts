@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 import { Prisma } from '../generated/prisma/client.js';
 import { RegistroDto } from './dto/registro.dto.js';
@@ -14,7 +15,10 @@ import { LoginDto } from './dto/login.dto.js';
 
 @Injectable()
 export class ServicioAuth {
-  constructor(private readonly prisma: ServicioPrisma) {}
+  constructor(
+    private readonly prisma: ServicioPrisma,
+    private readonly jwt: JwtService,
+  ) {}
 
   async registrar(dto: RegistroDto) {
     const correo = dto.correo.trim().toLowerCase();
@@ -125,7 +129,13 @@ export class ServicioAuth {
       throw new UnauthorizedException('Correo o contraseña incorrectos');
     }
 
+    const accessToken = await this.jwt.signAsync({
+      sub: usuario.id,
+      rol: usuario.rol,
+    });
+
     return {
+      accessToken,
       usuario: {
         id: usuario.id,
         nombre: usuario.nombre,

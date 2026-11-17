@@ -1,21 +1,17 @@
 import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import { CheckoutDto } from './dto/checkout.dto.js';
 import { HistorialPagosDto } from './dto/historial-pagos.dto.js';
 import { ServicioPagos } from './servicio-pagos.js';
 
 @ApiTags('Pagos (HU-06)')
+@ApiBearerAuth()
 @Controller('payments')
 export class ControladorPagos {
   constructor(private readonly servicioPagos: ServicioPagos) {}
 
   @Post('checkout')
-  @ApiHeader({
-    name: 'x-usuario-id',
-    required: false,
-    description: 'Id del usuario que paga (temporal, hasta implementar JWT)',
-  })
   @ApiHeader({
     name: 'idempotency-key',
     required: false,
@@ -41,11 +37,6 @@ export class ControladorPagos {
   }
 
   @Get('history')
-  @ApiHeader({
-    name: 'x-usuario-id',
-    required: false,
-    description: 'Id del usuario (temporal, hasta implementar JWT)',
-  })
   @ApiOperation({ summary: 'Historial de pagos realizados o recibidos' })
   historial(@UsuarioId() usuarioId: string, @Query() dto: HistorialPagosDto) {
     return this.servicioPagos.historial(usuarioId, dto);

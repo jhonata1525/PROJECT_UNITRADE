@@ -146,10 +146,6 @@ export const OnboardingEstudiante = () => {
   const { usuario } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [fase, setFase] = React.useState("cerrado");
-  const [indice, setIndice] = React.useState(0);
-  const [rectObjetivo, setRectObjetivo] = React.useState(null);
-
   const claveAlmacen = usuario?.id
     ? `unitrade_onboarding_${VERSION_ONBOARDING}_${usuario.id}`
     : null;
@@ -157,6 +153,37 @@ export const OnboardingEstudiante = () => {
     location.pathname === "/login" ||
     location.pathname === "/registro" ||
     location.pathname.startsWith("/verificar");
+
+  const [fase, setFase] = React.useState(() => {
+    if (!claveAlmacen || esRutaPublica) return "cerrado";
+    return localStorage.getItem(claveAlmacen) ? "cerrado" : "bienvenida";
+  });
+  const [indice, setIndice] = React.useState(0);
+  const [rectObjetivo, setRectObjetivo] = React.useState(null);
+
+  const [contextoAnterior, setContextoAnterior] = React.useState({
+    claveAlmacen,
+    esRutaPublica,
+  });
+  if (
+    claveAlmacen !== contextoAnterior.claveAlmacen ||
+    esRutaPublica !== contextoAnterior.esRutaPublica
+  ) {
+    setContextoAnterior({ claveAlmacen, esRutaPublica });
+
+    if (!claveAlmacen || esRutaPublica) {
+      setFase("cerrado");
+    } else if (!localStorage.getItem(claveAlmacen)) {
+      setIndice(0);
+      setFase("bienvenida");
+    }
+  }
+
+  const [faseAnterior, setFaseAnterior] = React.useState(fase);
+  if (fase !== faseAnterior) {
+    setFaseAnterior(fase);
+    if (fase !== "tour") setRectObjetivo(null);
+  }
 
   const marcarComoVisto = React.useCallback(() => {
     if (claveAlmacen) {
@@ -191,19 +218,6 @@ export const OnboardingEstudiante = () => {
       window.removeEventListener("unitrade:abrir-onboarding", abrir);
   }, []);
 
-  // Se muestra automáticamente la primera vez que el usuario inicia sesión.
-  React.useEffect(() => {
-    if (!claveAlmacen || esRutaPublica) {
-      setFase("cerrado");
-      return;
-    }
-    const yaVisto = localStorage.getItem(claveAlmacen);
-    if (!yaVisto) {
-      setIndice(0);
-      setFase("bienvenida");
-    }
-  }, [claveAlmacen, esRutaPublica]);
-
   // Bloquea el scroll de la página mientras el onboarding está abierto.
   React.useEffect(() => {
     if (fase === "cerrado") return undefined;
@@ -213,8 +227,6 @@ export const OnboardingEstudiante = () => {
       document.body.style.overflow = overflowAnterior;
     };
   }, [fase]);
-
-  const total = fase === "tour" ? PASOS_TOUR.length : DIAPOSITIVAS.length;
 
   const avanzar = React.useCallback(() => {
     if (fase === "bienvenida") {
@@ -254,10 +266,7 @@ export const OnboardingEstudiante = () => {
 
   // Localiza el elemento del menú que ilumina cada paso del tour.
   React.useLayoutEffect(() => {
-    if (fase !== "tour") {
-      setRectObjetivo(null);
-      return undefined;
-    }
+    if (fase !== "tour") return undefined;
 
     const actualizar = () => {
       const selector = `[data-tour="${PASOS_TOUR[indice]?.clave}"]`;

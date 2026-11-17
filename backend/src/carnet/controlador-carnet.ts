@@ -1,5 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Publico } from '../auth/decorador-publico.js';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import { GuardiaLimiteCarnet } from './guardia-limite-carnet.js';
 import { ServicioCarnet } from './servicio-carnet.js';
@@ -10,11 +11,7 @@ export class ControladorCarnet {
   constructor(private readonly servicioCarnet: ServicioCarnet) {}
 
   @Get('mio')
-  @ApiHeader({
-    name: 'x-usuario-id',
-    required: true,
-    description: 'Id del usuario dueño del carnet',
-  })
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Obtiene (o emite) el token y código del carnet del usuario',
   })
@@ -22,6 +19,7 @@ export class ControladorCarnet {
     return this.servicioCarnet.obtenerMiCarnet(usuarioId);
   }
 
+  @Publico()
   @Get('verificar/:token')
   @UseGuards(GuardiaLimiteCarnet)
   @ApiOperation({

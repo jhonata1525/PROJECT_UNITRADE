@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
 import { ControladorApp } from './app.controlador.js';
 import { ServicioApp } from './app.servicio.js';
 import { ControladorAuth } from './auth/auth.controlador.js';
 import { ServicioAuth } from './auth/auth.servicio.js';
+import { GuardiaJwt } from './auth/guardia-jwt.js';
 import { ModuloBilletera } from './billetera/modulo-billetera.js';
 import { ModuloPagos } from './pagos/modulo-pagos.js';
 import { ModuloPasarela } from './pasarela/modulo-pasarela.js';
@@ -19,6 +22,17 @@ import { ModuloCarnet } from './carnet/modulo-carnet.js';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: config.get('JWT_EXPIRES_IN') ?? '7d',
+        },
+      }),
+    }),
     ModuloPrisma,
     ModuloPasarela,
     ModuloPagos,
@@ -29,6 +43,11 @@ import { ModuloCarnet } from './carnet/modulo-carnet.js';
     ModuloArticulos,
   ],
   controllers: [ControladorApp, ControladorAuth],
-  providers: [ServicioApp, ServicioAuth],
+  providers: [
+    ServicioApp,
+    ServicioAuth,
+    GuardiaJwt,
+    { provide: APP_GUARD, useClass: GuardiaJwt },
+  ],
 })
 export class ModuloApp {}

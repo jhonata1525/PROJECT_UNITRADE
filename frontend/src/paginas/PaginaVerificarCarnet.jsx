@@ -21,20 +21,24 @@ export default function PaginaVerificarCarnet() {
   const [resultado, setResultado] = React.useState(null);
   const [error, setError] = React.useState("");
 
-  React.useEffect(() => {
-    let activo = true;
-
-    setCargando(true);
+  const [tokenAnterior, setTokenAnterior] = React.useState(null);
+  if (token !== tokenAnterior) {
+    setTokenAnterior(token);
     setResultado(null);
-    setError("");
 
-    if (!token) {
+    if (token) {
+      setCargando(true);
+      setError("");
+    } else {
       setError("El enlace no incluye un código de carnet.");
       setCargando(false);
-      return () => {
-        activo = false;
-      };
     }
+  }
+
+  React.useEffect(() => {
+    if (!token) return undefined;
+
+    let activo = true;
 
     verificarCarnet(token)
       .then((data) => {

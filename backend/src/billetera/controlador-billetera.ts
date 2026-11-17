@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsuarioId } from '../comun/usuario-id.decorator.js';
 import { DepositoDto } from './dto/deposito.dto.js';
 import { HistorialBilleteraDto } from './dto/historial-billetera.dto.js';
@@ -7,11 +7,7 @@ import { SolicitarRetiroDto } from './dto/solicitar-retiro.dto.js';
 import { ServicioBilletera } from './servicio-billetera.js';
 
 @ApiTags('Billetera (HU-10)')
-@ApiHeader({
-  name: 'x-usuario-id',
-  required: false,
-  description: 'Id del usuario (temporal, hasta implementar JWT)',
-})
+@ApiBearerAuth()
 @Controller('wallet')
 export class ControladorBilletera {
   constructor(private readonly servicioBilletera: ServicioBilletera) {}

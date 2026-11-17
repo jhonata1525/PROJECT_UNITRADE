@@ -3,7 +3,7 @@
  * Cliente HTTP de la billetera virtual (HU-10).
  *
  * Todos los datos viven en PostgreSQL y se consultan al backend NestJS.
- * Mientras no exista JWT, el usuario se identifica con `x-usuario-id`.
+ * La identidad del usuario viaja en el token JWT del header Authorization.
  *
  * Endpoints:
  * - GET  /wallet/balance    → saldos y totales
@@ -15,10 +15,6 @@
  */
 
 import servicioClienteApi from "./servicioClienteApi";
-
-const cabecerasUsuario = (usuarioId) => ({
-  headers: { "x-usuario-id": usuarioId },
-});
 
 /**
  * Convierte un error de Axios en un mensaje legible en español.
@@ -42,21 +38,17 @@ export const mensajeErrorBilletera = (
 };
 
 /** Saldo disponible, pendiente, ganado y retirado del usuario. */
-export const obtenerBalance = async (usuarioId) => {
-  const { data } = await servicioClienteApi.get(
-    "/wallet/balance",
-    cabecerasUsuario(usuarioId)
-  );
+export const obtenerBalance = async (_usuarioId) => {
+  const { data } = await servicioClienteApi.get("/wallet/balance");
   return data;
 };
 
 /** Historial de movimientos (ingresos, retiros y recargas). */
 export const obtenerHistorialTransacciones = async (
-  usuarioId,
+  _usuarioId,
   { limite = 50, tipo } = {}
 ) => {
   const { data } = await servicioClienteApi.get("/wallet/historial", {
-    ...cabecerasUsuario(usuarioId),
     params: {
       limite,
       ...(tipo ? { tipo } : {}),
@@ -75,18 +67,14 @@ export const listarEntidades = async () => {
  * Solicita un retiro. El backend retiene el saldo, ejecuta el payout sandbox
  * y devuelve el resultado. Si el payout falla, el saldo se restaura.
  */
-export const solicitarRetiro = async (usuarioId, datosRetiro) => {
+export const solicitarRetiro = async (_usuarioId, datosRetiro) => {
   const { metodo, cuenta, monto, forzarFallo } = datosRetiro;
-  const { data } = await servicioClienteApi.post(
-    "/wallet/withdraw",
-    {
-      metodo,
-      cuenta,
-      monto,
-      ...(typeof forzarFallo === "boolean" ? { forzarFallo } : {}),
-    },
-    cabecerasUsuario(usuarioId)
-  );
+  const { data } = await servicioClienteApi.post("/wallet/withdraw", {
+    metodo,
+    cuenta,
+    monto,
+    ...(typeof forzarFallo === "boolean" ? { forzarFallo } : {}),
+  });
   return data;
 };
 
@@ -94,20 +82,18 @@ export const solicitarRetiro = async (usuarioId, datosRetiro) => {
  * Recarga saldo de prueba (solo sandbox).
  * No cobra dinero real; sirve para demostrar la billetera y el retiro.
  */
-export const recargarSaldo = async (usuarioId, datosRecarga) => {
+export const recargarSaldo = async (_usuarioId, datosRecarga) => {
   const { monto, metodo } = datosRecarga;
-  const { data } = await servicioClienteApi.post(
-    "/wallet/deposit",
-    { monto, metodo },
-    cabecerasUsuario(usuarioId)
-  );
+  const { data } = await servicioClienteApi.post("/wallet/deposit", {
+    monto,
+    metodo,
+  });
   return data;
 };
 
 /** Solicitudes de retiro del usuario. */
-export const obtenerRetiros = async (usuarioId, limite = 20) => {
+export const obtenerRetiros = async (_usuarioId, limite = 20) => {
   const { data } = await servicioClienteApi.get("/wallet/withdrawals", {
-    ...cabecerasUsuario(usuarioId),
     params: { limite },
   });
   return data;

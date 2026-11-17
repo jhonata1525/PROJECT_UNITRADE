@@ -105,7 +105,16 @@ export const FormularioArticuloModal = ({
   const precioValido = formData.precioPorDia && !isNaN(precioNumerico) && precioNumerico >= TARIFA_MINIMA;
   const usaTarifaSugerida = precioNumerico === tarifaSugerida && tarifaSugerida > 0;
 
-  React.useEffect(() => {
+  const [aperturaAnterior, setAperturaAnterior] = React.useState({
+    isOpen: false,
+    initialData: null,
+  });
+  if (
+    isOpen !== aperturaAnterior.isOpen ||
+    initialData !== aperturaAnterior.initialData
+  ) {
+    setAperturaAnterior({ isOpen, initialData });
+
     if (isOpen) {
       if (initialData) {
         setFormData({
@@ -130,8 +139,11 @@ export const FormularioArticuloModal = ({
       setPreviewError(false);
       setFotoError("");
       setProcesandoFoto(false);
-      if (inputFotoRef.current) inputFotoRef.current.value = "";
     }
+  }
+
+  React.useEffect(() => {
+    if (isOpen && inputFotoRef.current) inputFotoRef.current.value = "";
   }, [isOpen, initialData]);
 
   // Auto-actualizar precio cuando cambia la categoría (si estaba usando la sugerida)

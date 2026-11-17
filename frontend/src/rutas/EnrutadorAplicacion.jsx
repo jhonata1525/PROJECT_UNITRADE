@@ -24,18 +24,37 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ProveedorAutenticacion, useAuth } from "../contexto/ContextoAutenticacion";
-import PaginaDashboard from "../paginas/PaginaDashboard";
-import PaginaBilletera from "../paginas/PaginaBilletera";
-import PaginaPagoReserva from "../paginas/PaginaPagoReserva";
-import PaginaMisArticulos from "../paginas/PaginaMisArticulos";
-import PaginaMisAlquileres from "../paginas/PaginaMisAlquileres";
-import PaginaCatalogo from "../paginas/PaginaCatalogo";
-import PaginaPerfil from "../paginas/PaginaPerfil";
-import PaginaInicioSesion from "../paginas/PaginaInicioSesion";
-import PaginaRegistro from "../paginas/PaginaRegistro";
-import PaginaVerificarCarnet from "../paginas/PaginaVerificarCarnet";
-import PaginaEscanearCarnet from "../paginas/PaginaEscanearCarnet";
 import { OnboardingEstudiante } from "../componentes/onboarding/OnboardingEstudiante";
+
+const PaginaDashboard = React.lazy(() => import("../paginas/PaginaDashboard"));
+const PaginaBilletera = React.lazy(() => import("../paginas/PaginaBilletera"));
+const PaginaPagoReserva = React.lazy(() => import("../paginas/PaginaPagoReserva"));
+const PaginaMisArticulos = React.lazy(() => import("../paginas/PaginaMisArticulos"));
+const PaginaMisAlquileres = React.lazy(() => import("../paginas/PaginaMisAlquileres"));
+const PaginaCatalogo = React.lazy(() => import("../paginas/PaginaCatalogo"));
+const PaginaPerfil = React.lazy(() => import("../paginas/PaginaPerfil"));
+const PaginaInicioSesion = React.lazy(() => import("../paginas/PaginaInicioSesion"));
+const PaginaRegistro = React.lazy(() => import("../paginas/PaginaRegistro"));
+const PaginaVerificarCarnet = React.lazy(() => import("../paginas/PaginaVerificarCarnet"));
+const PaginaEscanearCarnet = React.lazy(() => import("../paginas/PaginaEscanearCarnet"));
+
+const CargadorRuta = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <svg
+        className="animate-spin h-12 w-12 text-[var(--color-neon)] mx-auto mb-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <circle className="opacity-25" cx="12" cy="12" r="10" />
+        <path className="opacity-75" d="M12 2a10 10 0 0 1 10 10" />
+      </svg>
+      <p className="text-gray-400">Cargando…</p>
+    </div>
+  </div>
+);
 
 /**
  * ProtectedRoute - Wrapper que protege rutas requiriendo autenticación
@@ -76,7 +95,8 @@ const EnrutadorAplicacion = () => {
   return (
     <Router>
       <ProveedorAutenticacion>
-        <Routes>
+        <React.Suspense fallback={<CargadorRuta />}>
+          <Routes>
           {/* Rutas públicas */}
           <Route path="/login" element={<PaginaInicioSesion />} />
           <Route path="/registro" element={<PaginaRegistro />} />
@@ -153,7 +173,8 @@ const EnrutadorAplicacion = () => {
 
           {/* Fallback para rutas no encontradas */}
           <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+          </Routes>
+        </React.Suspense>
         <OnboardingEstudiante />
       </ProveedorAutenticacion>
     </Router>

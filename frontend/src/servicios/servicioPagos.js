@@ -13,17 +13,19 @@
 
 import servicioClienteApi from "./servicioClienteApi";
 
-const cabecerasUsuario = (usuarioId, claveIdempotencia) => ({
+const cabecerasIdempotencia = (claveIdempotencia) => ({
   headers: {
-    "x-usuario-id": usuarioId,
     ...(claveIdempotencia ? { "idempotency-key": claveIdempotencia } : {}),
   },
 });
 
 /** Genera una clave de idempotencia compatible con navegadores sin Web Crypto. */
 export const generarClaveIdempotencia = () => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+  if (
+    typeof globalThis.crypto !== "undefined" &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    return globalThis.crypto.randomUUID();
   }
   return `web-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 };
@@ -51,7 +53,7 @@ export const mensajeErrorPagos = (
  * @param {string} [claveIdempotencia] - Evita cobrar dos veces la misma intención.
  */
 export const procesarCheckout = async (
-  usuarioId,
+  _usuarioId,
   datosPago,
   claveIdempotencia
 ) => {
@@ -62,7 +64,7 @@ export const procesarCheckout = async (
       metodo: "billetera",
       moneda: "COP",
     },
-    cabecerasUsuario(usuarioId, claveIdempotencia)
+    cabecerasIdempotencia(claveIdempotencia)
   );
   return data;
 };
@@ -76,9 +78,8 @@ export const consultarEstadoPago = async (identificador) => {
 };
 
 /** Historial de pagos del usuario (como arrendatario o propietario). */
-export const obtenerHistorialPagos = async (usuarioId, limite = 20) => {
+export const obtenerHistorialPagos = async (_usuarioId, limite = 20) => {
   const { data } = await servicioClienteApi.get("/payments/history", {
-    ...cabecerasUsuario(usuarioId),
     params: { limite },
   });
   return data;

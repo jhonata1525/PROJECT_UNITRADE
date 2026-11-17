@@ -36,11 +36,25 @@ export const PaginaBilletera = () => {
   const [totalRetirado, setTotalRetirado] = useState(0);
   const [retirosProceso, setRetirosProceso] = useState(0);
   const [historial, setHistorial] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [cargandoInicial, setCargandoInicial] = useState(true);
+  const [loading, setLoading] = useState(Boolean(usuarioId));
+  const [cargandoInicial, setCargandoInicial] = useState(Boolean(usuarioId));
   const [modalAbierto, setModalAbierto] = useState(false);
   const [mostrarModalRecarga, setMostrarModalRecarga] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    usuarioId ? "" : "No se pudo identificar al usuario. Vuelve a iniciar sesión."
+  );
+
+  const [usuarioIdAnterior, setUsuarioIdAnterior] = useState(usuarioId);
+  if (usuarioId !== usuarioIdAnterior) {
+    setUsuarioIdAnterior(usuarioId);
+    setError(
+      usuarioId
+        ? ""
+        : "No se pudo identificar al usuario. Vuelve a iniciar sesión."
+    );
+    setLoading(Boolean(usuarioId));
+    setCargandoInicial(Boolean(usuarioId));
+  }
   const [aviso, setAviso] = useState("");
 
   const cargarDatos = useCallback(async () => {
@@ -76,8 +90,45 @@ export const PaginaBilletera = () => {
   }, [usuarioId]);
 
   useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+    if (!usuarioId) return undefined;
+
+    let activo = true;
+
+    Promise.all([
+      obtenerBalance(usuarioId),
+      obtenerHistorialTransacciones(usuarioId, { limite: 50 }),
+    ])
+      .then(([balance, transacciones]) => {
+        if (!activo) return;
+
+        setSaldoDisponible(balance?.saldoDisponible || 0);
+        setSaldoPendiente(balance?.saldoPendiente || 0);
+        setTotalGanado(balance?.totalGanado || 0);
+        setTotalRetirado(balance?.totalRetirado || 0);
+        setRetirosProceso(balance?.retirosProceso || 0);
+        setHistorial(Array.isArray(transacciones) ? transacciones : []);
+      })
+      .catch((err) => {
+        if (activo) {
+          setError(
+            mensajeErrorBilletera(
+              err,
+              "Error al cargar los datos de la billetera."
+            )
+          );
+        }
+      })
+      .finally(() => {
+        if (activo) {
+          setLoading(false);
+          setCargandoInicial(false);
+        }
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [usuarioId]);
 
   useEffect(() => {
     if (!aviso) return;

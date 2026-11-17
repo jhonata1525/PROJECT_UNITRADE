@@ -46,18 +46,25 @@ export const PaginaPerfil = () => {
   const { usuario, actualizarUsuario } = useAuth();
   const [editandoPerfil, setEditandoPerfil] = React.useState(false);
   const [carnet, setCarnet] = React.useState(null);
-  const [cargandoCarnet, setCargandoCarnet] = React.useState(true);
+  const [cargandoCarnet, setCargandoCarnet] = React.useState(
+    Boolean(usuario?.id)
+  );
   const [copiado, setCopiado] = React.useState("");
   const temporizadorCopiado = React.useRef(null);
 
+  const [usuarioIdAnterior, setUsuarioIdAnterior] = React.useState(
+    usuario?.id ?? null
+  );
+  if ((usuario?.id ?? null) !== usuarioIdAnterior) {
+    setUsuarioIdAnterior(usuario?.id ?? null);
+    setCarnet(null);
+    setCargandoCarnet(Boolean(usuario?.id));
+  }
+
   React.useEffect(() => {
-    if (!usuario?.id) {
-      setCargandoCarnet(false);
-      return undefined;
-    }
+    if (!usuario?.id) return undefined;
 
     let activo = true;
-    setCargandoCarnet(true);
     obtenerMiCarnet(usuario.id)
       .then((data) => {
         if (activo) setCarnet(data);
