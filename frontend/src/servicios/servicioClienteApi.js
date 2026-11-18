@@ -36,11 +36,59 @@ import axios from "axios";
  */
 export const servicioClienteApi = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
-  timeout: 30000,
+  timeout: 50000,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+/**
+ * Interceptor de solicitud: registra la hora de inicio y, si la respuesta
+ * tarda más de 4 segundos (arranque en frío en Render), dispara un evento
+ * global `unitrade:solicitud-lenta` para que la UI muestre un mensaje claro
+ * sin bloquear la aplicación.
+ */
+const TIEMPO_LARGO_MS = 4000;
+servicioClienteApi.interceptors.request.use((config) => {
+  config.metadata = config.metadata || {};
+  config.metadata.inicio = Date.now();
+  return config;
+});
+
+servicioClienteApi.interceptors.response.use(
+  (response) => {
+    const inicio = response.config?.metadata?.inicio;
+    if (inicio && Date.now() - inicio > TIEMPO_LARGO_MS) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("unitrade:solicitud-lenta", {
+            detail: { url: response.config?.url, ms: Date.now() - inicio },
+          })
+        );
+      }
+      console.warn(
+        `[UniTrade] Solicitud lenta (>4s): ${response.config?.url} (${Date.now() - inicio}ms)`
+      );
+    }
+    return response;
+  },
+  (error) => {
+    const inicio = error.config?.metadata?.inicio;
+    if (inicio && Date.now() - inicio > TIEMPO_LARGO_MS) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("unitrade:solicitud-lenta", {
+            detail: { url: error.config?.url, ms: Date.now() - inicio },
+          })
+        );
+      }
+      console.warn(
+        `[UniTrade] Solicitud lenta fallida (>4s): ${error.config?.url} (${Date.now() - inicio}ms)`
+      );
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Interceptor de petición: Adjunta el token JWT automáticamente

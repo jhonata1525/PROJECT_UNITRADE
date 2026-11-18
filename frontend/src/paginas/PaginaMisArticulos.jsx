@@ -1,13 +1,13 @@
 /**
  * @file PaginaMisArticulos.jsx
- * PÃ¡gina completa "Mis ArtÃ­culos en Alquiler" con glassmorphism.
- * - Header con tÃ­tulo, resumen y botÃ³n publicar
- * - Buscador y filtro por categorÃ­as
- * - Grid de tarjetas responsive con foto, tÃ­tulo, categorÃ­a, precio, estado
+ * Página completa "Mis Artículos en Alquiler" con glassmorphism.
+ * - Header con título, resumen y botón publicar
+ * - Buscador y filtro por categorías
+ * - Grid de tarjetas responsive con foto, título, categoría, precio, estado
  * - Acciones: Cambiar estado (Pausar/Activar) y Eliminar
  * - Modal FormularioArticuloModal para crear/editar
  * - Persistencia en la tabla `articulo` del backend (PostgreSQL)
- * - MigraciÃ³n automÃ¡tica de los artÃ­culos que estaban en localStorage
+ * - Migración automática de los artículos que estaban en localStorage
  */
 
 import React from "react";
@@ -61,7 +61,7 @@ const QRScanner = React.lazy(() =>
   import("../componentes/comunes/QRScanner")
 );
 
-const CATEGORIAS = ["Todas", "Libros", "Laboratorio", "Calculadoras", "TecnologÃ­a", "Deportes", "Otros"];
+const CATEGORIAS = ["Todas", "Libros", "Laboratorio", "Calculadoras", "Tecnología", "Deportes", "Otros"];
 const STORAGE_KEY = "unitrade_mis_articulos";
 
 const ESTADOS_CONFIG = {
@@ -70,7 +70,7 @@ const ESTADOS_CONFIG = {
   pausado: { label: "Pausado", color: "bg-amber-500", text: "text-amber-400", icon: Play },
 };
 
-/** Lee los artÃ­culos que quedaron guardados en el navegador (formato antiguo). */
+/** Lee los artículos que quedaron guardados en el navegador (formato antiguo). */
 const leerArticulosLocales = () => {
   try {
     const guardados = localStorage.getItem(STORAGE_KEY);
@@ -78,7 +78,7 @@ const leerArticulosLocales = () => {
     const datos = JSON.parse(guardados);
     return Array.isArray(datos) ? datos : [];
   } catch (error) {
-    console.error("No se pudieron leer los artÃ­culos locales:", error);
+    console.error("No se pudieron leer los artículos locales:", error);
     return [];
   }
 };
@@ -126,7 +126,7 @@ export const PaginaMisArticulos = () => {
         if (!cancelado) {
           setAviso({
             tipo: "error",
-            mensaje: "Inicia sesiÃ³n para ver y administrar tus artÃ­culos.",
+            mensaje: "Inicia sesión para ver y administrar tus artículos.",
           });
           setLoading(false);
         }
@@ -156,8 +156,8 @@ export const PaginaMisArticulos = () => {
 
         if (migrados > 0) {
           setAviso({
-            tipo: "Ã©xito",
-            mensaje: `Se sincronizaron ${migrados} artÃ­culo(s) con la base de datos.`,
+            tipo: "éxito",
+            mensaje: `Se sincronizaron ${migrados} artículo(s) con la base de datos.`,
           });
         }
 
@@ -165,11 +165,11 @@ export const PaginaMisArticulos = () => {
           setAviso({
             tipo: "error",
             mensaje:
-              `${pendientes} artÃ­culo(s) guardados en este navegador no se pudieron migrar. ` +
-              "Revisa que tengan descripciÃ³n y una tarifa de al menos $1.000.",
+              `${pendientes} artículo(s) guardados en este navegador no se pudieron migrar. ` +
+              "Revisa que tengan descripción y una tarifa de al menos $1.000.",
           });
         } else if (articulosLocales.length > 0) {
-          // Todo quedÃ³ en PostgreSQL: ya no hace falta duplicarlo en el navegador.
+          // Todo quedó en PostgreSQL: ya no hace falta duplicarlo en el navegador.
           localStorage.removeItem(STORAGE_KEY);
         }
       } catch (error) {
@@ -180,7 +180,7 @@ export const PaginaMisArticulos = () => {
           tipo: "error",
           mensaje: mensajeErrorArticulos(
             error,
-            "No se pudieron cargar los artÃ­culos desde la base de datos. " +
+            "No se pudieron cargar los artículos desde la base de datos. " +
               "Se muestran los guardados en este navegador."
           ),
         });
@@ -243,15 +243,15 @@ export const PaginaMisArticulos = () => {
       setEditandoArticulo(null);
       setModalAbierto(false);
       setAviso({
-        tipo: "Ã©xito",
+        tipo: "éxito",
         mensaje: editando
-          ? "ArtÃ­culo actualizado en la base de datos."
-          : "ArtÃ­culo publicado en la base de datos.",
+          ? "Artículo actualizado en la base de datos."
+          : "Artículo publicado en la base de datos.",
       });
     } catch (error) {
       setAviso({
         tipo: "error",
-        mensaje: mensajeErrorArticulos(error, "No se pudo guardar el artÃ­culo."),
+        mensaje: mensajeErrorArticulos(error, "No se pudo guardar el artículo."),
       });
     } finally {
       setGuardando(false);
@@ -278,13 +278,13 @@ export const PaginaMisArticulos = () => {
       setArticulos((prev) => prev.filter((a) => a.id !== id));
       setEliminandoId(null);
       setAviso({
-        tipo: "Ã©xito",
-        mensaje: resultado.mensaje || "ArtÃ­culo eliminado de la base de datos.",
+        tipo: "éxito",
+        mensaje: resultado.mensaje || "Artículo eliminado de la base de datos.",
       });
     } catch (error) {
       setAviso({
         tipo: "error",
-        mensaje: mensajeErrorArticulos(error, "No se pudo eliminar el artÃ­culo."),
+        mensaje: mensajeErrorArticulos(error, "No se pudo eliminar el artículo."),
       });
     } finally {
       setGuardando(false);
@@ -317,18 +317,18 @@ export const PaginaMisArticulos = () => {
         prev.map((a) => (a.id === art.id ? actualizado : a))
       );
       setAviso({
-        tipo: "Ã©xito",
+        tipo: "éxito",
         mensaje:
           nuevoEstado === "pausado"
-            ? "El artÃ­culo se pausÃ³ en la base de datos."
-            : "El artÃ­culo se activÃ³ en la base de datos.",
+            ? "El artículo se pausó en la base de datos."
+            : "El artículo se activó en la base de datos.",
       });
     } catch (error) {
       setAviso({
         tipo: "error",
         mensaje: mensajeErrorArticulos(
           error,
-          "No se pudo cambiar el estado del artÃ­culo."
+          "No se pudo cambiar el estado del artículo."
         ),
       });
     } finally {
@@ -359,12 +359,12 @@ export const PaginaMisArticulos = () => {
       setCodigoDevolucion("");
       setEscanerAbierto(false);
       setAviso({
-        tipo: "Ã©xito",
-        mensaje: resultado.mensaje || "DevoluciÃ³n confirmada. El artÃ­culo estÃ¡ disponible.",
+        tipo: "éxito",
+        mensaje: resultado.mensaje || "Devolución confirmada. El artículo está disponible.",
       });
     } catch (error) {
       setErrorDevolucion(
-        mensajeErrorReservas(error, "No se pudo confirmar la devoluciÃ³n.")
+        mensajeErrorReservas(error, "No se pudo confirmar la devolución.")
       );
     } finally {
       setConfirmandoDevolucion(false);
@@ -381,7 +381,7 @@ export const PaginaMisArticulos = () => {
       <div className="min-h-screen flex items-center justify-center pt-16 pb-20">
         <div className="text-center">
           <Loader2 className="animate-spin h-12 w-12 text-[var(--color-neon)] mx-auto mb-4" />
-          <p className="text-gray-400">Cargando tus artÃ­culos...</p>
+          <p className="text-gray-400">Cargando tus artículos...</p>
         </div>
       </div>
     );
@@ -397,9 +397,9 @@ export const PaginaMisArticulos = () => {
           <div className="mb-6 animate-slide-up">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-white">Mis ArtÃ­culos en Alquiler</h1>
+                <h1 className="text-3xl font-bold text-white">Mis Artículos en Alquiler</h1>
                 <p className="text-gray-400 mt-1">
-                  Gestiona tus publicaciones y controla el estado de cada artÃ­culo
+                  Gestiona tus publicaciones y controla el estado de cada artículo
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -408,7 +408,7 @@ export const PaginaMisArticulos = () => {
                   className="btn-secondary w-full sm:w-auto flex items-center justify-center gap-2"
                 >
                   <Compass className="w-5 h-5" />
-                  Explorar catÃ¡logo
+                  Explorar catálogo
                 </Link>
                 <button onClick={abrirModalNuevo} className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2">
                   <Plus className="w-5 h-5" />
@@ -471,11 +471,11 @@ export const PaginaMisArticulos = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o descripciÃ³n..."
+                  placeholder="Buscar por nombre o descripción..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="glass-input pl-10"
-                  aria-label="Buscar artÃ­culos"
+                  aria-label="Buscar artículos"
                 />
               </div>
               <div className="relative">
@@ -484,7 +484,7 @@ export const PaginaMisArticulos = () => {
                   value={categoriaFiltro}
                   onChange={(e) => setCategoriaFiltro(e.target.value)}
                   className="glass-input pl-10 pr-10 bg-[var(--color-surface)] cursor-pointer appearance-none"
-                  aria-label="Filtrar por categorÃ­a"
+                  aria-label="Filtrar por categoría"
                 >
                   {CATEGORIAS.map((cat) => (
                     <option key={cat} value={cat}>
@@ -496,22 +496,22 @@ export const PaginaMisArticulos = () => {
             </div>
           </div>
 
-          {/* Carrusel de ArtÃ­culos */}
+          {/* Carrusel de Artículos */}
           {articulosFiltrados.length === 0 ? (
             <div className="glass-panel p-12 text-center animate-fade-in">
               <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
-                {articulos.length === 0 ? "No tienes artÃ­culos publicados" : "No hay resultados"}
+                {articulos.length === 0 ? "No tienes artículos publicados" : "No hay resultados"}
               </h3>
               <p className="text-gray-400 mb-6">
                 {articulos.length === 0
-                  ? "Comienza publicando tu primer artÃ­culo para alquilar"
-                  : "Intenta cambiar los filtros o la bÃºsqueda"}
+                  ? "Comienza publicando tu primer artículo para alquilar"
+                  : "Intenta cambiar los filtros o la búsqueda"}
               </p>
               {articulos.length === 0 && (
                 <button onClick={abrirModalNuevo} className="btn-primary inline-flex items-center gap-2">
                   <Plus className="w-5 h-5" />
-                  Publicar mi primer artÃ­culo
+                  Publicar mi primer artículo
                 </button>
               )}
             </div>
@@ -521,15 +521,15 @@ export const PaginaMisArticulos = () => {
               <div className="flex items-center justify-between gap-3 mb-3">
                 <p className="text-sm text-gray-400">
                   {articulosFiltrados.length}{" "}
-                  {articulosFiltrados.length === 1 ? "publicaciÃ³n" : "publicaciones"}
-                  <span className="hidden sm:inline"> Â· desliza o usa las flechas</span>
+                  {articulosFiltrados.length === 1 ? "publicación" : "publicaciones"}
+                  <span className="hidden sm:inline"> · desliza o usa las flechas</span>
                 </p>
                 <div className="hidden sm:flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => desplazarCarril(-1)}
                     className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/60 text-gray-300 hover:text-white hover:border-[var(--color-border-hover)] transition-colors"
-                    aria-label="Ver artÃ­culos anteriores"
+                    aria-label="Ver artículos anteriores"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
@@ -537,7 +537,7 @@ export const PaginaMisArticulos = () => {
                     type="button"
                     onClick={() => desplazarCarril(1)}
                     className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/60 text-gray-300 hover:text-white hover:border-[var(--color-border-hover)] transition-colors"
-                    aria-label="Ver mÃ¡s artÃ­culos"
+                    aria-label="Ver más artículos"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -548,7 +548,7 @@ export const PaginaMisArticulos = () => {
                 ref={carrilRef}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-thin pb-4 -mx-1 px-1"
                 role="list"
-                aria-label="Lista de artÃ­culos"
+                aria-label="Lista de artículos"
               >
                 {articulosFiltrados.map((art) => {
                   const estadoConfig = ESTADOS_CONFIG[art.estado];
@@ -567,7 +567,7 @@ export const PaginaMisArticulos = () => {
                     art.estadoAlquiler === "PENDIENTE_ENTREGA"
                       ? "Confirmar entrega con QR/PIN"
                       : art.estado === "en_alquiler"
-                        ? "Confirmar devoluciÃ³n con QR/PIN"
+                        ? "Confirmar devolución con QR/PIN"
                         : etiquetaEstado;
                   return (
                     <article
@@ -614,13 +614,13 @@ export const PaginaMisArticulos = () => {
                             {art.categoria}
                           </span>
                           <span>â€¢</span>
-                          <span>{formatCOP(Number(art.precioPorDia))}/dÃ­a</span>
+                          <span>{formatCOP(Number(art.precioPorDia))}/día</span>
                         </div>
                         <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-3">
                           {art.descripcion}
                         </p>
   
-                        {/* Contacto y disponibilidad del dueÃ±o (HU-03) */}
+                        {/* Contacto y disponibilidad del dueño (HU-03) */}
                         {(tieneDisponibilidad || sedeEntrega) && (
                           <div className="space-y-1 text-xs text-gray-400 mb-3">
                             {tieneDisponibilidad && (
@@ -669,8 +669,8 @@ export const PaginaMisArticulos = () => {
                             onClick={() => handleEliminar(art.id)}
                             className="shrink-0 p-2 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors disabled:opacity-50"
                             disabled={eliminandoId === art.id || cambiandoEstadoId === art.id}
-                            aria-label="Eliminar artÃ­culo"
-                            title="Eliminar artÃ­culo"
+                            aria-label="Eliminar artículo"
+                            title="Eliminar artículo"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -738,10 +738,10 @@ export const PaginaMisArticulos = () => {
                     <h2 id="validacion-reserva-titulo" className="text-xl font-bold text-white">
                       {tipoConfirmacion === "entrega"
                         ? "Confirmar entrega presencial"
-                        : "Confirmar devoluciÃ³n presencial"}
+                        : "Confirmar devolución presencial"}
                     </h2>
                     <p className="text-sm text-gray-400 mt-1">
-                      El arrendatario debe presentar su QR o PIN de 4 dÃ­gitos
+                      El arrendatario debe presentar su QR o PIN de 4 dígitos
                       en persona para{" "}
                       <span className="text-white">{articuloDevolucion.nombre}</span>.
                       {tipoConfirmacion === "devolucion" &&
@@ -751,13 +751,13 @@ export const PaginaMisArticulos = () => {
                 </div>
                 {escanerAbierto ? (
                   <React.Suspense
-                    fallback={<p className="text-sm text-gray-400">Cargando escÃ¡ner...</p>}
+                    fallback={<p className="text-sm text-gray-400">Cargando escáner...</p>}
                   >
                     <QRScanner
                       onScan={(codigo) => handleConfirmarDevolucion(undefined, codigo)}
                       onClose={() => setEscanerAbierto(false)}
                       onError={(error) => setErrorDevolucion(
-                        mensajeErrorReservas(error, "No se pudo abrir la cÃ¡mara.")
+                        mensajeErrorReservas(error, "No se pudo abrir la cámara.")
                       )}
                       className="mb-4"
                     />
@@ -781,7 +781,7 @@ export const PaginaMisArticulos = () => {
                       className="btn-secondary inline-flex items-center gap-2"
                     >
                       <Camera className="w-4 h-4" />
-                      Escanear QR con cÃ¡mara
+                      Escanear QR con cámara
                     </button>
                   </div>
                 )}
@@ -812,7 +812,7 @@ export const PaginaMisArticulos = () => {
                       ? "Validando..."
                       : tipoConfirmacion === "entrega"
                         ? "Validar entrega"
-                        : "Validar devoluciÃ³n"}
+                        : "Validar devolución"}
                   </button>
                 </div>
               </form>

@@ -22,9 +22,10 @@
  */
 
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ProveedorAutenticacion, useAuth } from "../contexto/ContextoAutenticacion";
 import { OnboardingEstudiante } from "../componentes/onboarding/OnboardingEstudiante";
+import { ScrollToTop } from "../componentes/comunes/ScrollToTop";
 
 const PaginaDashboard = React.lazy(() => import("../paginas/PaginaDashboard"));
 const PaginaBilletera = React.lazy(() => import("../paginas/PaginaBilletera"));
@@ -176,6 +177,7 @@ const EnrutadorAplicacion = () => {
           </Routes>
         </React.Suspense>
         <OnboardingEstudiante />
+        <ScrollToTop />
       </ProveedorAutenticacion>
     </Router>
   );

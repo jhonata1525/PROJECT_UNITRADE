@@ -216,29 +216,30 @@
 
 /* ========================================
    GLASSMORPHISM BASE CLASSES
+   Reducción de blur en móvil para 60 FPS en scroll de listas largas.
    ======================================== */
 .glass-surface,
 .glass-surface-hover {
-  background-color: rgba(24, 25, 32, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: rgba(24, 25, 32, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
 }
 
 .glass-card,
 .glass-card-hover {
-  background-color: rgba(24, 25, 32, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: rgba(15, 16, 21, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--color-border);
   border-radius: 1rem;
 }
 
 .glass-panel,
 .glass-panel-hover {
-  background-color: rgba(24, 25, 32, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: rgba(15, 16, 21, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--color-border);
   border-radius: 0.75rem;
 }
@@ -249,14 +250,13 @@
   transition: all 0.3s;
 }
 
-.glass-surface-hover:hover,
 .glass-card-hover:hover,
 .glass-panel-hover:hover {
   border-color: var(--color-border-hover);
   box-shadow: 
     0 0 0 1px var(--color-border-hover),
-    0 20px 40px -10px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 10px 20px -8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .glass-btn-primary {
@@ -285,15 +285,15 @@
   cursor: not-allowed;
 }
 
-.glass-btn-secondary {
+  .glass-btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.75rem 1.25rem;
   border-radius: 0.5rem;
-  background-color: rgba(24, 25, 32, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: rgba(24, 25, 32, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--color-border);
   color: white;
   font-weight: 500;
@@ -413,6 +413,7 @@
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
+    overflow-x: hidden;
   }
   body {
     font-family: var(--font-sans);
@@ -422,6 +423,8 @@
     background-color: var(--color-canvas);
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
   ::selection {
     background-color: rgba(59, 130, 246, 0.35);
@@ -524,11 +527,12 @@
 
   .card,
   .card-hover {
-    background-color: rgba(24, 25, 32, 0.5);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background-color: rgba(15, 16, 21, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border: 1px solid var(--color-border);
     border-radius: 1rem;
+    will-change: transform;
   }
 
   .card-hover {
@@ -538,8 +542,8 @@
     border-color: var(--color-border-hover);
     box-shadow: 
       0 0 0 1px var(--color-border-hover),
-      0 20px 40px -10px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      0 10px 20px -8px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .page-container {
@@ -609,9 +613,9 @@
     border-image: linear-gradient(to right, var(--color-neon), var(--color-accent-500)) 1;
   }
   .bg-glass {
-    background-color: rgba(24, 25, 32, 0.5);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background-color: rgba(15, 16, 21, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border: 1px solid var(--color-border);
   }
   .scrollbar-thin,
