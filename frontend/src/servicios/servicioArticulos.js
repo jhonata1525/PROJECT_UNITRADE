@@ -1,0 +1,113 @@
+/**
+ * @file servicioArticulos.js
+ * Cliente HTTP del módulo de artículos del backend.
+ *
+ * Reemplaza la persistencia en localStorage de "Mis Artículos": ahora todos
+ * los artículos viven en la tabla `articulo` de PostgreSQL y se comparten
+ * entre usuarios. La identidad del usuario viaja en el token JWT que el
+ * interceptor de Axios adjunta a cada petición.
+ */
+
+import servicioClienteApi from "./servicioClienteApi";
+
+/**
+ * Convierte un error de Axios en un mensaje legible en español.
+ * @param {unknown} error
+ * @param {string} mensajePorDefecto
+ * @returns {string}
+ */
+export const mensajeErrorArticulos = (
+  error,
+  mensajePorDefecto = "No se pudo completar la operación con los artículos."
+) => {
+  const respuesta = error?.response?.data;
+  const mensaje = respuesta?.message ?? respuesta?.mensaje;
+
+  if (Array.isArray(mensaje)) return mensaje.join(", ");
+  if (typeof mensaje === "string" && mensaje.trim()) return mensaje;
+  if (error?.message === "Network Error") {
+    return "No se pudo conectar con el servidor. Verifica que el backend esté encendido.";
+  }
+  return mensajePorDefecto;
+};
+
+/** Artículos publicados por el usuario autenticado. */
+export const listarMisArticulos = async (_usuarioId) => {
+  const { data } = await servicioClienteApi.get("/articulos/mios");
+  return data;
+};
+
+/** Catálogo público de artículos activos. */
+export const listarCatalogoArticulos = async (parametros = {}) => {
+  const { data } = await servicioClienteApi.get("/articulos", {
+    params: parametros,
+  });
+  return data;
+};
+
+/** Publica un artículo nuevo en la tabla `articulo`. */
+export const crearArticulo = async (_usuarioId, articulo) => {
+  const { data } = await servicioClienteApi.post("/articulos", articulo);
+  return data;
+};
+
+/** Actualiza un artículo propio. */
+export const actualizarArticulo = async (_usuarioId, id, cambios) => {
+  const { data } = await servicioClienteApi.patch(
+    `/articulos/${encodeURIComponent(id)}`,
+    cambios
+  );
+  return data;
+};
+
+/** Elimina (o pausa, si tiene reservas) un artículo propio. */
+export const eliminarArticulo = async (_usuarioId, id) => {
+  const { data } = await servicioClienteApi.delete(
+    `/articulos/${encodeURIComponent(id)}`
+  );
+  return data;
+};
+
+/**
+ * Importa los artículos que el usuario tenía guardados en localStorage.
+ * Es idempotente: el backend usa el id local como `claveExterna` para no
+ * duplicar registros si la sincronización se ejecuta varias veces.
+ */
+export const importarArticulos = async (_usuarioId, articulos) => {
+  const { data } = await servicioClienteApi.post("/articulos/importar", {
+    articulos,
+  });
+  return data;
+};
+
+/**
+ * Disponibilidad semanal del dueño y rangos ocupados por reservas activas.
+ * Se usa en el modal de reserva para no ofrecer horas ya ocupadas.
+ */
+export const obtenerAgendaArticulo = async (id) => {
+  const { data } = await servicioClienteApi.get(
+    `/articulos/${encodeURIComponent(id)}/agenda`
+  );
+  return data;
+};
+
+/**
+ * Promedio de tarifa por hora por categoría, calculado sobre el catálogo
+ * activo. Alimenta la sugerencia de precio del formulario (RN-05).
+ */
+export const obtenerTarifasSugeridas = async () => {
+  const { data } = await servicioClienteApi.get("/articulos/tarifas-sugeridas");
+  return data;
+};
+
+export default {
+  listarMisArticulos,
+  listarCatalogoArticulos,
+  obtenerAgendaArticulo,
+  obtenerTarifasSugeridas,
+  crearArticulo,
+  actualizarArticulo,
+  eliminarArticulo,
+  importarArticulos,
+  mensajeErrorArticulos,
+};

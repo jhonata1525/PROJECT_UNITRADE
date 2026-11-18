@@ -1,0 +1,1 @@
+ALTER TYPE "TipoTransaccion" ADD VALUE 'PAGO_ALQUILER';

@@ -1,0 +1,324 @@
+// Esquema de base de datos de UniTrade.
+// Prisma 7: la URL de conexión va en prisma.config.ts, no aquí.
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// ─────────────────────────────────────────────
+// Enums (valores cerrados que usa la app)
+// ─────────────────────────────────────────────
+
+enum Rol {
+  ESTUDIANTE
+  ADMIN
+}
+
+enum CondicionArticulo {
+  NUEVO
+  COMO_NUEVO
+  BUENO
+  REGULAR
+}
+
+enum EstadoAlquiler {
+  PENDIENTE_ENTREGA
+  ACTIVO
+  PENDIENTE_DEVOLUCION
+  COMPLETADO
+  CANCELADO
+  EN_MORA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PROCESANDO
+  COMPLETADO
+  FALLIDO
+  REEMBOLSADO
+}
+
+enum TipoTransaccion {
+  INGRESO
+  RETIRO
+  COMISION
+  REEMBOLSO
+  DEPOSITO
+  PENALIZACION
+  PAGO_ALQUILER
+}
+
+enum EstadoTransaccion {
+  PENDIENTE
+  PROCESANDO
+  COMPLETADO
+  FALLIDO
+}
+
+enum MetodoRetiro {
+  NEQUI
+  DAVIPLATA
+  BANCO
+}
+
+// ─────────────────────────────────────────────
+// Usuarios
+// ─────────────────────────────────────────────
+
+model Usuario {
+  id                        String    @id @default(cuid())
+  nombre                    String
+  correo                    String    @unique
+  hashContrasena            String
+  telefono                  String?
+  telefonoVerificado        Boolean   @default(false)
+  fechaVerificacionTelefono DateTime?
+  correoVerificado          Boolean   @default(false)
+  tokenCarnet               String?   @unique
+  codigoEstudiantil         String?   @unique
+  carnetVigenteHasta        DateTime?
+  rol                       Rol       @default(ESTUDIANTE)
+  sede                      String?
+  puntoEntrega              String?
+  fotoPerfil                String?
+  disponibilidad            Json?
+  suspendidoPorMora         Boolean   @default(false)
+  calificacion              Float     @default(0)
+  totalResenas              Int       @default(0)
+  creadoEn                  DateTime  @default(now())
+  actualizadoEn             DateTime  @updatedAt
+
+  articulos                  Articulo[]
+  alquileresComoArrendatario Alquiler[]      @relation("Arrendatario")
+  alquileresComoPropietario  Alquiler[]      @relation("Propietario")
+  calificacionesDadas        Calificacion[]  @relation("CalificacionesDadas")
+  calificacionesRecibidas    Calificacion[]  @relation("CalificacionesRecibidas")
+  billetera                  Billetera?
+  tokensRefresco             TokenRefresco[]
+  codigosOtp                 CodigoOtp[]
+
+  @@index([telefono])
+  @@map("usuario")
+}
+
+// ─────────────────────────────────────────────
+// Artículos publicados
+// ─────────────────────────────────────────────
+
+model Articulo {
+  id              String            @id @default(cuid())
+  titulo          String
+  descripcion     String
+  categoria       String
+  condicion       CondicionArticulo
+  tarifaHora      Int
+  tarifaSugerida  Int?
+  ubicacion       String
+  imagenes        String[]
+  disponibleDesde DateTime
+  disponibleHasta DateTime
+  activo          Boolean           @default(true)
+  propietarioId   String
+  // Id del artículo en el navegador del usuario (migración desde localStorage).
+  claveExterna    String?
+  creadoEn        DateTime          @default(now())
+  actualizadoEn   DateTime          @updatedAt
+
+  propietario Usuario    @relation(fields: [propietarioId], references: [id], onDelete: Cascade)
+  alquileres  Alquiler[]
+
+  @@unique([propietarioId, claveExterna])
+  @@index([propietarioId])
+  @@index([categoria])
+  @@index([activo])
+  @@map("articulo")
+}
+
+// ─────────────────────────────────────────────
+// Reservas / alquileres
+// ─────────────────────────────────────────────
+
+model Alquiler {
+  id                     String         @id @default(cuid())
+  articuloId             String
+  arrendatarioId         String
+  propietarioId          String
+  inicio                 DateTime
+  fin                    DateTime
+  horas                  Int
+  subtotal               Int
+  comision               Int
+  total                  Int
+  estado                 EstadoAlquiler @default(PENDIENTE_ENTREGA)
+  codigoEntrega          String?
+  codigoVerificacion     String?
+  codigoQrEntrega        String?        @unique
+  codigoQr               String?
+  entregaConfirmadaEn    DateTime?
+  devolucionConfirmadaEn DateTime?
+  moraMonto              Int            @default(0)
+  moraPagada             Int            @default(0)
+  moraPagoEstado         EstadoPago     @default(PENDIENTE)
+  moraTransaccionId      String?        @unique
+  creadoEn               DateTime       @default(now())
+  actualizadoEn          DateTime       @updatedAt
+
+  articulo       Articulo       @relation(fields: [articuloId], references: [id], onDelete: Restrict)
+  arrendatario   Usuario        @relation("Arrendatario", fields: [arrendatarioId], references: [id], onDelete: Restrict)
+  propietario    Usuario        @relation("Propietario", fields: [propietarioId], references: [id], onDelete: Restrict)
+  pago           Pago?
+  calificaciones Calificacion[]
+
+  @@index([arrendatarioId])
+  @@index([propietarioId])
+  @@index([articuloId])
+  @@index([estado])
+  @@map("alquiler")
+}
+
+model Calificacion {
+  id          String   @id @default(cuid())
+  alquilerId  String
+  evaluadorId String
+  evaluadoId  String
+  estrellas   Int
+  comentario  String?  @db.VarChar(1000)
+  creadoEn    DateTime @default(now())
+
+  alquiler  Alquiler @relation(fields: [alquilerId], references: [id], onDelete: Cascade)
+  evaluador Usuario  @relation("CalificacionesDadas", fields: [evaluadorId], references: [id], onDelete: Restrict)
+  evaluado  Usuario  @relation("CalificacionesRecibidas", fields: [evaluadoId], references: [id], onDelete: Restrict)
+
+  @@unique([alquilerId, evaluadorId])
+  @@index([evaluadoId, creadoEn])
+  @@map("calificacion")
+}
+
+// ─────────────────────────────────────────────
+// Pagos (HU-06)
+// ─────────────────────────────────────────────
+
+model Pago {
+  id                String     @id @default(cuid())
+  alquilerId        String     @unique
+  monto             Int
+  comision          Int        @default(0)
+  montoPropietario  Int        @default(0)
+  moneda            String     @default("COP")
+  estado            EstadoPago @default(PENDIENTE)
+  metodo            String     @default("sandbox")
+  idTransaccion     String?    @unique
+  claveIdempotencia String?    @unique
+  errorMensaje      String?
+  metadata          Json?
+  pagadoEn          DateTime?
+  creadoEn          DateTime   @default(now())
+  actualizadoEn     DateTime   @updatedAt
+
+  alquiler Alquiler @relation(fields: [alquilerId], references: [id], onDelete: Cascade)
+
+  @@index([estado])
+  @@map("pago")
+}
+
+// ─────────────────────────────────────────────
+// Billetera virtual (HU-10)
+// ─────────────────────────────────────────────
+
+// El dinero se guarda en pesos enteros (COP), nunca en decimales.
+// saldoDisponible = dinero listo para retirar.
+// saldoPendiente  = dinero retenido mientras una dispersión (payout) está en proceso.
+model Billetera {
+  id              String   @id @default(cuid())
+  usuarioId       String   @unique
+  saldoDisponible Int      @default(0)
+  saldoPendiente  Int      @default(0)
+  totalGanado     Int      @default(0)
+  totalRetirado   Int      @default(0)
+  moneda          String   @default("COP")
+  creadoEn        DateTime @default(now())
+  actualizadoEn   DateTime @updatedAt
+
+  usuario       Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  transacciones TransaccionBilletera[]
+  retiros       Retiro[]
+
+  @@map("billetera")
+}
+
+model TransaccionBilletera {
+  id           String            @id @default(cuid())
+  billeteraId  String
+  tipo         TipoTransaccion
+  monto        Int
+  saldoDespues Int
+  descripcion  String
+  estado       EstadoTransaccion @default(COMPLETADO)
+  metadata     Json?
+  creadoEn     DateTime          @default(now())
+
+  billetera Billetera @relation(fields: [billeteraId], references: [id], onDelete: Cascade)
+
+  @@index([billeteraId, creadoEn])
+  @@map("transaccion_billetera")
+}
+
+model Retiro {
+  id            String            @id @default(cuid())
+  billeteraId   String
+  metodo        MetodoRetiro
+  cuenta        String
+  monto         Int
+  moneda        String            @default("COP")
+  estado        EstadoTransaccion @default(PENDIENTE)
+  idPayout      String?           @unique
+  errorMensaje  String?
+  completadoEn  DateTime?
+  creadoEn      DateTime          @default(now())
+  actualizadoEn DateTime          @updatedAt
+
+  billetera Billetera @relation(fields: [billeteraId], references: [id], onDelete: Cascade)
+
+  @@index([billeteraId, creadoEn])
+  @@index([estado])
+  @@map("retiro")
+}
+
+// ─────────────────────────────────────────────
+// Autenticación
+// ─────────────────────────────────────────────
+
+model CodigoOtp {
+  id        String   @id @default(cuid())
+  usuarioId String?
+  telefono  String
+  codigo    String
+  expiraEn  DateTime
+  usado     Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([telefono, codigo])
+  @@index([expiraEn])
+  @@map("codigo_otp")
+}
+
+model TokenRefresco {
+  id        String   @id @default(cuid())
+  usuarioId String
+  hashToken String   @unique
+  expiraEn  DateTime
+  revocado  Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("token_refresco")
+}
