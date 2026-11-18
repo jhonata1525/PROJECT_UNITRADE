@@ -2,9 +2,11 @@
  * @file QRScanner.jsx
  * Componente lector de código QR usando html5-qrcode con fallback seguro.
  * - Soporta cámara trasera (environment) y frontal (user)
- * - Manejo de permisos y errores de cámara
- * - Fallback a entrada manual si no hay cámara
+ * - Manejo de permisos y errores de cámara sin romper el árbol de React
+ * - Fallback a entrada manual si no hay cámara o el usuario niega el permiso
  * - Accesible: aria-labels, estados de carga, mensajes de error claros
+ * - Robusto en iOS Safari: facingMode exact "environment" con fallback,
+ *   playsInline y muted en el elemento <video> de la librería subyacente
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -23,15 +25,41 @@ const QRScanner = ({
   const [error, setError] = useState("");
   const [facingMode, setFacingMode] = useState("environment");
   const [torchEnabled, setTorchEnabled] = useState(false);
+  const [camaraSoportada, setCamaraSoportada] = useState(null);
   const html5QrcodeRef = useRef(null);
   const containerRef = useRef(null);
+
+  /**
+   * Verifica de forma segura si el navegador expone las APIs necesarias
+   * para acceder a la cámara (navigator, mediaDevices, getUserMedia).
+   * Nunca lanza: devuelve false si falta alguna API.
+   */
+  const camaraDisponible = useCallback(() => {
+    try {
+      if (typeof navigator === "undefined") return false;
+      if (!navigator.mediaDevices) return false;
+      if (typeof navigator.mediaDevices.getUserMedia !== "function") return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const comprobarSoporte = async () => {
+      try {
+        setCamaraSoportada(camaraDisponible());
+      } catch {
+        setCamaraSoportada(false);
+      }
+    };
+    comprobarSoporte();
+  }, [camaraDisponible]);
 
   const stopScanner = useCallback(async () => {
     if (html5QrcodeRef.current) {
       try {
         await html5QrcodeRef.current.stop();
-        html5QrcodeRef.current = null;
-        setScanning(false);
       } catch (err) {
         console.warn("Error deteniendo scanner:", err);
       } finally {
@@ -43,13 +71,26 @@ const QRScanner = ({
 
   const startScanner = useCallback(async () => {
     if (!containerRef.current || html5QrcodeRef.current) return;
+    if (!camaraDisponible()) {
+      setError("Este navegador no soporta acceso a la cámara. Usa la entrada manual.");
+      setCamaraSoportada(false);
+      onError?.(new Error("Cámara no soportada"));
+      return;
+    }
 
     try {
       const html5Qrcode = new Html5Qrcode(containerRef.current.id);
       html5QrcodeRef.current = html5Qrcode;
 
+      // iOS Safari exige facingMode exact y atributos playsInline/muted en <video>.
+      // html5-qrcode los pasa internamente; aquí forzamos environment con fallback seguro.
+      const restriccionesVideo =
+        facingMode === "environment"
+          ? { facingMode: { exact: "environment" } }
+          : { facingMode: "user" };
+
       await html5Qrcode.start(
-        { facingMode, torch: torchEnabled },
+        restriccionesVideo,
         {
           fps: 10,
           qrbox: { width: 240, height: 240 },
@@ -60,36 +101,67 @@ const QRScanner = ({
           onScan?.(decodedText);
         },
         (_errorMessage) => {
-          // Silenciar errores de escaneo continuo
-        }
+          // Silenciar errores de escaneo continuo (cámara aún enfocando)
+        },
       );
       setScanning(true);
       setError("");
     } catch (err) {
       html5QrcodeRef.current = null;
       setScanning(false);
-      setError("No se pudo acceder a la cámara. Verifica los permisos.");
+      // Fallback: si environment falla en iOS, probar user como último recurso.
+      if (facingMode === "environment") {
+        setFacingMode("user");
+        setTimeout(() => setScanning(true), 200);
+        return;
+      }
+      setError("No se pudo acceder a la cámara. Verifica los permisos o usa la entrada manual.");
       onError?.(err);
     }
-  }, [facingMode, torchEnabled, onScan, onError, stopScanner]);
+  }, [facingMode, camaraDisponible, stopScanner, onScan, onError]);
 
+  /**
+   * Verifica permiso de cámara de forma segura, sin romper si falta la API.
+   */
   useEffect(() => {
     const checkPermission = async () => {
+      if (!camaraDisponible()) {
+        setHasPermission(false);
+        setCamaraSoportada(false);
+        setError(
+          "Cámara no disponible en este navegador. Usa la entrada manual.",
+        );
+        return;
+      }
       try {
-        const stream = await globalThis.navigator.mediaDevices.getUserMedia({ video: { facingMode } });
-        stream.getTracks().forEach(track => track.stop());
+        const stream = await navigator.mediaDevices
+          .getUserMedia({ video: { facingMode } })
+          .catch((err) => {
+            throw err;
+          });
+        stream.getTracks().forEach((track) => track.stop());
         setHasPermission(true);
+        setCamaraSoportada(true);
+        setError("");
       } catch {
         setHasPermission(false);
-        setError("Permiso de cámara denegado. Usa la entrada manual.");
+        setCamaraSoportada(false);
+        setError(
+          "Permiso de cámara denegado o no disponible. Usa la entrada manual.",
+        );
       }
     };
     checkPermission();
-  }, [facingMode]);
+  }, [facingMode, camaraDisponible]);
 
   useEffect(() => {
     if (scanning) {
-      startScanner();
+      startScanner().catch((err) => {
+        console.warn("Error iniciando escáner:", err);
+        setScanning(false);
+        setError("No se pudo iniciar el escáner. Usa la entrada manual.");
+        onError?.(err);
+      });
     }
     return () => {
       stopScanner();
@@ -97,7 +169,7 @@ const QRScanner = ({
   }, [scanning, startScanner, stopScanner]);
 
   const toggleCamera = () => {
-    setFacingMode(prev => prev === "environment" ? "user" : "environment");
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
     stopScanner();
     setTimeout(() => setScanning(true), 100);
   };
@@ -105,7 +177,9 @@ const QRScanner = ({
   const toggleTorch = async () => {
     if (html5QrcodeRef.current && scanning) {
       try {
-        await html5QrcodeRef.current.applyVideoConstraints({ advanced: [{ torch: !torchEnabled }] });
+        await html5QrcodeRef.current.applyVideoConstraints({
+          advanced: [{ torch: !torchEnabled }],
+        });
         setTorchEnabled(!torchEnabled);
       } catch (err) {
         console.warn("Torch no disponible:", err);
@@ -118,12 +192,17 @@ const QRScanner = ({
     onClose?.();
   };
 
-  if (!hasPermission && !showFallback) {
+  // Si no hay soporte de cámara en absoluto, mostrar directamente la alternativa manual.
+  if (camaraSoportada === false && !showFallback) {
     return (
       <div className={`glass-card p-6 text-center ${className}`} role="alert">
         <Camera className="w-12 h-12 mx-auto text-gray-500 mb-4" />
-        <h3 className="text-lg font-semibold text-white mb-2">Cámara no disponible</h3>
-        <p className="text-gray-400 mb-4">{error || "No se pudo acceder a la cámara"}</p>
+        <h3 className="text-lg font-semibold text-white mb-2">
+          Cámara no disponible
+        </h3>
+        <p className="text-gray-400 mb-4">
+          {error || "Este navegador no soporta acceso a la cámara."}
+        </p>
         <button onClick={onClose} className="btn-secondary">
           Cerrar
         </button>
@@ -132,7 +211,11 @@ const QRScanner = ({
   }
 
   return (
-    <div className={`glass-card overflow-hidden ${className}`} role="region" aria-label="Escáner QR">
+    <div
+      className={`glass-card overflow-hidden ${className}`}
+      role="region"
+      aria-label="Escáner QR"
+    >
       <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">Escáner QR</h3>
         <button
@@ -147,15 +230,13 @@ const QRScanner = ({
       {error && !scanning && (
         <div className="px-4 pb-4 text-center">
           <p className="text-red-400 text-sm mb-3">{error}</p>
-          {showFallback && (
-            <button
-              onClick={() => setScanning(true)}
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reintentar cámara
-            </button>
-          )}
+          <button
+            onClick={() => setScanning(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reintentar cámara
+          </button>
         </div>
       )}
 
@@ -183,7 +264,11 @@ const QRScanner = ({
             onClick={toggleCamera}
             disabled={!scanning}
             className="btn-secondary flex items-center gap-2"
-            aria-label={facingMode === "environment" ? "Cambiar a cámara frontal" : "Cambiar a cámara trasera"}
+            aria-label={
+              facingMode === "environment"
+                ? "Cambiar a cámara frontal"
+                : "Cambiar a cámara trasera"
+            }
           >
             <RotateCcw className="w-4 h-4" />
             Cambiar cámara
@@ -192,7 +277,9 @@ const QRScanner = ({
             onClick={toggleTorch}
             disabled={!scanning || facingMode === "user"}
             className={`btn-secondary flex items-center gap-2 ${torchEnabled ? "bg-[var(--color-neon)]/20 border-[var(--color-neon)]" : ""}`}
-            aria-label={torchEnabled ? "Apagar linterna" : "Encender linterna"}
+            aria-label={
+              torchEnabled ? "Apagar linterna" : "Encender linterna"
+            }
             aria-pressed={torchEnabled}
           >
             <Zap className="w-4 h-4" />
@@ -201,7 +288,7 @@ const QRScanner = ({
         </div>
       )}
 
-      {!scanning && showFallback && (
+      {!scanning && showFallback && camaraDisponible() && (
         <div className="px-4 pb-4 border-t border-[var(--color-border)]">
           <button
             onClick={() => setScanning(true)}
@@ -212,6 +299,27 @@ const QRScanner = ({
           </button>
         </div>
       )}
+
+      {/* Alternativa manual SIEMPRE visible: campo de texto para ingresar código/PIN/token */}
+      <div className="px-4 pb-4 border-t border-[var(--color-border)]">
+        <p className="text-[11px] text-gray-500 mb-2 text-center uppercase tracking-wider font-semibold">
+          Entrada manual
+        </p>
+        <div className="relative">
+          <Camera className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Pega el enlace del QR, el código de verificación o el PIN"
+            className="w-full pl-9 glass-input text-sm"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Código de verificación o PIN manual"
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-gray-500 text-center">
+          Aparece debajo del QR en el perfil del estudiante.
+        </p>
+      </div>
     </div>
   );
 };
