@@ -334,12 +334,9 @@ export const PaginaCatalogo = () => {
                   key={art.id}
                   art={art}
                   usuario={usuario}
-      esMio={art.propietario?.id === usuario?.id}
-      onReserva={abrirReserva}
-      onDetalle={setArticuloDetalle}
-      onEditar={handleEditar}
-      onCambiarEstado={handleCambiarEstado}
-      onEliminar={handleEliminar}
+                  esMio={art.propietario?.id === usuario?.id}
+                  onReserva={abrirReserva}
+                  onDetalle={setArticuloDetalle}
                 />
               ))}
             </div>
@@ -382,22 +379,23 @@ export const PaginaCatalogo = () => {
             </div>
 
             <div className="space-y-5 p-5">
-              {articuloDetalle.fotoUrl && (
+              {articuloDetalle?.fotoUrl && (
                 <img
                   src={articuloDetalle.fotoUrl}
-                  alt={articuloDetalle.nombre}
+                  alt={articuloDetalle.nombre || "Artículo"}
                   className="h-52 w-full rounded-xl bg-[var(--color-canvas)] object-cover"
                 />
               )}
               <div>
                 <p className="text-sm text-[var(--color-neon)]">
-                  {articuloDetalle.categoria} · {formatCOP(articuloDetalle.precioPorDia)}/hora
+                  {articuloDetalle?.categoria || "Sin categoría"} ·{" "}
+                  {formatCOP(articuloDetalle?.precioPorDia ?? 0)}/hora
                 </p>
                 <h3 className="mt-1 text-2xl font-bold text-white">
-                  {articuloDetalle.nombre}
+                  {articuloDetalle?.nombre || "Sin título"}
                 </h3>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-gray-300">
-                  {articuloDetalle.descripcion}
+                  {articuloDetalle?.descripcion || ""}
                 </p>
               </div>
 
