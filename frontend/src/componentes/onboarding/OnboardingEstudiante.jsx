@@ -305,29 +305,52 @@ export const OnboardingEstudiante = () => {
     return null;
   }
 
+  const MARGEN_SEGURO = 16; // 1rem -> left-4 / right-4 en el viewport
+  const ANCHO_MAX_TARJETA = 360;
+
+  const anchoTarjeta = Math.min(
+    ANCHO_MAX_TARJETA,
+    Math.max(280, window.innerWidth - 2 * MARGEN_SEGURO),
+  );
+
   const posicionTarjeta = (() => {
     if (!rectObjetivo) {
       return {
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
+        width: `${anchoTarjeta}px`,
+        boxSizing: "border-box",
       };
     }
-    // El menú lateral está a la izquierda: mostramos la tarjeta a su derecha.
-    if (rectObjetivo.left < 120) {
-      return {
-        top: Math.max(
-          16,
-          Math.min(rectObjetivo.top - 12, window.innerHeight - 300),
-        ),
-        left: rectObjetivo.left + rectObjetivo.width + 16,
-      };
+
+    // El indicador visual (caja resaltada renderizada abajo) enmarca el
+    // elemento activo. La tarjeta del tooltip se centra horizontalmente con
+    // márgenes seguros para nunca desbordarse del viewport en móvil, sin
+    // importar qué ícono de la barra inferior esté resaltado.
+    let left = Math.round((window.innerWidth - anchoTarjeta) / 2);
+    left = Math.max(
+      MARGEN_SEGURO,
+      Math.min(left, window.innerWidth - MARGEN_SEGURO - anchoTarjeta),
+    );
+
+    // Posición vertical: intenta colocar la tarjeta encima del objetivo; si no
+    // cabe, la deja dentro del viewport con el mismo margen seguro.
+    let top = rectObjetivo.top - 16 - 300;
+    if (top < MARGEN_SEGURO) {
+      top = rectObjetivo.bottom + 16;
     }
-    // En móvil el menú está abajo: mostramos la tarjeta encima.
+    const altoEstimado = 300;
+    if (top + altoEstimado > window.innerHeight - MARGEN_SEGURO) {
+      top = window.innerHeight - MARGEN_SEGURO - altoEstimado;
+    }
+    top = Math.max(MARGEN_SEGURO, top);
+
     return {
-      bottom: 96,
-      left: "50%",
-      transform: "translateX(-50%)",
+      top: `${Math.round(top)}px`,
+      left: `${left}px`,
+      width: `${anchoTarjeta}px`,
+      boxSizing: "border-box",
     };
   })();
 
@@ -462,7 +485,7 @@ export const OnboardingEstudiante = () => {
             </div>
           ) : (
             <div
-              className="fixed z-10 w-[min(360px,calc(100vw-2rem))]"
+              className="fixed z-10 w-full max-w-[calc(100vw-2rem)]"
               style={posicionTarjeta}
             >
               <div className="glass-panel overflow-hidden border-[var(--color-border-hover)] animate-slide-up">
