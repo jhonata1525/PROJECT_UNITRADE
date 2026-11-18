@@ -613,7 +613,7 @@ export const PaginaMisArticulos = () => {
                           <span className="px-2 py-0.5 rounded bg-[var(--color-canvas)] border border-[var(--color-border)]">
                             {art.categoria}
                           </span>
-                          <span>â€¢</span>
+                          <span aria-hidden="true">•</span>
                           <span>{formatCOP(Number(art.precioPorDia))}/día</span>
                         </div>
                         <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-3">

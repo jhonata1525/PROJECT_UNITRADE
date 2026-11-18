@@ -54,6 +54,26 @@ const MOBILE_SECONDARY_PATHS = [
 
 const STORAGE_COLAPSADO = "unitrade_sidebar_collapsed";
 
+const AvatarUsuario = ({ usuario, iniciales, className = "" }) => {
+  const nombre = usuario?.nombre || "usuario";
+
+  return (
+    <span
+      className={`flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] text-xs font-semibold text-white ${className}`}
+    >
+      {usuario?.fotoPerfil ? (
+        <img
+          src={usuario.fotoPerfil}
+          alt={`Foto de ${nombre}`}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        iniciales
+      )}
+    </span>
+  );
+};
+
 export const NavegacionLateral = () => {
   // Se recuerda en el equipo si el usuario dejó el menú colapsado.
   const [collapsed, setCollapsed] = React.useState(() => {
@@ -202,9 +222,7 @@ export const NavegacionLateral = () => {
                 title={usuario?.nombre || "Mi perfil"}
                 aria-label="Mi perfil"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] text-xs font-semibold text-white">
-                  {iniciales}
-                </span>
+                <AvatarUsuario usuario={usuario} iniciales={iniciales} className="h-9 w-9" />
               </NavLink>
               <button
                 onClick={handleLogout}
@@ -219,9 +237,7 @@ export const NavegacionLateral = () => {
           ) : (
             <div className="glass-panel p-3 space-y-2">
               <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-neon)] to-[var(--color-accent-500)] text-xs font-semibold text-white">
-                  {iniciales}
-                </span>
+                <AvatarUsuario usuario={usuario} iniciales={iniciales} className="h-9 w-9" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-white">
                     {usuario?.nombre || "Estudiante UniTrade"}
@@ -264,8 +280,8 @@ export const NavegacionLateral = () => {
           </NavLink>
 
           <div className="flex items-center gap-2">
-            <NavLink to="/perfil" className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-[rgba(255,255,255,0.05)] transition-colors" aria-label="Mi perfil">
-              <User className="w-5 h-5" />
+            <NavLink to="/perfil" className="rounded-lg p-1 text-gray-300 transition-colors hover:bg-[rgba(255,255,255,0.05)] hover:text-white" aria-label="Mi perfil">
+              <AvatarUsuario usuario={usuario} iniciales={iniciales} className="h-8 w-8" />
             </NavLink>
             <button
               onClick={() => setMobileMenuOpen(true)}
