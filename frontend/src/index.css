@@ -414,6 +414,7 @@
     scroll-behavior: smooth;
     color-scheme: dark;
     overflow-x: hidden;
+    overflow-y: auto;
   }
   body {
     font-family: var(--font-sans);
@@ -423,8 +424,8 @@
     background-color: var(--color-canvas);
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
   }
   ::selection {
     background-color: rgba(59, 130, 246, 0.35);
@@ -432,6 +433,7 @@
   }
   #root {
     background-color: transparent;
+    min-height: 100vh;
   }
   * {
     border-color: var(--color-border);
