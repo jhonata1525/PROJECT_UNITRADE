@@ -18,10 +18,16 @@ async function iniciar() {
   // Todas las rutas quedan bajo http://localhost:8081/api
   app.setGlobalPrefix('api');
 
-  // Permite que Vite (5173) consuma la API
   app.enableCors({
-    origin: process.env.FRONTEND_URL?.split(',') ?? 'http://localhost:5173',
+    origin: true,
     credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-usuario-id',
+      'Idempotency-Key',
+      'x-requested-with',
+    ],
   });
 
   // Valida los DTOs y elimina propiedades que no estén declaradas
