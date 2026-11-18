@@ -13,6 +13,7 @@ import {
   mensajeErrorBilletera,
   solicitarRetiro,
 } from "../../servicios/servicioBilletera";
+import { bloquearScroll, desbloquearScroll } from "../../utils/bloqueoScroll";
 
 const MIN_RETIRO = 10000;
 const MAX_RETIRO = 5000000;
@@ -81,14 +82,11 @@ export const FormularioRetiroModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      bloquearScroll();
       setTimeout(() => modalRef.current?.focus(), 100);
-    } else {
-      document.body.style.overflow = "unset";
+      return () => desbloquearScroll();
     }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
+    return undefined;
   }, [isOpen]);
 
   useEffect(() => {

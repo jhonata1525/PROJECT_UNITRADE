@@ -8,6 +8,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { X, AlertCircle } from "lucide-react";
+import { bloquearScroll, desbloquearScroll } from "../../utils/bloqueoScroll";
 
 const MIN_RECARGA = 10000;
 const MAX_RECARGA = 5000000;
@@ -36,20 +37,15 @@ export const ModalRecargaSaldo = ({ isOpen, onClose, onConfirm }) => {
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      bloquearScroll();
       const temporizador = setTimeout(() => modalRef.current?.focus(), 100);
 
       return () => {
         clearTimeout(temporizador);
-        document.body.style.overflow = "unset";
+        desbloquearScroll();
       };
     }
-
-    document.body.style.overflow = "unset";
-
-    return () => {
-      document.body.style.overflow = "unset";
-    };
+    return undefined;
   }, [isOpen]);
 
   useEffect(() => {

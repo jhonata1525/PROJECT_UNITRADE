@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../../contexto/ContextoAutenticacion";
+import { bloquearScroll, desbloquearScroll } from "../../utils/bloqueoScroll";
 
 const VERSION_ONBOARDING = "v1";
 
@@ -221,11 +222,8 @@ export const OnboardingEstudiante = () => {
   // Bloquea el scroll de la página mientras el onboarding está abierto.
   React.useEffect(() => {
     if (fase === "cerrado") return undefined;
-    const overflowAnterior = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflowAnterior;
-    };
+    bloquearScroll();
+    return () => desbloquearScroll();
   }, [fase]);
 
   const avanzar = React.useCallback(() => {
