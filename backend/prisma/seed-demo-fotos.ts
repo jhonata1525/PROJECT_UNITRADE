@@ -1,15 +1,16 @@
 /**
  * @file seed-demo-fotos.ts
- * Seed idempotente de fotos y artículos demo para demostración universitaria
- * (Universidad Simón Bolívar).
+ * Seed idempotente que deja exactamente 19 artículos universitarios únicos en
+ * la base de datos de Neon (uno por cada imagen local en frontend/public/articulos/).
  *
- * - Actualiza TODOS los artículos existentes sobreescribiendo sus imágenes con
- *   rutas locales verificadas en frontend/public/articulos/.
- * - Crea 3 artículos nuevos por cada usuario existente (sin borrar usuarios ni saldos).
- * - Cada artículo incluye título, categoría, descripción, tarifa en COP y la
- *   imagen local que corresponde fielmente a su título.
+ * - Elimina artículos duplicados por título normalizado O por ruta de imagen
+ *   (salvo los que tengan alquileres vinculados, para no romper integridad).
+ * - Borra artículos de prueba previos del seed cuyos títulos estén en la lista maestra.
+ * - Crea exactamente 19 artículos, distribuidos linealmente entre usuarios (índice 0-18,
+ *   se detiene en el ítem 19, no recicla).
+ * - Imprime la lista final para confirmar cero títulos y cero fotos repetidas.
  *
- * Requisitos: DATABASE_URL en backend/.env (ya configurada con Neon).
+ * Requisitos: DATABASE_URL en backend/.env (Neon).
  *
  * Uso:
  *   npx tsx prisma/seed-demo-fotos.ts
@@ -33,34 +34,7 @@ const AHORA = new Date();
 const UN_ANIO_DESDE = new Date(AHORA.getTime() + 365 * 24 * 60 * 60 * 1000);
 
 // ---------------------------------------------------------------
-// Rutas locales verificadas en frontend/public/articulos/
-// Cada archivo pesa más de 10 KB y es una foto real del objeto.
-// ---------------------------------------------------------------
-const IMG = (archivo: string) => `/articulos/${archivo}`;
-
-const IMG_LIBRO_CALCULO = IMG("libro-calculo.jpg");
-const IMG_LIBRO_FISICA = IMG("libro-fisica.jpg");
-const IMG_LIBRO_PROGRAMACION = IMG("libro-programacion.jpg");
-const IMG_BATA_LABORATORIO = IMG("bata-laboratorio.jpg");
-const IMG_MULTIMETRO = IMG("multimetro-digital.jpg");
-const IMG_KIT_ARDUINO = IMG("kit-arduino.jpg");
-const IMG_GAFAS_SEGURIDAD = IMG("gafas-seguridad.jpg");
-const IMG_CALCULADORA_CASIO = IMG("calculadora-casio.jpg");
-const IMG_CALCULADORA_GRAFICADORA = IMG("calculadora-graficadora.jpg");
-const IMG_CARGADOR_LAPTOP = IMG("cargador-laptop.jpg");
-const IMG_ADAPTADOR_USBC = IMG("adaptador-usbc.jpg");
-const IMG_TABLETA_GRAFICA = IMG("tableta-grafica.jpg");
-const IMG_AUDIFONOS = IMG("audifonos.jpg");
-const IMG_BALON_FUTBOL = IMG("balon-futbol.jpg");
-const IMG_RAQUETA_TENIS = IMG("raqueta-tenis.jpg");
-const IMG_BALON_BALONCESTO = IMG("balon-baloncesto.jpg");
-const IMG_ATRIL_LECTURA = IMG("atril-lectura.jpg");
-const IMG_REGLA_DIBUJO = IMG("regla-dibujo.jpg");
-const IMG_TRIPODE = IMG("tripode.jpg");
-
-// ---------------------------------------------------------------
-// Catálogo de artículos demo: 3 por usuario.
-// Cada entrada tiene su ruta de imagen local específica.
+// 19 artículos universitarios únicos (título + imagen local 1:1).
 // ---------------------------------------------------------------
 type ArticuloDemo = {
   titulo: string;
@@ -71,45 +45,7 @@ type ArticuloDemo = {
   imagen: string;
 };
 
-const ARTICULOS_DEMO: ArticuloDemo[] = [
-  // Libros
-  {
-    titulo: "Cálculo de Stewart - Edición Universitaria",
-    categoria: "Libros",
-    descripcion:
-      "Libro de cálculo diferencial e integral de James Stewart, ideal para estudiantes de ingeniería y ciencias. Estado muy bueno, sin subrayados importantes.",
-    condicion: CondicionArticulo.COMO_NUEVO,
-    tarifaHora: 2500,
-    imagen: IMG_LIBRO_CALCULO,
-  },
-  {
-    titulo: "Física Universitaria - Sears y Zemansky",
-    categoria: "Libros",
-    descripcion:
-      "Texto clásico de física universitaria (mecánica, termodinámica, electricidad y magnetismo). Útil para cursos básicos de física.",
-    condicion: CondicionArticulo.BUENO,
-    tarifaHora: 2000,
-    imagen: IMG_LIBRO_FISICA,
-  },
-  {
-    titulo: "Anatomía de Moore - Clínicamente Orientada",
-    categoria: "Libros",
-    descripcion:
-      "Manual de anatomía humana con enfoque clínico, ampliamente usado en programas de ciencias de la salud.",
-    condicion: CondicionArticulo.BUENO,
-    tarifaHora: 3000,
-    imagen: IMG_LIBRO_CALCULO,
-  },
-  {
-    titulo: "Código Limpio - Robert C. Martin",
-    categoria: "Libros",
-    descripcion:
-      "Referencia esencial para estudiantes de programación y desarrollo de software. Ejercicios y buenas prácticas de código.",
-    condicion: CondicionArticulo.NUEVO,
-    tarifaHora: 2800,
-    imagen: IMG_LIBRO_PROGRAMACION,
-  },
-  // Laboratorio
+const ARTICULOS_UNICOS: ArticuloDemo[] = [
   {
     titulo: "Bata blanca de laboratorio talla M",
     categoria: "Laboratorio",
@@ -117,233 +53,182 @@ const ARTICULOS_DEMO: ArticuloDemo[] = [
       "Bata blanca de algodón para prácticas de laboratorio, talla M, en buen estado. Ideal para cursos de química y biología.",
     condicion: CondicionArticulo.BUENO,
     tarifaHora: 1500,
-    imagen: IMG_BATA_LABORATORIO,
+    imagen: "/articulos/bata-laboratorio.jpg",
   },
   {
-    titulo: "Multímetro digital Fluke",
-    categoria: "Laboratorio",
-    descripcion:
-      "Multímetro digital profesional para medición de voltaje, corriente y resistencia. Incluye cables de prueba.",
-    condicion: CondicionArticulo.COMO_NUEVO,
-    tarifaHora: 4500,
-    imagen: IMG_MULTIMETRO,
-  },
-  {
-    titulo: "Kit protoboard con Arduino Uno y sensores",
-    categoria: "Laboratorio",
-    descripcion:
-      "Kit de electrónica para prototipado: placa Arduino Uno, protoboard, sensores de temperatura, luz y movimiento, jumpers y resistencias.",
-    condicion: CondicionArticulo.NUEVO,
-    tarifaHora: 6000,
-    imagen: IMG_KIT_ARDUINO,
-  },
-  {
-    titulo: "Gafas de seguridad industrial",
-    categoria: "Laboratorio",
-    descripcion:
-      "Gafas de protección con certificación para laboratorio. Lentes transparentes, montura ajustable y tratamiento antivaho.",
-    condicion: CondicionArticulo.NUEVO,
-    tarifaHora: 1200,
-    imagen: IMG_GAFAS_SEGURIDAD,
-  },
-  // Calculadoras
-  {
-    titulo: "Casio fx-991LA X ClassWiz científica",
+    titulo: "Calculadora científica Casio fx-991LA X",
     categoria: "Calculadoras",
     descripcion:
       "Calculadora científica Casio fx-991LA con pantalla ClassWiz, ideal para matemáticas, física e ingeniería.",
     condicion: CondicionArticulo.COMO_NUEVO,
     tarifaHora: 1800,
-    imagen: IMG_CALCULADORA_CASIO,
+    imagen: "/articulos/calculadora-casio.jpg",
   },
   {
-    titulo: "Texas Instruments TI-84 Plus graficadora",
+    titulo: "Calculadora graficadora Texas Instruments TI-84",
     categoria: "Calculadoras",
     descripcion:
       "Calculadora graficadora TI-84 Plus, ampliamente usada en cursos de cálculo, estadística e ingeniería. Incluye cable de conexión.",
     condicion: CondicionArticulo.BUENO,
     tarifaHora: 3500,
-    imagen: IMG_CALCULADORA_GRAFICADORA,
+    imagen: "/articulos/calculadora-graficadora.jpg",
   },
   {
-    titulo: "Casio fx-82MS científica",
-    categoria: "Calculadoras",
+    titulo: "Libro Cálculo de una Variable - James Stewart",
+    categoria: "Libros",
     descripcion:
-      "Calculadora científica clásica Casio fx-82MS, funcional y económica para operaciones básicas de ciencia y matemáticas.",
-    condicion: CondicionArticulo.REGULAR,
-    tarifaHora: 1500,
-    imagen: IMG_CALCULADORA_CASIO,
+      "Libro de cálculo diferencial e integral de James Stewart, ideal para estudiantes de ingeniería y ciencias. Estado muy bueno, sin subrayados importantes.",
+    condicion: CondicionArticulo.COMO_NUEVO,
+    tarifaHora: 2500,
+    imagen: "/articulos/libro-calculo.jpg",
   },
-  // Tecnología
   {
-    titulo: "Cargador USB-C 65W para portátil",
-    categoria: "Tecnología",
+    titulo: "Libro Física Universitaria - Sears Zemansky",
+    categoria: "Libros",
     descripcion:
-      "Cargador rápido USB-C de 65W compatible con la mayoría de portátiles. Incluye cable desmontable.",
+      "Texto clásico de física universitaria (mecánica, termodinámica, electricidad y magnetismo). Útil para cursos básicos de física.",
+    condicion: CondicionArticulo.BUENO,
+    tarifaHora: 2000,
+    imagen: "/articulos/libro-fisica.jpg",
+  },
+  {
+    titulo: "Libro Clean Code - Ingeniería de Software",
+    categoria: "Libros",
+    descripcion:
+      "Referencia esencial para estudiantes de programación y desarrollo de software. Ejercicios y buenas prácticas de código.",
     condicion: CondicionArticulo.NUEVO,
-    tarifaHora: 3200,
-    imagen: IMG_CARGADOR_LAPTOP,
+    tarifaHora: 2800,
+    imagen: "/articulos/libro-programacion.jpg",
   },
   {
-    titulo: "Adaptador HDMI a USB-C multipuerto",
+    titulo: "Multímetro digital autorrango con puntas",
+    categoria: "Laboratorio",
+    descripcion:
+      "Multímetro digital profesional para medición de voltaje, corriente y resistencia. Incluye cables de prueba.",
+    condicion: CondicionArticulo.COMO_NUEVO,
+    tarifaHora: 4500,
+    imagen: "/articulos/multimetro-digital.jpg",
+  },
+  {
+    titulo: "Kit Arduino Uno R3 con protoboard y sensores",
+    categoria: "Laboratorio",
+    descripcion:
+      "Kit de electrónica para prototipado: placa Arduino Uno, protoboard, sensores de temperatura, luz y movimiento, jumpers y resistencias.",
+    condicion: CondicionArticulo.NUEVO,
+    tarifaHora: 6000,
+    imagen: "/articulos/kit-arduino.jpg",
+  },
+  {
+    titulo: "Gafas de seguridad transparentes para laboratorio",
+    categoria: "Laboratorio",
+    descripcion:
+      "Gafas de protección con certificación para laboratorio. Lentes transparentes, montura ajustable y tratamiento antivaho.",
+    condicion: CondicionArticulo.NUEVO,
+    tarifaHora: 1200,
+    imagen: "/articulos/gafas-seguridad.jpg",
+  },
+  {
+    titulo: "Adaptador multipuerto USB-C a HDMI y USB 3.0",
     categoria: "Tecnología",
     descripcion:
       "Hub multipuerto con HDMI, USB-A y USB-C para conectar monitores y periféricos a laptops modernas.",
     condicion: CondicionArticulo.BUENO,
     tarifaHora: 2500,
-    imagen: IMG_ADAPTADOR_USBC,
+    imagen: "/articulos/adaptador-usbc.jpg",
   },
   {
-    titulo: "Tableta gráfica Wacom Intuos",
+    titulo: "Cargador rápido USB-C 65W para portátil",
+    categoria: "Tecnología",
+    descripcion:
+      "Cargador rápido USB-C de 65W compatible con la mayoría de portátiles. Incluye cable desmontable.",
+    condicion: CondicionArticulo.NUEVO,
+    tarifaHora: 3200,
+    imagen: "/articulos/cargador-laptop.jpg",
+  },
+  {
+    titulo: "Tableta gráfica digitalizadora con lápiz óptico",
     categoria: "Tecnología",
     descripcion:
       "Tableta gráfica Wacom Intuos para diseño digital e ilustración. Incluye stylus sensible a la presión.",
     condicion: CondicionArticulo.COMO_NUEVO,
     tarifaHora: 5500,
-    imagen: IMG_TABLETA_GRAFICA,
+    imagen: "/articulos/tableta-grafica.jpg",
   },
   {
-    titulo: "Audífonos con cancelación de ruido",
+    titulo: "Audífonos inalámbricos de diadema con aislamiento",
     categoria: "Tecnología",
     descripcion:
       "Audífonos over-ear con cancelación activa de ruido, ideales para estudiar y concentrarse en bibliotecas o espacios compartidos.",
     condicion: CondicionArticulo.BUENO,
     tarifaHora: 4000,
-    imagen: IMG_AUDIFONOS,
+    imagen: "/articulos/audifonos.jpg",
   },
-  // Deportes
   {
-    titulo: "Balón de fútbol profesional Golty",
+    titulo: "Balón de fútbol profesional N.º 5",
     categoria: "Deportes",
     descripcion:
       "Balón de fútbol talla 5, marca Golty, para juegos recreativos y entrenamientos universitarios.",
     condicion: CondicionArticulo.BUENO,
     tarifaHora: 1500,
-    imagen: IMG_BALON_FUTBOL,
+    imagen: "/articulos/balon-futbol.jpg",
   },
   {
-    titulo: "Raqueta de tenis Wilson",
-    categoria: "Deportes",
-    descripcion:
-      "Raqueta de tenis Wilson para iniciación e intermedio. Empuñadura cómoda y cordaje en buen estado.",
-    condicion: CondicionArticulo.BUENO,
-    tarifaHora: 2200,
-    imagen: IMG_RAQUETA_TENIS,
-  },
-  {
-    titulo: "Balón de baloncesto Spalding",
+    titulo: "Balón de baloncesto N.º 7 agarre antideslizante",
     categoria: "Deportes",
     descripcion:
       "Balón de baloncesto Spalding oficial, tamaño 7, para canchas techadas y al aire libre.",
     condicion: CondicionArticulo.COMO_NUEVO,
     tarifaHora: 2000,
-    imagen: IMG_BALON_BALONCESTO,
+    imagen: "/articulos/balon-baloncesto.jpg",
   },
   {
-    titulo: "Guantes de arquero",
+    titulo: "Raqueta de tenis de grafito con funda",
     categoria: "Deportes",
     descripcion:
-      "Guantes de arquero con acolchado en palma y muñequera ajustable, talla única adaptable.",
+      "Raqueta de tenis Wilson para iniciación e intermedio. Empuñadura cómoda y cordaje en buen estado.",
     condicion: CondicionArticulo.BUENO,
-    tarifaHora: 1500,
-    imagen: IMG_BALON_FUTBOL,
-  },
-  // Otros
-  {
-    titulo: "Regla T y escuadras de dibujo técnico",
-    categoria: "Otros",
-    descripcion:
-      "Juego de dibujo técnico con regla T, escuadras 45° y 60°, y cartabón. Ideal para estudiantes de arquitectura e ingeniería.",
-    condicion: CondicionArticulo.BUENO,
-    tarifaHora: 1500,
-    imagen: IMG_REGLA_DIBUJO,
+    tarifaHora: 2200,
+    imagen: "/articulos/raqueta-tenis.jpg",
   },
   {
-    titulo: "Atril plegable para lectura",
+    titulo: "Atril metálico plegable para lectura y partituras",
     categoria: "Otros",
     descripcion:
       "Atril metálico plegable para sostener libros y partituras mientras estudias. Ajustable en altura y ángulo.",
     condicion: CondicionArticulo.NUEVO,
     tarifaHora: 1200,
-    imagen: IMG_ATRIL_LECTURA,
+    imagen: "/articulos/atril-lectura.jpg",
   },
   {
-    titulo: "Trípode ligero para celular/cámara",
+    titulo: "Juego de escuadras y regla T para dibujo técnico",
+    categoria: "Otros",
+    descripcion:
+      "Juego de dibujo técnico con regla T, escuadras 45° y 60°, y cartabón. Ideal para estudiantes de arquitectura e ingeniería.",
+    condicion: CondicionArticulo.BUENO,
+    tarifaHora: 1500,
+    imagen: "/articulos/regla-dibujo.jpg",
+  },
+  {
+    titulo: "Trípode ajustable para celular y cámara",
     categoria: "Otros",
     descripcion:
       "Trípode compacto y ligero compatible con celulares y cámaras pequeñas. Ideal para grabaciones y videollamadas estable.",
     condicion: CondicionArticulo.COMO_NUEVO,
     tarifaHora: 1800,
-    imagen: IMG_TRIPODE,
+    imagen: "/articulos/tripode.jpg",
   },
 ];
 
-// Mapeo de palabras clave del título → ruta de imagen local (para artículos existentes).
-const IMAGEN_POR_TITULO: Record<string, string> = {
-  cálculo: IMG_LIBRO_CALCULO,
-  calculo: IMG_LIBRO_CALCULO,
-  física: IMG_LIBRO_FISICA,
-  fisica: IMG_LIBRO_FISICA,
-  anatomía: IMG_LIBRO_CALCULO,
-  anatomia: IMG_LIBRO_CALCULO,
-  código: IMG_LIBRO_PROGRAMACION,
-  codigo: IMG_LIBRO_PROGRAMACION,
-  programación: IMG_LIBRO_PROGRAMACION,
-  programacion: IMG_LIBRO_PROGRAMACION,
-  bata: IMG_BATA_LABORATORIO,
-  multímetro: IMG_MULTIMETRO,
-  multimetro: IMG_MULTIMETRO,
-  arduino: IMG_KIT_ARDUINO,
-  protoboard: IMG_KIT_ARDUINO,
-  gafas: IMG_GAFAS_SEGURIDAD,
-  casio: IMG_CALCULADORA_CASIO,
-  texas: IMG_CALCULADORA_GRAFICADORA,
-  ti-84: IMG_CALCULADORA_GRAFICADORA,
-  cargador: IMG_CARGADOR_LAPTOP,
-  usb-c: IMG_ADAPTADOR_USBC,
-  adaptador: IMG_ADAPTADOR_USBC,
-  tableta: IMG_TABLETA_GRAFICA,
-  wacom: IMG_TABLETA_GRAFICA,
-  audífonos: IMG_AUDIFONOS,
-  audifonos: IMG_AUDIFONOS,
-  balón: IMG_BALON_FUTBOL,
-  balon: IMG_BALON_FUTBOL,
-  fútbol: IMG_BALON_FUTBOL,
-  futbol: IMG_BALON_FUTBOL,
-  raqueta: IMG_RAQUETA_TENIS,
-  tenis: IMG_RAQUETA_TENIS,
-  baloncesto: IMG_BALON_BALONCESTO,
-  spalding: IMG_BALON_BALONCESTO,
-  guantes: IMG_BALON_FUTBOL,
-  regla: IMG_REGLA_DIBUJO,
-  escuadras: IMG_REGLA_DIBUJO,
-  dibujo: IMG_REGLA_DIBUJO,
-  atril: IMG_ATRIL_LECTURA,
-  trípode: IMG_TRIPODE,
-  tripode: IMG_TRIPODE,
-};
+const TITULOS_MAESTROS = new Set(ARTICULOS_UNICOS.map((a) => a.titulo.toLowerCase().trim()));
 
-function imagenParaTitulo(titulo: string, categoria: string): string {
-  const t = titulo.toLowerCase();
-  for (const [clave, ruta] of Object.entries(IMAGEN_POR_TITULO)) {
-    if (t.includes(clave)) return ruta;
-  }
-  // Fallback por categoría
-  const fallbacks: Record<string, string> = {
-    Libros: IMG_LIBRO_CALCULO,
-    Laboratorio: IMG_BATA_LABORATORIO,
-    Calculadoras: IMG_CALCULADORA_CASIO,
-    Tecnología: IMG_CARGADOR_LAPTOP,
-    Deportes: IMG_BALON_FUTBOL,
-    Otros: IMG_REGLA_DIBUJO,
-  };
-  return fallbacks[categoria] ?? IMG_LIBRO_CALCULO;
+function normalizar(texto: string): string {
+  return texto.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 async function main() {
-  console.log("🚀 Iniciando seed de fotos y artículos demo...\n");
+  console.log("🚀 Iniciando seed de 19 artículos únicos...\n");
 
-  // 1. Obtener TODOS los usuarios existentes (sin tocar saldos ni borrar nada).
+  // 1. Usuarios existentes.
   const usuarios = await prisma.usuario.findMany({
     select: { id: true, nombre: true, correo: true },
     orderBy: { creadoEn: "asc" },
@@ -358,124 +243,248 @@ async function main() {
   console.log(`👥 Usuarios encontrados: ${usuarios.length}`);
   usuarios.forEach((u) => console.log(`   - ${u.correo} (${u.nombre})`));
 
-  // 2. Actualizar TODOS los artículos existentes sobreescribiendo con imagen local.
+  // 2. Consultar TODOS los artículos existentes ordenados por creadoEn.
   const todosArticulos = await prisma.articulo.findMany({
-    select: { id: true, titulo: true, categoria: true, imagenes: true },
+    select: {
+      id: true,
+      titulo: true,
+      categoria: true,
+      imagenes: true,
+      propietarioId: true,
+      creadoEn: true,
+    },
+    orderBy: { creadoEn: "asc" },
   });
 
-  let actualizados = 0;
+  console.log(`\n📦 Artículos existentes en BD: ${todosArticulos.length}`);
+
+  // Obtener alquileres para proteger integridad referencial en la limpieza.
+  const alquileres = await prisma.alquiler.findMany({
+    select: { articuloId: true },
+  });
+  const articulosConAlquileres = new Set(alquileres.map((a) => a.articuloId));
+
+  // 2. Limpieza inicial: eliminar artículos que NO estén en la lista maestra
+  //    de los 19 títulos únicos (incluyendo los 9 artículos viejos de prueba),
+  //    siempre que no tengan alquileres vinculados. Si los tienen, se eliminan
+  //    los alquileres de prueba primero y luego el artículo.
+  const idsAborrarLimpieza = new Set<string>();
+
   for (const art of todosArticulos) {
-    const rutaLocal = imagenParaTitulo(art.titulo, art.categoria);
+    const tituloNorm = normalizar(art.titulo);
+    const esMaestro = TITULOS_MAESTROS.has(tituloNorm);
 
-    await prisma.articulo.update({
-      where: { id: art.id },
-      data: { imagenes: [rutaLocal] },
-    });
-    actualizados++;
-    console.log(
-      `   🖼️  Actualizado: "${art.titulo}" (${art.categoria}) → ${rutaLocal}`
-    );
-  }
-  console.log(`\n✅ Artículos existentes actualizados con foto local: ${actualizados}\n`);
-
-  // 3. Crear 3 artículos nuevos por cada usuario existente.
-  let totalCreados = 0;
-  const resumenPorUsuario: Record<string, { nombre: string; titulos: string[] }> =
-    {};
-
-  for (const usuario of usuarios) {
-    resumenPorUsuario[usuario.id] = {
-      nombre: usuario.nombre,
-      titulos: [],
-    };
-
-    // Seleccionamos 3 artículos distintos del catálogo demo (ciclamos si hay más usuarios que selecciones).
-    const seleccion = [
-      ARTICULOS_DEMO[0], // Libros (Stewart)
-      ARTICULOS_DEMO[4], // Laboratorio (bata)
-      ARTICULOS_DEMO[8], // Calculadoras (Casio fx-991LA)
-      ARTICULOS_DEMO[12], // Tecnología (cargador USB-C)
-      ARTICULOS_DEMO[16], // Deportes (balón fútbol)
-      ARTICULOS_DEMO[20], // Otros (regla T)
-    ];
-
-    const inicio = usuarios.indexOf(usuario) % seleccion.length;
-    const tres = [
-      seleccion[inicio % seleccion.length],
-      seleccion[(inicio + 2) % seleccion.length],
-      seleccion[(inicio + 4) % seleccion.length],
-    ];
-
-    for (const demo of tres) {
-      const yaExiste = await prisma.articulo.findFirst({
-        where: {
-          propietarioId: usuario.id,
-          titulo: demo.titulo,
-        },
-      });
-
-      if (yaExiste) {
-        // Idempotente: sobreescribir la foto con la ruta local correcta.
-        await prisma.articulo.update({
-          where: { id: yaExiste.id },
-          data: { imagenes: [demo.imagen] },
-        });
-        resumenPorUsuario[usuario.id].titulos.push(
-          `${demo.titulo} (actualizado con foto local)`
-        );
-        continue;
+    if (!esMaestro) {
+      // Título no está en la lista maestra: candidato a eliminación total.
+      if (!articulosConAlquileres.has(art.id)) {
+        idsAborrarLimpieza.add(art.id);
+      } else {
+        // Tiene alquileres vinculados: eliminar los alquileres de prueba y luego el artículo.
+        idsAborrarLimpieza.add(art.id);
       }
-
-      const creado = await prisma.articulo.create({
-        data: {
-          titulo: demo.titulo,
-          descripcion: demo.descripcion,
-          categoria: demo.categoria,
-          condicion: demo.condicion,
-          tarifaHora: demo.tarifaHora,
-          tarifaSugerida: demo.tarifaHora,
-          ubicacion: "Campus principal - Biblioteca",
-          imagenes: [demo.imagen],
-          disponibleDesde: AHORA,
-          disponibleHasta: UN_ANIO_DESDE,
-          activo: true,
-          propietarioId: usuario.id,
-        },
-      });
-
-      totalCreados++;
-      resumenPorUsuario[usuario.id].titulos.push(
-        `${demo.titulo} ($${demo.tarifaHora.toLocaleString("es-CO")}/hr)`
-      );
-      console.log(
-        `   ✨ Creado para ${usuario.correo}: "${creado.titulo}" (${demo.categoria}) - ${demo.imagen}`
-      );
     }
   }
 
-  // 4. Resumen final.
-  console.log("\n────────────────────────────────────────────");
-  console.log("📊 RESUMEN DEL SEED");
-  console.log("────────────────────────────────────────────");
-  console.log(`Artículos existentes actualizados con foto local: ${actualizados}`);
-  console.log(`Artículos nuevos creados: ${totalCreados}`);
-  console.log(`Usuarios procesados: ${usuarios.length}\n`);
-
-  for (const [id, info] of Object.entries(resumenPorUsuario)) {
-    console.log(`👤 ${info.nombre} (${id}):`);
-    info.titulos.forEach((t) => console.log(`   • ${t}`));
-    console.log("");
+  // 2a. Eliminar alquileres vinculados a artículos que no son de la lista maestra.
+  let alquileresBorrados = 0;
+  for (const id of idsAborrarLimpieza) {
+    try {
+      const resultado = await prisma.alquiler.deleteMany({
+        where: { articuloId: id },
+      });
+      alquileresBorrados += resultado.count;
+    } catch {
+      // Si falla, se ignora y se intenta borrar el artículo de todas formas.
+    }
   }
 
-  const totalFinal = await prisma.articulo.count();
-  console.log(`Total de artículos en la base de datos: ${totalFinal}`);
+  // 2b. Eliminar los artículos no maestros (ya sin alquileres vinculados).
+  let borradosLimpieza = 0;
+  for (const id of idsAborrarLimpieza) {
+    try {
+      await prisma.articulo.delete({ where: { id } });
+      borradosLimpieza++;
+    } catch {
+      // Si falla por FK restante, saltar.
+    }
+  }
+  console.log(
+    `🗑️  Limpieza inicial: ${borradosLimpieza} artículos no-maestros borrados, ${alquileresBorrados} alquileres de prueba eliminados.`
+  );
+
+  // 2c. Volver a consultar artículos restantes para el manejo de duplicados.
+  const todosArticulosRestantes = await prisma.articulo.findMany({
+    select: {
+      id: true,
+      titulo: true,
+      categoria: true,
+      imagenes: true,
+      propietarioId: true,
+      creadoEn: true,
+    },
+    orderBy: { creadoEn: "asc" },
+  });
+
+  // 2d. Detectar alquileres vinculados a los artículos restantes.
+  const alquileresRestantes = await prisma.alquiler.findMany({
+    select: { articuloId: true },
+  });
+  const articulosConAlquileresRestantes = new Set(
+    alquileresRestantes.map((a) => a.articuloId)
+  );
+
+  // 2e. Agrupar por título normalizado y por imagen.
+  const porTitulo = new Map<string, string[]>();
+  const porImagen = new Map<string, string[]>();
+  const idsABorrarDuplicados = new Set<string>();
+
+  for (const art of todosArticulosRestantes) {
+    const tituloNorm = normalizar(art.titulo);
+    const imagen =
+      Array.isArray(art.imagenes) && art.imagenes.length > 0
+        ? art.imagenes[0]
+        : "";
+
+    // Solo agrupar duplicados entre artículos de la lista maestra.
+    if (TITULOS_MAESTROS.has(tituloNorm)) {
+      if (!porTitulo.has(tituloNorm)) porTitulo.set(tituloNorm, []);
+      porTitulo.get(tituloNorm)!.push(art.id);
+    }
+
+    if (imagen) {
+      if (!porImagen.has(imagen)) porImagen.set(imagen, []);
+      porImagen.get(imagen)!.push(art.id);
+    }
+  }
+
+  // 2f. Marcar duplicados por título (mantener el primero creado, borrar el resto).
+  for (const [, ids] of porTitulo) {
+    if (ids.length > 1) {
+      for (let i = 1; i < ids.length; i++) {
+        if (!articulosConAlquileresRestantes.has(ids[i])) {
+          idsABorrarDuplicados.add(ids[i]);
+        }
+      }
+    }
+  }
+
+  // 2g. Marcar duplicados por imagen (mantener el primero, borrar el resto sin alquileres).
+  for (const [, ids] of porImagen) {
+    if (ids.length > 1) {
+      for (let i = 1; i < ids.length; i++) {
+        if (!articulosConAlquileresRestantes.has(ids[i])) {
+          idsABorrarDuplicados.add(ids[i]);
+        }
+      }
+    }
+  }
+
+  // 2h. Ejecutar borrados de duplicados (respetando integridad referencial).
+  let borradosDuplicados = 0;
+  for (const id of idsABorrarDuplicados) {
+    if (articulosConAlquileresRestantes.has(id)) continue;
+    try {
+      await prisma.articulo.delete({ where: { id } });
+      borradosDuplicados++;
+    } catch {
+      // Si falla por FK, saltar.
+    }
+  }
+  console.log(
+    `🗑️  Duplicados borrados: ${borradosDuplicados} (título o imagen repetidos).`
+  );
+
+  // 3. Crear exactamente 19 artículos únicos, distribuidos linealmente entre usuarios.
+  let totalCreados = 0;
+  const resumen: Array<{ titulo: string; propietario: string; imagen: string }> = [];
+
+  for (let i = 0; i < ARTICULOS_UNICOS.length; i++) {
+    const demo = ARTICULOS_UNICOS[i];
+    const propietario = usuarios[i % usuarios.length];
+
+    // Verificar que no exista ya este título exacto para este usuario (idempotencia parcial).
+    const yaExiste = await prisma.articulo.findFirst({
+      where: {
+        propietarioId: propietario.id,
+        titulo: demo.titulo,
+      },
+    });
+
+    if (yaExiste) {
+      // Actualizar con la imagen local correcta si no coincide.
+      await prisma.articulo.update({
+        where: { id: yaExiste.id },
+        data: { imagenes: [demo.imagen] },
+      });
+      resumen.push({ titulo: demo.titulo, propietario: propietario.correo, imagen: demo.imagen });
+      console.log(`   ♻️  Actualizado: "${demo.titulo}" → ${propietario.correo}`);
+      continue;
+    }
+
+    const creado = await prisma.articulo.create({
+      data: {
+        titulo: demo.titulo,
+        descripcion: demo.descripcion,
+        categoria: demo.categoria,
+        condicion: demo.condicion,
+        tarifaHora: demo.tarifaHora,
+        tarifaSugerida: demo.tarifaHora,
+        ubicacion: "Campus principal - Biblioteca",
+        imagenes: [demo.imagen],
+        disponibleDesde: AHORA,
+        disponibleHasta: UN_ANIO_DESDE,
+        activo: true,
+        propietarioId: propietario.id,
+      },
+    });
+
+    totalCreados++;
+    resumen.push({ titulo: demo.titulo, propietario: propietario.correo, imagen: demo.imagen });
+    console.log(
+      `   ✨ Creado (${i + 1}/19): "${creado.titulo}" → ${propietario.correo} (${demo.imagen})`
+    );
+  }
+
+  // 4. Verificación final: listar todos los artículos y confirmar cero duplicados.
+  const finales = await prisma.articulo.findMany({
+    select: { id: true, titulo: true, imagenes: true, propietario: { select: { correo: true } } },
+    orderBy: { creadoEn: "asc" },
+  });
+
+  const titulosFinales = finales.map((a) => normalizar(a.titulo));
+  const imagenesFinales = finales.map((a) => (Array.isArray(a.imagenes) && a.imagenes.length > 0 ? a.imagenes[0] : ""));
+  const titulosDuplicados = titulosFinales.filter((t, i) => titulosFinales.indexOf(t) !== i);
+  const imagenesDuplicadas = imagenesFinales.filter((img, i) => imagenesFinales.indexOf(img) !== i);
+
+  console.log("\n────────────────────────────────────────────");
+  console.log("📊 RESUMEN FINAL");
+  console.log("────────────────────────────────────────────");
+  console.log(`Total artículos en BD: ${finales.length}`);
+  console.log(`Artículos creados en esta ejecución: ${totalCreados}`);
+  console.log(`Títulos duplicados detectados: ${titulosDuplicados.length}`);
+  console.log(`Imágenes duplicadas detectadas: ${imagenesDuplicadas.length}`);
+
+  if (titulosDuplicados.length > 0 || imagenesDuplicadas.length > 0) {
+    console.error("❌ ADVERTENCIA: Se detectaron duplicados.");
+    if (titulosDuplicados.length > 0) console.error("   Títulos:", [...new Set(titulosDuplicados)]);
+    if (imagenesDuplicadas.length > 0) console.error("   Imágenes:", [...new Set(imagenesDuplicadas)]);
+    process.exitCode = 1;
+  } else {
+    console.log("✅ Cero títulos y cero fotos repetidas.");
+  }
+
+  console.log("\n📋 Lista exacta de artículos en la base de datos:");
+  for (const a of finales) {
+    const imagen = Array.isArray(a.imagenes) && a.imagenes.length > 0 ? a.imagenes[0] : "(sin imagen)";
+    console.log(`   - id=${a.id} | titulo="${a.titulo}" | propietario=${a.propietario.correo} | imagen=${imagen}`);
+  }
 
   await prisma.$disconnect();
 }
 
 main().catch((error) => {
-  console.error("❌ Error ejecutando el seed de fotos:", error);
+  console.error("❌ Error ejecutando el seed:", error);
   process.exitCode = 1;
-}) .finally(async () => {
+}).finally(async () => {
   await prisma.$disconnect().catch(() => {});
 });
