@@ -8,7 +8,7 @@
  *   para que nunca lance TypeError aunque el dato llegue incompleto.
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCircle2,
@@ -61,6 +61,8 @@ const ArticuloCard = React.memo(({
 
   const esPropio = esMio || (usuario && propietario.id === usuario.id);
 
+  const [imagenFallida, setImagenFallida] = useState(false);
+
   const etiquetaEstado =
     estado === "disponible"
       ? "Pausar"
@@ -78,18 +80,21 @@ const ArticuloCard = React.memo(({
       role="listitem"
     >
       <div className="relative h-40 bg-[var(--color-canvas)] overflow-hidden">
-        {fotoUrl ? (
+        {fotoUrl && !imagenFallida ? (
           <img
             src={fotoUrl}
             alt={nombre}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
             loading="lazy"
             decoding="async"
+            onError={() => setImagenFallida(true)}
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-canvas)]">
-            <ImageIcon className="w-10 h-10 text-gray-600" />
-            <span className="text-[11px] uppercase tracking-wider text-gray-500">Sin foto</span>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[var(--color-surface)]">
+            <ImageIcon className="w-10 h-10 text-gray-500" />
+            <span className="text-[11px] uppercase tracking-wider text-gray-400">
+              Imagen no disponible
+            </span>
           </div>
         )}
         {esPropio && (
