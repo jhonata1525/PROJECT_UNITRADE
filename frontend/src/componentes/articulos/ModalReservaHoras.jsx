@@ -47,6 +47,17 @@ const DIAS_POR_INDICE = [
 
 const formatHora = (hora) => `${hora.toString().padStart(2, "0")}:00`;
 
+/** Disponibilidad por defecto universitaria: todos los días de 07:00 a 21:00. */
+const DISPONIBILIDAD_POR_DEFECTO = {
+  lunes: { activo: true, inicio: "07:00", fin: "21:00" },
+  martes: { activo: true, inicio: "07:00", fin: "21:00" },
+  miercoles: { activo: true, inicio: "07:00", fin: "21:00" },
+  jueves: { activo: true, inicio: "07:00", fin: "21:00" },
+  viernes: { activo: true, inicio: "07:00", fin: "21:00" },
+  sabado: { activo: true, inicio: "07:00", fin: "21:00" },
+  domingo: { activo: true, inicio: "07:00", fin: "21:00" },
+};
+
 /** Convierte "08:30" a minutos desde medianoche. */
 const aMinutos = (hora) => {
   const [h, m] = String(hora ?? "").split(":").map(Number);
@@ -215,9 +226,14 @@ export const ModalReservaHoras = ({
   const [cargandoAgenda, setCargandoAgenda] = useState(false);
   const [errorAgenda, setErrorAgenda] = useState("");
 
-  // La agenda del backend manda; el catálogo es el respaldo inmediato.
+  // La agenda del backend manda; si no hay disponibilidad configurada, se usa
+  // un horario estándar universitario (07:00–21:00 todos los días) para que
+  // siempre se pueda reservar sin bloqueos.
   const disponibilidad = useMemo(
-    () => agenda?.disponibilidad ?? articulo?.propietario?.disponibilidad ?? null,
+    () =>
+      agenda?.disponibilidad ??
+      articulo?.propietario?.disponibilidad ??
+      DISPONIBILIDAD_POR_DEFECTO,
     [agenda, articulo],
   );
 

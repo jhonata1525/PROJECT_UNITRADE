@@ -34,6 +34,85 @@ const AHORA = new Date();
 const UN_ANIO_DESDE = new Date(AHORA.getTime() + 365 * 24 * 60 * 60 * 1000);
 
 // ---------------------------------------------------------------
+// Disponibilidad semanal por defecto (todos los días, 06:00–22:00).
+// ---------------------------------------------------------------
+const DIAS_DISPONIBILIDAD = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"] as const;
+
+const disponibilidadPorDefecto = () => {
+  const disponibilidad: Record<string, { activo: boolean; inicio: string; fin: string }> = {};
+  for (const dia of DIAS_DISPONIBILIDAD) {
+    disponibilidad[dia] = { activo: true, inicio: "06:00", fin: "22:00" };
+  }
+  return disponibilidad;
+};
+
+const SALDO_MINIMO_COP = 50_000;
+
+/**
+ * Asegura que todos los usuarios existentes tengan:
+ * 1. Franjas de disponibilidad semanal configuradas (si no las tienen).
+ * 2. Saldo mínimo de $50.000 COP en su billetera.
+ */
+async function sembrarDisponibilidadYSaldos(usuarios: Array<{ id: string; nombre: string; correo: string }>) {
+  console.log("\n🕒 Configurando disponibilidad y saldos mínimos...\n");
+
+  for (const usuario of usuarios) {
+    // 1. Disponibilidad: solo si no tiene ninguna configurada o está vacía.
+    const usuarioActual = await prisma.usuario.findUnique({
+      where: { id: usuario.id },
+      select: { disponibilidad: true },
+    });
+
+    const tieneDisponibilidad = usuarioActual?.disponibilidad
+      ? Object.values(usuarioActual.disponibilidad as Record<string, unknown>).some(
+          (v) =>
+            v &&
+            typeof v === "object" &&
+            !Array.isArray(v) &&
+            (v as { activo?: unknown }).activo === true,
+        )
+      : false;
+
+    if (!tieneDisponibilidad) {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { disponibilidad: disponibilidadPorDefecto() },
+      });
+      console.log(`   📅 Disponibilidad configurada para ${usuario.correo}`);
+    }
+
+    // 2. Billetera: asegurar saldo mínimo.
+    await prisma.billetera.upsert({
+      where: { usuarioId: usuario.id },
+      create: {
+        usuarioId: usuario.id,
+        saldoDisponible: SALDO_MINIMO_COP,
+        saldoPendiente: 0,
+        totalGanado: SALDO_MINIMO_COP,
+        totalRetirado: 0,
+        moneda: "COP",
+      },
+      update: {},
+    });
+
+    // Re-leer y ajustar si es necesario (Prisma no soporta max() nativo en update).
+    const billetera = await prisma.billetera.findUnique({
+      where: { usuarioId: usuario.id },
+      select: { saldoDisponible: true },
+    });
+    if (billetera && billetera.saldoDisponible < SALDO_MINIMO_COP) {
+      await prisma.billetera.update({
+        where: { usuarioId: usuario.id },
+        data: { saldoDisponible: SALDO_MINIMO_COP },
+      });
+      console.log(`   💰 Saldo ajustado a $${SALDO_MINIMO_COP.toLocaleString("es-CO")} para ${usuario.correo}`);
+    } else if (billetera) {
+      console.log(`   💰 Saldo OK: $${billetera.saldoDisponible.toLocaleString("es-CO")} para ${usuario.correo}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------
 // 19 artículos universitarios únicos (título + imagen local 1:1).
 // ---------------------------------------------------------------
 type ArticuloDemo = {
@@ -242,6 +321,9 @@ async function main() {
 
   console.log(`👥 Usuarios encontrados: ${usuarios.length}`);
   usuarios.forEach((u) => console.log(`   - ${u.correo} (${u.nombre})`));
+
+  // 1b. Disponibilidad y saldos mínimos para todos los usuarios.
+  await sembrarDisponibilidadYSaldos(usuarios);
 
   // 2. Consultar TODOS los artículos existentes ordenados por creadoEn.
   const todosArticulos = await prisma.articulo.findMany({
